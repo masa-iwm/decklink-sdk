@@ -31,13 +31,20 @@ PLATFORM_PATH=Linux
 CPPFLAGS=-Wno-multichar -I $(SDK_PATH) -I $(PLATFORM_PATH) -fno-rtti
 LDFLAGS=-lm -ldl -lpthread
 
-all: AutomaticModeDetection DeviceNotification
+COMMON_SOURCES= \
+	$(SDK_PATH)/DeckLinkAPIDispatch.cpp \
+	$(PLATFORM_PATH)/platform.cpp
 
-AutomaticModeDetection: AutomaticModeDetection.cpp $(SDK_PATH)/DeckLinkAPIDispatch.cpp $(PLATFORM_PATH)/platform.cpp
-	$(CC) -o $(BIN_PATH)/AutomaticModeDetection AutomaticModeDetection.cpp $(SDK_PATH)/DeckLinkAPIDispatch.cpp $(PLATFORM_PATH)/platform.cpp $(CPPFLAGS) $(LDFLAGS)
+all: ${BIN_PATH}/AutomaticModeDetection ${BIN_PATH}/DeviceNotification ${BIN_PATH}/VancOutput
 
-DeviceNotification: DeviceNotification.cpp $(SDK_PATH)/DeckLinkAPIDispatch.cpp $(PLATFORM_PATH)/platform.cpp
-	$(CC) -o $(BIN_PATH)/DeviceNotification DeviceNotification.cpp $(SDK_PATH)/DeckLinkAPIDispatch.cpp $(PLATFORM_PATH)/platform.cpp $(CPPFLAGS) $(LDFLAGS)
+$(BIN_PATH)/AutomaticModeDetection: AutomaticModeDetection.cpp $(COMMON_SOURCES)
+	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
+
+$(BIN_PATH)/DeviceNotification: DeviceNotification.cpp $(COMMON_SOURCES)
+	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
+
+$(BIN_PATH)/VancOutput: VancOutput.cpp $(COMMON_SOURCES)
+	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 clean:
 	rm -f $(BIN_PATH)/*

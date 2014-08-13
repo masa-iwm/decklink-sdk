@@ -32,11 +32,11 @@
 HRESULT Initialize()
 {
 	HRESULT result = E_FAIL;
-    result = CoInitialize(NULL);
-    if (FAILED(result))
-    {
-        fprintf(stderr, "Initialization of COM failed - result = %08x.\n", result);
-    }	
+	result = CoInitialize(NULL);
+	if (FAILED(result))
+	{
+		fprintf(stderr, "Initialization of COM failed - result = %08x.\n", result);
+	}
 	return result;
 }
 
@@ -45,25 +45,26 @@ HRESULT GetDeckLinkIterator(IDeckLinkIterator **deckLinkIterator)
 	HRESULT result = E_FAIL;
 	
 	// Create an IDeckLinkIterator object to enumerate all DeckLink cards in the system
-    result = CoCreateInstance(CLSID_CDeckLinkIterator, NULL, CLSCTX_ALL, IID_IDeckLinkIterator, (void**)deckLinkIterator);
-    if (FAILED(result))
-    {
-        fprintf(stderr, "A DeckLink iterator could not be created.  The DeckLink drivers may not be installed.\n");
-        return E_FAIL;
-    }
-    return S_OK;
+	result = CoCreateInstance(CLSID_CDeckLinkIterator, NULL, CLSCTX_ALL, IID_IDeckLinkIterator, (void**)deckLinkIterator);
+	if (FAILED(result))
+	{
+		fprintf(stderr, "A DeckLink iterator could not be created.  The DeckLink drivers may not be installed.\n");
+		return E_FAIL;
+	}
+	return S_OK;
 }
 
 HRESULT GetDeckLinkDiscoveryInstance(IDeckLinkDiscovery **deckLinkDiscovery)
 {
 	HRESULT result = E_FAIL;
+	*deckLinkDiscovery = NULL;
 	
 	result = CoCreateInstance(CLSID_CDeckLinkDiscovery, NULL, CLSCTX_ALL, IID_IDeckLinkDiscovery, (void**)deckLinkDiscovery);
-	if (deckLinkDiscovery == NULL)
-    {
-        fprintf(stderr, "A DeckLink discovery instance could not be created.\n");
-        return E_FAIL;
-    }
+	if (FAILED(result) || *deckLinkDiscovery == NULL)
+	{
+		fprintf(stderr, "A DeckLink discovery instance could not be created.\n");
+		return E_FAIL;
+	}
     return S_OK;
 }
 

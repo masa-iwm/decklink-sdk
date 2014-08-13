@@ -96,7 +96,7 @@ using namespace std;
 		return;
 	}
 
-	[deviceListPopup addItemWithTitle:device->getDeviceName()];
+	[[deviceListPopup menu] addItemWithTitle:(NSString*)device->getDeviceName() action:nil keyEquivalent:@""];
 	[[deviceListPopup lastItem] setTag:(NSInteger)device];
 	
 	if ([deviceListPopup numberOfItems] == 1)

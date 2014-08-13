@@ -8,6 +8,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DeviceNotification", "Devic
 		{C0CFBE4E-BD52-4BA7-9A11-99A99E23F023} = {C0CFBE4E-BD52-4BA7-9A11-99A99E23F023}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VancOutput", "VancOutput.vcproj", "{60D55381-CA54-4514-B15A-F0DDBC8FFFEC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8C3F2138-722C-4615-8E22-FC107DCEA2C7} = {8C3F2138-722C-4615-8E22-FC107DCEA2C7}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -32,6 +37,12 @@ Global
 		{8C3F2138-722C-4615-8E22-FC107DCEA2C7}.Release|Win32.Build.0 = Release|Win32
 		{8C3F2138-722C-4615-8E22-FC107DCEA2C7}.Release|x64.ActiveCfg = Release|x64
 		{8C3F2138-722C-4615-8E22-FC107DCEA2C7}.Release|x64.Build.0 = Release|x64
+		{60D55381-CA54-4514-B15A-F0DDBC8FFFEC}.Debug|Win32.ActiveCfg = Debug|Win32
+		{60D55381-CA54-4514-B15A-F0DDBC8FFFEC}.Debug|Win32.Build.0 = Debug|Win32
+		{60D55381-CA54-4514-B15A-F0DDBC8FFFEC}.Debug|x64.ActiveCfg = Debug|Win32
+		{60D55381-CA54-4514-B15A-F0DDBC8FFFEC}.Release|Win32.ActiveCfg = Release|Win32
+		{60D55381-CA54-4514-B15A-F0DDBC8FFFEC}.Release|Win32.Build.0 = Release|Win32
+		{60D55381-CA54-4514-B15A-F0DDBC8FFFEC}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
