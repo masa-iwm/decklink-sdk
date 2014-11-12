@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 7.00.0500 */
-/* at Wed Aug 13 12:48:06 2014
+/* at Wed Nov 12 12:35:39 2014
  */
 /* Compiler settings for .\DecklinkFilters.idl:
     Oicf, W1, Zp8, env=Win32 (32b run)

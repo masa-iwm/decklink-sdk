@@ -51,6 +51,7 @@
 #define __DVAPI_GL_H_
 
 #include <GL/gl.h> 
+#include <GL/glext.h>
 
 #if !defined(WIN32)
 #include <GL/glx.h>
@@ -64,6 +65,11 @@ dvpInitGLContext(uint32_t flags);
 DVPAPI_INTERFACE
 dvpCloseGLContext();
 
+//------------------------------------------------------------------------
+// If the multiple GL contexts used in the application access the same
+// sysmem buffers, then application must create those GL contexts with
+// display list shared.
+//------------------------------------------------------------------------
 DVPAPI_INTERFACE
 dvpBindToGLCtx(DVPBufferHandle hBuf);
 

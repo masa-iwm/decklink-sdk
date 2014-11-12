@@ -35,7 +35,11 @@ COMMON_SOURCES= \
 	$(SDK_PATH)/DeckLinkAPIDispatch.cpp \
 	$(PLATFORM_PATH)/platform.cpp
 
-all: ${BIN_PATH}/AutomaticModeDetection ${BIN_PATH}/DeviceNotification ${BIN_PATH}/VancOutput
+all: \
+	${BIN_PATH}/AutomaticModeDetection \
+	${BIN_PATH}/DeviceNotification \
+	${BIN_PATH}/VancOutput \
+	${BIN_PATH}/RP188VitcOutput
 
 $(BIN_PATH)/AutomaticModeDetection: AutomaticModeDetection.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
@@ -44,6 +48,9 @@ $(BIN_PATH)/DeviceNotification: DeviceNotification.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 $(BIN_PATH)/VancOutput: VancOutput.cpp $(COMMON_SOURCES)
+	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
+
+$(BIN_PATH)/RP188VitcOutput: RP188VitcOutput.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 clean:

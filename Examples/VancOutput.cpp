@@ -291,7 +291,7 @@ int main(int argc, const char * argv[])
 	}
 	
 	// Set the callback object to the DeckLink device's output interface
-	result = deckLinkOutput->SetScheduledFrameCompletionCallback(NULL);
+	result = deckLinkOutput->SetScheduledFrameCompletionCallback(outputCallback);
 	if(result != S_OK)
 	{
 		fprintf(stderr, "Could not set callback - result = %08x\n", result);

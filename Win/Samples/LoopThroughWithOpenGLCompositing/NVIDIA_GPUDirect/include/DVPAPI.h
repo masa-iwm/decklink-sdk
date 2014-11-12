@@ -54,12 +54,28 @@
 
 #if defined(WIN32)
 #define DVPAPI_INTERFACE  __declspec( dllexport ) DVPStatus
+#if defined(DVP_STATIC)
+// If using a static build, force the linker to include the
+// DVP CRT call back, so the DVP can properly cleanup thread
+// data. For dynamic library linkage, this is handled by Dllmain.
+// Dynamic linkage is recommended.
+  #ifdef _WIN64
+  #pragma comment(linker, "/INCLUDE:_tls_used")
+  #pragma comment(linker, "/INCLUDE:dvp_callback")
+  
+  #else  // _WIN64
+  
+  #pragma comment(linker, "/INCLUDE:__tls_used")
+  #pragma comment(linker, "/INCLUDE:_dvp_callback")
+  
+  #endif  // _WIN64
+#endif
 #else
 #define DVPAPI_INTERFACE  extern DVPStatus
 #endif
 
-static const uint32_t DVP_MAJOR_VERSION = 1;
-static const uint32_t DVP_MINOR_VERSION = 32;
+#define DVP_MAJOR_VERSION  1
+#define DVP_MINOR_VERSION  63
 
 typedef uint64_t DVPBufferHandle;
 typedef uint64_t DVPSyncObjectHandle;
@@ -79,6 +95,8 @@ typedef enum
     DVP_STATUS_INVALID_FORMAT_OR_TYPE    =  10,
     DVP_STATUS_DEVICE_UNINITIALIZED      =  11,
     DVP_STATUS_UNSIGNALED                =  12,
+    DVP_STATUS_SYNC_ERROR                =  13,
+    DVP_STATUS_SYNC_STILL_BOUND          =  14,
     DVP_STATUS_ERROR                     = -1, 
 } DVPStatus;
 
@@ -111,6 +129,16 @@ typedef enum
     DVP_CUDA_1_CHANNEL,
     DVP_CUDA_2_CHANNELS,
     DVP_CUDA_4_CHANNELS,
+    DVP_RGBA_INTEGER,
+    DVP_BGRA_INTEGER,
+    DVP_RED_INTEGER,
+    DVP_GREEN_INTEGER,
+    DVP_BLUE_INTEGER,
+    DVP_ALPHA_INTEGER,
+    DVP_RGB_INTEGER,
+    DVP_BGR_INTEGER,
+    DVP_LUMINANCE_INTEGER,
+    DVP_LUMINANCE_ALPHA_INTEGER,
 } DVPBufferFormats;
 
 // Possible pixel component storage types for system memory buffers
@@ -176,7 +204,8 @@ typedef struct DVPSyncObjectDescRec {
                                          // which can be triggered on device interrupts instead of
                                          // using spin loops inside the DVP library. Upon succeeding
                                          // the function must return DVP_STATUS_OK, non-zero for failure 
-                                         // and DVP_STATUS_TIMEOUT on timeout.
+                                         // and DVP_STATUS_TIMEOUT on timeout. The externalClientWaitFunc should
+                                         // not alter the current GL or CUDA context state
 } DVPSyncObjectDesc;
 
 // Time used when event timeouts should be ignored
@@ -377,6 +406,11 @@ dvpFreeBuffer(DVPBufferHandle gpuBufferHandle);
 //                If OpenGL or CUDA is used, the OpenGL/CUDA context
 //                must be current at time of call.
 //
+//                On Windows Vista and later dvpGetRequiredConstants* 
+//                may return DVP_STATUS_OUT_OF_MEMORY when the system
+//                limit for graphics contexts has been reached. To avoid
+//                this, spurious graphics/compute contexts should be avoided.
+//
 // Parameters:    bufferAddrAlignment[OUT]
 //                bufferGPUStrideAlignment[OUT]
 //                semaphoreAddrAlignment[OUT]
@@ -388,6 +422,7 @@ dvpFreeBuffer(DVPBufferHandle gpuBufferHandle);
 // Returns:       DVP_STATUS_OK
 //                DVP_STATUS_INVALID_PARAMETER
 //                DVP_STATUS_ERROR
+//                DVP_STATUS_OUT_OF_MEMORY
 //------------------------------------------------------------------------
 
 //------------------------------------------------------------------------
@@ -729,11 +764,20 @@ dvpImportSyncObject(DVPSyncObjectDesc *desc,
 //                any outstanding acquire operations have already been
 //                completed.
 //
+//                If OpenGL is being used and the app's GL context is being
+//                shared (via the DVP_DEVICE_FLAGS_SHARE_APP_CONTEXT flag),
+//                then dvpFreeSyncObject needs to be called while each context,
+//                on which the sync object was used, is current. If 
+//                DVP_DEVICE_FLAGS_SHARE_APP_CONTEXT is used and there are out
+//                standing contexts from which this sync object must be free'd
+//                then dvpFreeSyncObject will return DVP_STATUS_SYNC_STILL_BOUND.
+//
 // Parameters:    syncObject[IN] - handle to sync object to be free'd
 //
 // Returns:       DVP_STATUS_OK
 //                DVP_STATUS_INVALID_PARAMETER
 //                DVP_STATUS_ERROR
+//                DVP_STATUS_SYNC_STILL_BOUND
 //------------------------------------------------------------------------
 
 DVPAPI_INTERFACE

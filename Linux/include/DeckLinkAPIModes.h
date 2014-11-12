@@ -97,6 +97,9 @@ enum _BMDDisplayMode {
     bmdMode4K2160p25                                             = /* '4k25' */ 0x346B3235,
     bmdMode4K2160p2997                                           = /* '4k29' */ 0x346B3239,
     bmdMode4K2160p30                                             = /* '4k30' */ 0x346B3330,
+    bmdMode4K2160p50                                             = /* '4k50' */ 0x346B3530,
+    bmdMode4K2160p5994                                           = /* '4k59' */ 0x346B3539,
+    bmdMode4K2160p60                                             = /* '4k60' */ 0x346B3630,
 
     /* DCI Modes (output only) */
 
@@ -129,6 +132,8 @@ enum _BMDPixelFormat {
     bmdFormat8BitARGB                                            = 32,
     bmdFormat8BitBGRA                                            = /* 'BGRA' */ 0x42475241,
     bmdFormat10BitRGB                                            = /* 'r210' */ 0x72323130,	// Big-endian RGB 10-bit per component with SMPTE video levels (64-960). Packed as 2:10:10:10
+    bmdFormat12BitRGB                                            = /* 'R12B' */ 0x52313242,	// Big-endian RGB 12-bit per component with full range (0-4095). Packed as 12-bit per component
+    bmdFormat12BitRGBLE                                          = /* 'R12L' */ 0x5231324C,	// Little-endian RGB 12-bit per component with full range (0-4095). Packed as 12-bit per component
     bmdFormat10BitRGBXLE                                         = /* 'R10l' */ 0x5231306C,	// Little-endian 10-bit RGB with SMPTE video levels (64-940)
     bmdFormat10BitRGBX                                           = /* 'R10b' */ 0x52313062	// Big-endian 10-bit RGB with SMPTE video levels (64-940)
 };
@@ -155,7 +160,7 @@ public:
     virtual HRESULT Next (/* out */ IDeckLinkDisplayMode **deckLinkDisplayMode) = 0;
 
 protected:
-    virtual ~IDeckLinkDisplayModeIterator () {}; // call Release method to drop reference count
+    virtual ~IDeckLinkDisplayModeIterator () {} // call Release method to drop reference count
 };
 
 /* Interface IDeckLinkDisplayMode - represents a display mode */
@@ -172,7 +177,7 @@ public:
     virtual BMDDisplayModeFlags GetFlags (void) = 0;
 
 protected:
-    virtual ~IDeckLinkDisplayMode () {}; // call Release method to drop reference count
+    virtual ~IDeckLinkDisplayMode () {} // call Release method to drop reference count
 };
 
 /* Functions */
@@ -180,7 +185,7 @@ protected:
 extern "C" {
 
 
-};
+}
 
 
 #endif /* defined(BMD_DECKLINKAPIMODES_H) */

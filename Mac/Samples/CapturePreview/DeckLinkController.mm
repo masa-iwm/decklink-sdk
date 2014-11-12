@@ -50,7 +50,8 @@ DeckLinkDevice::~DeckLinkDevice()
 		deckLink = NULL;
 	}
 	
-	CFRelease(deviceName);
+	if (deviceName)
+		CFRelease(deviceName);
 }
 
 HRESULT         DeckLinkDevice::QueryInterface (REFIID iid, LPVOID *ppv)
@@ -210,12 +211,16 @@ void		DeckLinkDevice::stopCapture()
 HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {
 	UInt32				modeIndex = 0;
+	UInt32				flags = bmdVideoInputEnableFormatDetection;
 	BMDPixelFormat		pixelFormat = bmdFormat10BitYUV;
 	
 	NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
 	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
 		pixelFormat = bmdFormat10BitRGB;
+
+	if (detectedSignalFlags & bmdDetectedVideoInputDualStream3D)
+		flags |= bmdVideoInputDualStream3D;
 
 	// Restart capture with the new video mode if told to
 	if ([uiDelegate shouldRestartCaptureWithNewVideoMode] == YES)
@@ -224,7 +229,7 @@ HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatCh
 		deckLinkInput->StopStreams();
 		
 		// Set the video input mode
-		if (deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection) != S_OK)
+		if (deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, flags) != S_OK)
 		{
 			[uiDelegate stopCapture];
 			[uiDelegate showErrorMessage:@"This application was unable to select the new video mode." title:@"Error restarting the capture."];

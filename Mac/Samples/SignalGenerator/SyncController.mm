@@ -106,6 +106,7 @@ static uint32_t gHD75pcColourBars[8] =
 		[videoFormatPopup addItemWithTitle:(NSString*)modeName3D];
 
 		// Save the IDeckLinkDisplayMode in the menu item's tag
+		deckLinkDisplayMode->AddRef();
 		[[videoFormatPopup lastItem] setTag:(NSInteger)deckLinkDisplayMode];
 
 		CFRelease(modeName3D);
@@ -350,6 +351,7 @@ bail:
 	videoDisplayMode = (IDeckLinkDisplayMode*)[[videoFormatPopup selectedItem] tag];
 	frameWidth = videoDisplayMode->GetWidth();
 	frameHeight = videoDisplayMode->GetHeight();
+
 	videoDisplayMode->GetFrameRate(&frameDuration, &frameTimescale);
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	framesPerSecond = (frameTimescale + (frameDuration-1))  /  frameDuration;

@@ -113,7 +113,8 @@ typedef [v1_enum] enum	_BMDVideoOutputFlags {
 
 [v1_enum] enum	_BMDDetectedVideoInputFormatFlags {
     bmdDetectedVideoInputYCbCr422                                = 1 << 0,
-    bmdDetectedVideoInputRGB444                                  = 1 << 1
+    bmdDetectedVideoInputRGB444                                  = 1 << 1,
+    bmdDetectedVideoInputDualStream3D                            = 1 << 2
 };
 
 /* Enum BMDDeckLinkCapturePassthroughMode - Enumerates whether the video output is electrically connected to the video input or if the clean switching mode is enabled */
@@ -172,7 +173,7 @@ typedef [v1_enum] enum	_BMDDisplayModeSupport {
 
 typedef [v1_enum] enum	_BMDTimecodeFormat {
     bmdTimecodeRP188VITC1                                        = /* 'rpv1' */ 0x72707631,	// RP188 timecode where DBB1 equals VITC1 (line 9)
-    bmdTimecodeRP188VITC2                                        = /* 'rp12' */ 0x72703132,	// RP188 timecode where DBB1 equals VITC2 (line 571)
+    bmdTimecodeRP188VITC2                                        = /* 'rp12' */ 0x72703132,	// RP188 timecode where DBB1 equals VITC2 (line 9 for progressive or line 571 for interlaced/PsF)
     bmdTimecodeRP188LTC                                          = /* 'rplt' */ 0x72706C74,	// RP188 timecode where DBB1 equals LTC (line 10)
     bmdTimecodeRP188Any                                          = /* 'rp18' */ 0x72703138,	// For capture: return the first valid timecode in {VITC1, LTC ,VITC2} - For playback: set the timecode as VITC1
     bmdTimecodeVITC                                              = /* 'vitc' */ 0x76697463,
@@ -186,16 +187,6 @@ typedef [v1_enum] enum	_BMDTimecodeFormat {
     bmdAnalogVideoFlagCompositeSetup75                           = 1 << 0,
     bmdAnalogVideoFlagComponentBetacamLevels                     = 1 << 1
 };
-
-/* Enum BMDAudioConnection - Audio connection types */
-
-typedef [v1_enum] enum	_BMDAudioConnection {
-    bmdAudioConnectionEmbedded                                   = /* 'embd' */ 0x656D6264,
-    bmdAudioConnectionAESEBU                                     = /* 'aes ' */ 0x61657320,
-    bmdAudioConnectionAnalog                                     = /* 'anlg' */ 0x616E6C67,
-    bmdAudioConnectionAnalogXLR                                  = /* 'axlr' */ 0x61786C72,
-    bmdAudioConnectionAnalogRCA                                  = /* 'arca' */ 0x61726361
-} BMDAudioConnection;
 
 /* Enum BMDAudioOutputAnalogAESSwitch - Audio output Analog/AESEBU switch */
 
@@ -278,12 +269,15 @@ typedef [v1_enum] enum	_BMDDeckLinkAttributeID {
     /* Integers */
 
     BMDDeckLinkMaximumAudioChannels                              = /* 'mach' */ 0x6D616368,
+    BMDDeckLinkMaximumAnalogAudioChannels                        = /* 'aach' */ 0x61616368,
     BMDDeckLinkNumberOfSubDevices                                = /* 'nsbd' */ 0x6E736264,
     BMDDeckLinkSubDeviceIndex                                    = /* 'subi' */ 0x73756269,
     BMDDeckLinkPersistentID                                      = /* 'peid' */ 0x70656964,
     BMDDeckLinkTopologicalID                                     = /* 'toid' */ 0x746F6964,
     BMDDeckLinkVideoOutputConnections                            = /* 'vocn' */ 0x766F636E,
     BMDDeckLinkVideoInputConnections                             = /* 'vicn' */ 0x7669636E,
+    BMDDeckLinkAudioOutputConnections                            = /* 'aocn' */ 0x616F636E,
+    BMDDeckLinkAudioInputConnections                             = /* 'aicn' */ 0x6169636E,
     BMDDeckLinkDeviceBusyState                                   = /* 'dbst' */ 0x64627374,
     BMDDeckLinkVideoIOSupport                                    = /* 'vios' */ 0x76696F73,	// Returns a BMDVideoIOSupport bit field
 
@@ -820,6 +814,7 @@ importlib("stdole2.tlb");
 
 
 // import deprecated interfaces
+#include "DeckLinkAPI_v10_2.idl"
 #include "DeckLinkAPI_v9_9.idl"
 #include "DeckLinkAPI_v9_2.idl"
 #include "DeckLinkAPI_v8_1.idl"

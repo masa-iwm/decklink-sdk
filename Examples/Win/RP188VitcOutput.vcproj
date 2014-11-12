@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="DeviceNotification"
-	ProjectGUID="{8C3F2138-722C-4615-8E22-FC107DCEA2C7}"
-	RootNamespace="DeviceNotification"
+	Name="RP188VitcOutput"
+	ProjectGUID="{D6CC0E99-8332-4E8E-8FE2-4C12870CC6DE}"
+	RootNamespace="RP188VitcOutput"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -69,7 +69,6 @@
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
-				Profile="false"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -144,7 +143,6 @@
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="17"
-				Profile="false"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -196,7 +194,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".;$(NOINHERIT)"
+				AdditionalIncludeDirectories="."
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -273,7 +271,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".;$(NOINHERIT)"
+				AdditionalIncludeDirectories="."
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -331,7 +329,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\DeviceNotification.cpp"
+				RelativePath="..\RP188VitcOutput.cpp"
 				>
 			</File>
 		</Filter>
@@ -342,26 +340,28 @@
 			>
 		</Filter>
 		<Filter
-			Name="Common"
+			Name="DeckLink API"
+			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
+			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath=".\Win\platform.cpp"
+				RelativePath="..\..\Win\include\DeckLinkAPI.idl"
 				>
 			</File>
 			<File
-				RelativePath=".\platform.h"
+				RelativePath=".\DeckLinkAPI_i.c"
 				>
 			</File>
 		</Filter>
 		<Filter
-			Name="DeckLink API"
+			Name="Common"
 			>
 			<File
-				RelativePath="..\Win\include\DeckLinkAPI.idl"
+				RelativePath=".\platform.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Win\DeckLinkAPI_i.c"
+				RelativePath="..\platform.h"
 				>
 			</File>
 		</Filter>

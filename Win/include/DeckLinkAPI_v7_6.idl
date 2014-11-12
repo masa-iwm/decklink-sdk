@@ -368,8 +368,8 @@ interface IDeckLinkConfiguration_v7_6;
 
     /* Audio Input Configuration */
 
-    HRESULT SetAudioInputFormat([in] BMDAudioConnection audioInputFormat);
-    HRESULT GetAudioInputFormat([out] BMDAudioConnection *audioInputFormat);
+    HRESULT SetAudioInputFormat([in] BMDAudioConnection_v10_2 audioInputFormat);
+    HRESULT GetAudioInputFormat([out] BMDAudioConnection_v10_2 *audioInputFormat);
 };
 
 
