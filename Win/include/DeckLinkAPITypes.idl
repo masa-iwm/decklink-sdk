@@ -38,12 +38,12 @@
 
 typedef LONGLONG BMDTimeValue;
 typedef LONGLONG BMDTimeScale;
-typedef unsigned long BMDTimecodeBCD;
-typedef unsigned long BMDTimecodeUserBits;
+typedef unsigned int BMDTimecodeBCD;
+typedef unsigned int BMDTimecodeUserBits;
 
 // Enumeration Mapping
 
-cpp_quote("typedef unsigned long BMDTimecodeFlags;")
+cpp_quote("typedef unsigned int BMDTimecodeFlags;")
 cpp_quote("#if 0")
 typedef enum _BMDTimecodeFlags BMDTimecodeFlags;
 cpp_quote("#endif")

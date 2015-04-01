@@ -43,7 +43,7 @@
 #include <algorithm>
 
 #define	INT8_UNSIGNED			unsigned char
-#define	INT32_UNSIGNED			unsigned long
+#define	INT32_UNSIGNED			unsigned int
 #define INT64_SIGNED			LONGLONG
 
 #define STRINGOBJ               BSTR

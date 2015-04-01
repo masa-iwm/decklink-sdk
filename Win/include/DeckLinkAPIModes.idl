@@ -39,7 +39,7 @@
 
 // Enumeration Mapping
 
-cpp_quote("typedef unsigned long BMDDisplayModeFlags;")
+cpp_quote("typedef unsigned int BMDDisplayModeFlags;")
 cpp_quote("#if 0")
 typedef enum _BMDDisplayModeFlags BMDDisplayModeFlags;
 cpp_quote("#endif")
