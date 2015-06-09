@@ -271,6 +271,15 @@ enum _BMDIdleVideoOutputOperation {
     bmdIdleVideoOutputDesktop                                    = /* 'desk' */ 0x6465736B
 };
 
+/* Enum BMDLinkConfiguration - Video link configuration */
+
+typedef uint32_t BMDLinkConfiguration;
+enum _BMDLinkConfiguration {
+    bmdLinkConfigurationSingleLink                               = /* 'lcsl' */ 0x6C63736C,
+    bmdLinkConfigurationDualLink                                 = /* 'lcdl' */ 0x6C63646C,
+    bmdLinkConfigurationQuadLink                                 = /* 'lcql' */ 0x6C63716C
+};
+
 /* Enum BMDDeckLinkAttributeID - DeckLink Attribute ID */
 
 typedef uint32_t BMDDeckLinkAttributeID;
@@ -294,6 +303,7 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkSupportsFullFrameReferenceInputTimingOffset       = /* 'frin' */ 0x6672696E,
     BMDDeckLinkSupportsSMPTELevelAOutput                         = /* 'lvla' */ 0x6C766C61,
     BMDDeckLinkSupportsDualLinkSDI                               = /* 'sdls' */ 0x73646C73,
+    BMDDeckLinkSupportsQuadLinkSDI                               = /* 'sqls' */ 0x73716C73,
     BMDDeckLinkSupportsIdleOutput                                = /* 'idou' */ 0x69646F75,
 
     /* Integers */

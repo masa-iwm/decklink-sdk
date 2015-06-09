@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 8.00.0603 */
-/* at Mon Mar 30 13:58:55 2015
+/* at Tue May 26 12:18:39 2015
  */
 /* Compiler settings for GMFBridge.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.00.0603 

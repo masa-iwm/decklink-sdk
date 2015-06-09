@@ -31,8 +31,8 @@
 #include <inttypes.h>
 
 // List of known pixel formats and their matching display names
-const BMDPixelFormat	gKnownPixelFormats[]		= {bmdFormat8BitYUV, bmdFormat10BitYUV, bmdFormat8BitARGB, bmdFormat8BitBGRA, bmdFormat10BitRGB, 0};
-const char *			gKnownPixelFormatNames[]	= {" 8-bit YUV", "10-bit YUV", "8-bit ARGB", "8-bit BGRA", "10-bit RGB", NULL};
+const BMDPixelFormat	gKnownPixelFormats[]		= {bmdFormat8BitYUV, bmdFormat10BitYUV, bmdFormat8BitARGB, bmdFormat8BitBGRA, bmdFormat10BitRGB, bmdFormat12BitRGB, bmdFormat12BitRGBLE, bmdFormat10BitRGBXLE, bmdFormat10BitRGBX, 0};
+const char *			gKnownPixelFormatNames[]	= {" 8-bit YUV", "10-bit YUV", "8-bit ARGB", "8-bit BGRA", "10-bit RGB", "12-bit RGB", "12-bit RGBLE", "10-bit RGBXLE", "10-bit RGBX", NULL};
 
 void	print_attributes (IDeckLink* deckLink);
 void	print_output_modes (IDeckLink* deckLink);
@@ -307,6 +307,8 @@ void	print_output_modes (IDeckLink* deckLink)
 				{
 					printf("%s\t", gKnownPixelFormatNames[pixelFormatIndex]);
 				}
+				else
+					printf("------\t\t");
 				pixelFormatIndex++;
 			}
 
@@ -386,6 +388,8 @@ void	print_input_modes (IDeckLink* deckLink)
 				{
 					printf("%s\t", gKnownPixelFormatNames[pixelFormatIndex]);
 				}
+				else
+					printf("------\t\t");
 				pixelFormatIndex++;
 			}
 

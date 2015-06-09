@@ -245,6 +245,14 @@ typedef [v1_enum] enum	_BMDIdleVideoOutputOperation {
     bmdIdleVideoOutputDesktop                                    = /* 'desk' */ 0x6465736B
 } BMDIdleVideoOutputOperation;
 
+/* Enum BMDLinkConfiguration - Video link configuration */
+
+typedef [v1_enum] enum	_BMDLinkConfiguration {
+    bmdLinkConfigurationSingleLink                               = /* 'lcsl' */ 0x6C63736C,
+    bmdLinkConfigurationDualLink                                 = /* 'lcdl' */ 0x6C63646C,
+    bmdLinkConfigurationQuadLink                                 = /* 'lcql' */ 0x6C63716C
+} BMDLinkConfiguration;
+
 /* Enum BMDDeckLinkAttributeID - DeckLink Attribute ID */
 
 typedef [v1_enum] enum	_BMDDeckLinkAttributeID {
@@ -267,6 +275,7 @@ typedef [v1_enum] enum	_BMDDeckLinkAttributeID {
     BMDDeckLinkSupportsFullFrameReferenceInputTimingOffset       = /* 'frin' */ 0x6672696E,
     BMDDeckLinkSupportsSMPTELevelAOutput                         = /* 'lvla' */ 0x6C766C61,
     BMDDeckLinkSupportsDualLinkSDI                               = /* 'sdls' */ 0x73646C73,
+    BMDDeckLinkSupportsQuadLinkSDI                               = /* 'sqls' */ 0x73716C73,
     BMDDeckLinkSupportsIdleOutput                                = /* 'idou' */ 0x69646F75,
 
     /* Integers */
@@ -817,6 +826,7 @@ importlib("stdole2.tlb");
 
 
 // import deprecated interfaces
+#include "DeckLinkAPI_v10_4.idl"
 #include "DeckLinkAPI_v10_2.idl"
 #include "DeckLinkAPI_v9_9.idl"
 #include "DeckLinkAPI_v9_2.idl"
