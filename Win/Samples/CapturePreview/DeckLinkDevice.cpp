@@ -237,16 +237,20 @@ void		DeckLinkDevice::StopCapture()
 HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {	
 	unsigned int	modeIndex = 0;
+	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
 
 	// Restart capture with the new video mode if told to
 	if (! m_applyDetectedInputMode)
 		goto bail;
 
+	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
+		pixelFormat = bmdFormat10BitRGB;
+
 	// Stop the capture
 	m_deckLinkInput->StopStreams();
 
 	// Set the video input mode
-	if (m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), bmdFormat8BitYUV, bmdVideoInputEnableFormatDetection) != S_OK)
+	if (m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection) != S_OK)
 	{
 		// Let the UI know we couldnt restart the capture with the detected input mode
 		PostMessage(m_uiDelegate->GetSafeHwnd(), WM_ERROR_RESTARTING_CAPTURE_MESSAGE, 0, 0);

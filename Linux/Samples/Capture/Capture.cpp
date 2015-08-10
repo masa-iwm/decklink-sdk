@@ -167,18 +167,19 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 	return S_OK;
 }
 
-HRESULT DeckLinkCaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode, BMDDetectedVideoInputFormatFlags)
+HRESULT DeckLinkCaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode, BMDDetectedVideoInputFormatFlags formatFlags)
 {
 	// This only gets called if bmdVideoInputEnableFormatDetection was set
 	// when enabling video input
 	HRESULT	result;
 	char*	displayModeName = NULL;
+	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
 
-	if (!(events & bmdVideoInputDisplayModeChanged))
-		return S_OK;
+	if (formatFlags & bmdDetectedVideoInputRGB444)
+		pixelFormat = bmdFormat10BitRGB;
 
 	mode->GetName((const char**)&displayModeName);
-	printf("Video format changed to %s\n", displayModeName);
+	printf("Video format changed to %s %s\n", displayModeName, formatFlags & bmdDetectedVideoInputRGB444 ? "RGB" : "YUV");
 
 	if (displayModeName)
 		free(displayModeName);
@@ -187,7 +188,7 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChan
 	{
 		g_deckLinkInput->StopStreams();
 
-		result = g_deckLinkInput->EnableVideoInput(mode->GetDisplayMode(), g_config.m_pixelFormat, g_config.m_inputFlags);
+		result = g_deckLinkInput->EnableVideoInput(mode->GetDisplayMode(), pixelFormat, g_config.m_inputFlags);
 		if (result != S_OK)
 		{
 			fprintf(stderr, "Failed to switch video mode\n");
