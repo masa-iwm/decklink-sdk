@@ -49,38 +49,24 @@ static IDeckLinkInput*	g_deckLinkInput = NULL;
 
 static unsigned long	g_frameCount = 0;
 
-DeckLinkCaptureDelegate::DeckLinkCaptureDelegate() : m_refCount(0)
+DeckLinkCaptureDelegate::DeckLinkCaptureDelegate() : m_refCount(1)
 {
-	pthread_mutex_init(&m_mutex, NULL);
-}
-
-DeckLinkCaptureDelegate::~DeckLinkCaptureDelegate()
-{
-	pthread_mutex_destroy(&m_mutex);
 }
 
 ULONG DeckLinkCaptureDelegate::AddRef(void)
 {
-	pthread_mutex_lock(&m_mutex);
-		m_refCount++;
-	pthread_mutex_unlock(&m_mutex);
-
-	return (ULONG)m_refCount;
+	return __sync_add_and_fetch(&m_refCount, 1);
 }
 
 ULONG DeckLinkCaptureDelegate::Release(void)
 {
-	pthread_mutex_lock(&m_mutex);
-		m_refCount--;
-	pthread_mutex_unlock(&m_mutex);
-
-	if (m_refCount == 0)
+	int32_t newRefValue = __sync_sub_and_fetch(&m_refCount, 1);
+	if (newRefValue == 0)
 	{
 		delete this;
 		return 0;
 	}
-
-	return (ULONG)m_refCount;
+	return newRefValue;
 }
 
 HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioFrame)
@@ -420,6 +406,9 @@ bail:
 
 	if (displayModeIterator != NULL)
 		displayModeIterator->Release();
+
+	if (delegate != NULL)
+		delegate->Release();
 
 	if (g_deckLinkInput != NULL)
 	{

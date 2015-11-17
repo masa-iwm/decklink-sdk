@@ -34,7 +34,6 @@ class DeckLinkCaptureDelegate : public IDeckLinkInputCallback
 {
 public:
 	DeckLinkCaptureDelegate();
-	~DeckLinkCaptureDelegate();
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) { return E_NOINTERFACE; }
 	virtual ULONG STDMETHODCALLTYPE AddRef(void);
@@ -43,8 +42,7 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*, IDeckLinkAudioInputPacket*);
 
 private:
-	ULONG				m_refCount;
-	pthread_mutex_t		m_mutex;
+	int32_t				m_refCount;
 };
 
 #endif

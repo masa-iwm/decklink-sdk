@@ -99,6 +99,7 @@ typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
 
     bmdDeckLinkConfigVideoInputScanning                          = /* 'visc' */ 0x76697363,	// Applicable to H264 Pro Recorder only
     bmdDeckLinkConfigUseDedicatedLTCInput                        = /* 'dltc' */ 0x646C7463,	// Use timecode from LTC input instead of SDI stream
+    bmdDeckLinkConfigSDIInput3DPayloadOverride                   = /* '3dds' */ 0x33646473,
 
     /* Video Input Integers */
 
@@ -165,9 +166,24 @@ typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigDeckControlConnection                       = /* 'dcco' */ 0x6463636F
 } BMDDeckLinkConfigurationID;
 
+/* Enum BMDDeckLinkEncoderConfigurationID - DeckLink Encoder Configuration ID */
+
+typedef [v1_enum] enum	_BMDDeckLinkEncoderConfigurationID {
+
+    /* Video Encoder Integers */
+
+    bmdDeckLinkEncoderConfigPreferredBitDepth                    = /* 'epbr' */ 0x65706272,
+    bmdDeckLinkEncoderConfigFrameCodingMode                      = /* 'efcm' */ 0x6566636D,
+
+    /* HEVC/H.265 Encoder Integers */
+
+    bmdDeckLinkEncoderConfigH265TargetBitrate                    = /* 'htbr' */ 0x68746272
+} BMDDeckLinkEncoderConfigurationID;
+
 // Forward Declarations
 
 interface IDeckLinkConfiguration;
+interface IDeckLinkEncoderConfiguration;
 
 /* Interface IDeckLinkConfiguration - DeckLink Configuration interface */
 
@@ -187,6 +203,26 @@ interface IDeckLinkConfiguration;
     HRESULT SetString([in] BMDDeckLinkConfigurationID cfgID, [in] BSTR value);
     HRESULT GetString([in] BMDDeckLinkConfigurationID cfgID, [out] BSTR *value);
     HRESULT WriteConfigurationToPreferences(void);
+};
+
+/* Interface IDeckLinkEncoderConfiguration - DeckLink Encoder Configuration interface. Obtained from IDeckLinkEncoderInput */
+
+[
+    object,
+    uuid(67455668-0848-45DF-8D8E-350A77C9A028),
+    local, 
+    helpstring("DeckLink Encoder Configuration interface. Obtained from IDeckLinkEncoderInput")
+] interface IDeckLinkEncoderConfiguration : IUnknown
+{
+    HRESULT SetFlag([in] BMDDeckLinkEncoderConfigurationID cfgID, [in] BOOL value);
+    HRESULT GetFlag([in] BMDDeckLinkEncoderConfigurationID cfgID, [out] BOOL *value);
+    HRESULT SetInt([in] BMDDeckLinkEncoderConfigurationID cfgID, [in] LONGLONG value);
+    HRESULT GetInt([in] BMDDeckLinkEncoderConfigurationID cfgID, [out] LONGLONG *value);
+    HRESULT SetFloat([in] BMDDeckLinkEncoderConfigurationID cfgID, [in] double value);
+    HRESULT GetFloat([in] BMDDeckLinkEncoderConfigurationID cfgID, [out] double *value);
+    HRESULT SetString([in] BMDDeckLinkEncoderConfigurationID cfgID, [in] BSTR value);
+    HRESULT GetString([in] BMDDeckLinkEncoderConfigurationID cfgID, [out] BSTR *value);
+    HRESULT GetDecoderConfigurationInfo([out] void *buffer, [in] long bufferSize, [out] long *returnedSize);
 };
 
 /* Coclasses */

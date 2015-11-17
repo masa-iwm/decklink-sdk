@@ -269,6 +269,27 @@ void	print_attributes (IDeckLink* deckLink)
 		fprintf(stderr, "Could not query the HD-mode keying attribute- result = %08x\n", result);
 	}
 	
+	result = deckLinkAttributes->GetInt(BMDDeckLinkDeviceInterface, &value);
+	if (result == S_OK)
+	{
+		switch(value)
+		{
+			case bmdDeviceInterfacePCI:
+				printf(" %-40s %s\n", "Device Interface:",  "PCI");
+				break;
+			case bmdDeviceInterfaceUSB:
+				printf(" %-40s %s\n", "Device Interface:",  "USB");
+				break;
+			case bmdDeviceInterfaceThunderbolt:
+				printf(" %-40s %s\n", "Device Interface",  "Thunderbolt");
+				break;
+		}
+	}
+	else
+	{
+		fprintf(stderr, "Could not query the device interface attribute- result = %08x\n", result);
+	}
+	
 bail:
 	printf("\n");
 	if(deckLinkAttributes != NULL)
