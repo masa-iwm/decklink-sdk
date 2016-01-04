@@ -265,6 +265,16 @@ typedef [v1_enum] enum	_BMDVideoEncoderFrameCodingMode {
     bmdVideoEncoderFrameCodingModeIntra                          = /* 'intr' */ 0x696E7472
 } BMDVideoEncoderFrameCodingMode;
 
+/* Enum BMDDNxHRLevel - DNxHR Levels */
+
+typedef [v1_enum] enum	_BMDDNxHRLevel {
+    bmdDNxHRLevelSQ                                              = /* 'dnsq' */ 0x646E7371,
+    bmdDNxHRLevelLB                                              = /* 'dnlb' */ 0x646E6C62,
+    bmdDNxHRLevelHQ                                              = /* 'dnhq' */ 0x646E6871,
+    bmdDNxHRLevelHQX                                             = /* 'dhqx' */ 0x64687178,
+    bmdDNxHRLevel444                                             = /* 'd444' */ 0x64343434
+} BMDDNxHRLevel;
+
 /* Enum BMDLinkConfiguration - Video link configuration */
 
 typedef [v1_enum] enum	_BMDLinkConfiguration {
@@ -978,6 +988,7 @@ importlib("stdole2.tlb");
 
 
 // import deprecated interfaces
+#include "DeckLinkAPI_v10_5.idl"
 #include "DeckLinkAPI_v10_4.idl"
 #include "DeckLinkAPI_v10_2.idl"
 #include "DeckLinkAPI_v9_9.idl"

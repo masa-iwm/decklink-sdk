@@ -304,6 +304,17 @@ enum _BMDVideoEncoderFrameCodingMode {
     bmdVideoEncoderFrameCodingModeIntra                          = 'intr'
 };
 
+/* Enum BMDDNxHRLevel - DNxHR Levels */
+
+typedef uint32_t BMDDNxHRLevel;
+enum _BMDDNxHRLevel {
+    bmdDNxHRLevelSQ                                              = 'dnsq',
+    bmdDNxHRLevelLB                                              = 'dnlb',
+    bmdDNxHRLevelHQ                                              = 'dnhq',
+    bmdDNxHRLevelHQX                                             = 'dhqx',
+    bmdDNxHRLevel444                                             = 'd444'
+};
+
 /* Enum BMDLinkConfiguration - Video link configuration */
 
 typedef uint32_t BMDLinkConfiguration;
