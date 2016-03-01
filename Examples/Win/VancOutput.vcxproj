@@ -67,31 +67,31 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)Win\bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)Win\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)Win\build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)Win\bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)Win\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)Win\build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)Win\bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)Win\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)Win\build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)Win\bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)Win\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)Win\build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Midl>
-      <OutputDirectory>$(SolutionDir)Win\</OutputDirectory>
+      <OutputDirectory>$(SolutionDir)Win\build\$(ProjectName)</OutputDirectory>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./build/$(ProjectName);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -109,11 +109,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
-      <OutputDirectory>$(SolutionDir)Win\</OutputDirectory>
+      <OutputDirectory>$(SolutionDir)Win\build\$(ProjectName)</OutputDirectory>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./build/$(ProjectName);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -130,12 +130,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Midl>
-      <OutputDirectory>$(SolutionDir)Win\</OutputDirectory>
+      <OutputDirectory>$(SolutionDir)Win\build\$(ProjectName)</OutputDirectory>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./build/$(ProjectName);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -154,12 +154,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
-      <OutputDirectory>$(SolutionDir)Win\</OutputDirectory>
+      <OutputDirectory>$(SolutionDir)Win\build\$(ProjectName)</OutputDirectory>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./build/$(ProjectName);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -177,20 +177,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\VancOutput.cpp" />
+    <ClCompile Include="build\VancOutput\DeckLinkAPI_i.c" />
     <ClCompile Include="platform.cpp" />
-    <ClCompile Include="DeckLinkAPI_i.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="platform.h" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="..\..\Win\include\DeckLinkAPI.idl" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="DeviceNotification.vcxproj">
-      <Project>{8c3f2138-722c-4615-8e22-fc107dcea2c7}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

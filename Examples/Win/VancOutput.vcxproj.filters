@@ -23,7 +23,7 @@
     <ClCompile Include="platform.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="DeckLinkAPI_i.c">
+    <ClCompile Include="build\VancOutput\DeckLinkAPI_i.c">
       <Filter>DeckLink API</Filter>
     </ClCompile>
   </ItemGroup>

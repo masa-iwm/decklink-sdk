@@ -21,11 +21,11 @@
     <ClCompile Include="..\AutomaticModeDetection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DeckLinkAPI_i.c">
-      <Filter>DeckLink API</Filter>
-    </ClCompile>
     <ClCompile Include="platform.cpp">
       <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="build\AutomaticModeDetection\DeckLinkAPI_i.c">
+      <Filter>DeckLink API</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

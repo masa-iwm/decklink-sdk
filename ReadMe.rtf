@@ -1,17 +1,122 @@
 {\rtf1\ansi\ansicpg1252\cocoartf1348\cocoasubrtf170
 \cocoascreenfonts1{\fonttbl\f0\fnil\fcharset0 LucidaGrande;\f1\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
-\paperw11900\paperh16840\vieww19000\viewh20840\viewkind0
+\paperw11900\paperh16840\vieww29720\viewh22460\viewkind0
 \deftab720
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720
 
-\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 10.6\
+\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 10.6.1\
 \
 
 \b0 Please refer to the Blackmagic Design DeckLink SDK documentation for a detailed explanation of the available functionality.\
 \pard\pardeftab720
 
 \b\fs24 \cf0 \
+Changes in Blackmagic DeckLink SDK 10.6.1\
+\
+
+\b0 	- 
+\b Added Types\
+\
+
+\b0 			- added
+\b  BMDDuplexMode
+\b0 \
+				- Enumerates the configurable duplex mode options - Full or Half
+\b \
+\
+
+\b0 			- added
+\b  BMDDeckLinkStatusID
+\b0 \
+				- Enumerates the set of status information which may be queried using 
+\b IDeckLinkStatus\
+\
+
+\b0 			- added
+\b  BMDDeckLinkVideoStatusFlags
+\b0 \
+				- Enumerates the status flags associated with a video signal
+\b \
+\
+
+\b0 			- added
+\b  BMDDuplexStatus
+\b0 \
+				- Enumerates the duplex status of a device - Half, Full, Simplex, Inactive
+\b \
+\
+
+\b0 	- 
+\b Updated Types\
+\
+
+\b0 		- 
+\b BMDDeckLinkConfigurationID			\
+\
+			\CocoaLigature0 - 
+\b0 added 
+\b \CocoaLigature1 bmdDeckLinkConfigDuplexMode
+\b0 \
+				- Configure Duplex mode for sub-devices which support duplex mode configuration
+\b \
+\
+
+\b0 		- 
+\b BMDDeckLinkAttributeID\
+\
+
+\b0 			- added
+\b  BMDDeckLinkSupportsDuplexModeConfiguration
+\b0 \
+				- Indicates the sub-device supports duplex mode configuration\
+\
+			- added
+\b  BMDDeckLinkPairedDevicePersistentID
+\b0 \
+				- Identifies the persistent ID of the paired sub-device, where devices are paired (e.g. DeckLink Quad 2)\
+\
+			- added
+\b  BMDDeckLinkDeviceGroupID
+\b0 \
+				- Identifies sub-devices belonging to the same DeckLink hardware device
+\b \
+\
+
+\b0 			- removed
+\b  BMDDeckLinkDeviceBusyState\
+
+\b0 				- Replaced with 
+\b bmdDeckLinkStatusBusy
+\b0\fs28 \
+\
+
+\fs24 		- 
+\b BMDNotifications\
+\
+
+\b0 			- added
+\b  bmdStatusChanged
+\b0 \
+				- Indicates a status information item has changed
+\fs28 \
+\
+
+\fs24 	-\'a0
+\b New Interfaces
+\b0 \
+\
+
+\b 		-\'a0IDeckLinkStatus
+\b0 \
+\
+
+\b 			
+\b0 - new interface which supports querying and monitoring status information associated with a DeckLink device
+\fs28 \
+
+\b\fs24 \
+\
 Changes in Blackmagic DeckLink SDK 10.5.4\
 \
 
@@ -355,12 +460,10 @@ Changes in Blackmagic DeckLink SDK 10.4.1\
 
 \b0 	- 
 \b Updated Types\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 \
-\pard\pardeftab720
+\b0\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDDeckLinkAttributeID\
 \
 
@@ -392,12 +495,10 @@ Changes in Blackmagic DeckLink SDK 10.4\
 \
 	- 
 \b Updated Types\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 \
-\pard\pardeftab720
+\b0\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDDeckLinkAttributeID\
 \
 
@@ -549,12 +650,10 @@ Changes in Blackmagic DeckLink SDK 10.3\
 \b0 	- 
 \b Added Types
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDVideoIOSupport\
 	
 \b0 		- An enumeration of capture and playback support\
@@ -564,12 +663,10 @@ Changes in Blackmagic DeckLink SDK 10.3\
 \b0 	- 
 \b Updated Types
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDDeckLinkAttributeID\
 \
 
@@ -696,12 +793,10 @@ Changes in Blackmagic DeckLink SDK 10.1.1\
 \b0 	- 
 \b Updated Types
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDDeckLinkAttributeID\
 \
 
@@ -719,19 +814,15 @@ Changes in Blackmagic DeckLink SDK 10.0\
 \b0 	- 
 \b Updated Types
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDDeckLinkAttributeID\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 	\
-\pard\pardeftab720
+\b0\fs28 	\
 
-\fs24 \cf0 			- added
+\fs24 			- added
 \b  BMDDeckLinkSupportsFullDuplex
 \b0 \
 				- Whether the device support full duplex operation
@@ -903,16 +994,13 @@ Changes in Blackmagic DeckLink SDK 9.7\
 \b0 	- 
 \b Updated Types
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDDeckLinkAttributeID\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 	\
+\b0\fs28 	\
 \pard\tx480\pardeftab480\pardirnatural
 
 \b\fs24 \cf0 \CocoaLigature0 					- 
@@ -923,9 +1011,8 @@ Changes in Blackmagic DeckLink SDK 9.7\
 
 \b0 \cf0 \CocoaLigature1 		- 
 \b BMDVideoIOSupport\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 	\
+\b0\fs28 	\
 \pard\tx480\pardeftab480\pardirnatural
 
 \b\fs24 \cf0 \CocoaLigature0 					- 
@@ -939,9 +1026,8 @@ Changes in Blackmagic DeckLink SDK 9.7\
 
 \b0 \cf0 \CocoaLigature1 		- 
 \b BMDDisplayMode\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 	\
+\b0\fs28 	\
 \pard\tx480\pardeftab480\pardirnatural
 
 \b\fs24 \cf0 \CocoaLigature0 					- 
@@ -1109,19 +1195,15 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \fs24 	- 
 \b Updated Types
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDTimecodeFormat\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 	\
-\pard\pardeftab720
+\b0\fs28 	\
 
-\fs24 \cf0 			- enumeration now uses fourCC values
+\fs24 			- enumeration now uses fourCC values
 \b . 
 \b0 \
 \
@@ -1174,12 +1256,10 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \CocoaLigature1 			- added 
 \b \CocoaLigature0 bmdDeckControlVTRControlJogReverse
 \b0 \CocoaLigature1 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 8.1
+\b\fs24 Changes in Blackmagic DeckLink SDK 8.1
 \b0\fs28 \
 \
 
@@ -1191,27 +1271,21 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \b0 \
 \
 			- new enumeration of\'a0possible busy states for a BMD device.\
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 	- 
+\fs24 	- 
 \b Updated Types
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 		- 
+\fs24 		- 
 \b BMDDeckLinkAttributeID\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 	\
-\pard\pardeftab720
+\b0\fs28 	\
 
-\fs24 \cf0 			- added
+\fs24 			- added
 \b  BMDDeckLinkDeviceBusyState
 \b0 \
 \
@@ -1263,14 +1337,12 @@ Changes in Blackmagic DeckLink SDK 8.5\
 			- added 
 \b bmdTimecodeRP188Field2
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 			
+\fs28 			
 \fs24 - added 
 \b bmdTimecodeVITCField2\
-\pard\pardeftab720
 
-\b0 \cf0 \
+\b0 \
 				- the second field of timecode data\
 \
 		- 
@@ -1433,18 +1505,14 @@ Changes in Blackmagic DeckLink SDK 8.5\
 			- added 
 \b bmdIdleVideoOutputLastFrame
 \b0 \
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\fs24 \cf0 				- the video output when not playing video\
-\pard\pardeftab720
+\fs24 				- the video output when not playing video\
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\b\fs24 \cf0 	- Updated interfaces
+\b\fs24 	- Updated interfaces
 \b0\fs28 \
 \
 
@@ -1456,12 +1524,10 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \b0 method\
 \
 				- send custom commands conforming to the Sony 9 pin protocol to the deck\
-\pard\pardeftab720
 
-\fs28 \cf0 \
-\pard\pardeftab720
+\fs28 \
 
-\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 7.9.3
+\b\fs24 Changes in Blackmagic DeckLink SDK 7.9.3
 \b0\fs28 \
 
 \fs24 \
@@ -1682,12 +1748,10 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \
 		-\'a0
 \b BMDVideoOutputConversionMode\
-\pard\pardeftab720
 
-\b0\fs28 \cf0 \
-\pard\pardeftab720
+\b0\fs28 \
 
-\fs24 \cf0 			-\'a0added\'a0
+\fs24 			-\'a0added\'a0
 \b bmdVideoOutputHardwareAnamorphic149To720pUpconversion
 \b0\fs28 \
 
@@ -2175,4 +2239,4 @@ Some applications may use third party code under license. For details please ref
 \fs18 \
 \'a9 2016 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
 \
-Updated February 15, 2016.}
+Updated March 01, 2016.}

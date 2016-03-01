@@ -39,7 +39,8 @@ all: \
 	${BIN_PATH}/AutomaticModeDetection \
 	${BIN_PATH}/DeviceNotification \
 	${BIN_PATH}/VancOutput \
-	${BIN_PATH}/RP188VitcOutput
+	${BIN_PATH}/RP188VitcOutput \
+	${BIN_PATH}/StatusMonitor
 
 $(BIN_PATH)/AutomaticModeDetection: AutomaticModeDetection.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
@@ -51,6 +52,9 @@ $(BIN_PATH)/VancOutput: VancOutput.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 $(BIN_PATH)/RP188VitcOutput: RP188VitcOutput.cpp $(COMMON_SOURCES)
+	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
+
+$(BIN_PATH)/StatusMonitor: StatusMonitor.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 clean:

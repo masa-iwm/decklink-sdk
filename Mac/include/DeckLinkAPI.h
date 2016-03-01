@@ -84,6 +84,7 @@ BMD_CONST REFIID IID_IDeckLinkGLScreenPreviewHelper               = /* 504E2209-
 BMD_CONST REFIID IID_IDeckLinkNotificationCallback                = /* B002A1EC-070D-4288-8289-BD5D36E5FF0D */ {0xB0,0x02,0xA1,0xEC,0x07,0x0D,0x42,0x88,0x82,0x89,0xBD,0x5D,0x36,0xE5,0xFF,0x0D};
 BMD_CONST REFIID IID_IDeckLinkNotification                        = /* 0A1FB207-E215-441B-9B19-6FA1575946C5 */ {0x0A,0x1F,0xB2,0x07,0xE2,0x15,0x44,0x1B,0x9B,0x19,0x6F,0xA1,0x57,0x59,0x46,0xC5};
 BMD_CONST REFIID IID_IDeckLinkAttributes                          = /* ABC11843-D966-44CB-96E2-A1CB5D3135C4 */ {0xAB,0xC1,0x18,0x43,0xD9,0x66,0x44,0xCB,0x96,0xE2,0xA1,0xCB,0x5D,0x31,0x35,0xC4};
+BMD_CONST REFIID IID_IDeckLinkStatus                              = /* 5F558200-4028-49BC-BEAC-DB3FA4A96E46 */ {0x5F,0x55,0x82,0x00,0x40,0x28,0x49,0xBC,0xBE,0xAC,0xDB,0x3F,0xA4,0xA9,0x6E,0x46};
 BMD_CONST REFIID IID_IDeckLinkKeyer                               = /* 89AFCAF5-65F8-421E-98F7-96FE5F5BFBA3 */ {0x89,0xAF,0xCA,0xF5,0x65,0xF8,0x42,0x1E,0x98,0xF7,0x96,0xFE,0x5F,0x5B,0xFB,0xA3};
 BMD_CONST REFIID IID_IDeckLinkVideoConversion                     = /* 3BBCB8A2-DA2C-42D9-B5D8-88083644E99A */ {0x3B,0xBC,0xB8,0xA2,0xDA,0x2C,0x42,0xD9,0xB5,0xD8,0x88,0x08,0x36,0x44,0xE9,0x9A};
 BMD_CONST REFIID IID_IDeckLinkDeviceNotificationCallback          = /* 4997053B-0ADF-4CC8-AC70-7A50C4BE728F */ {0x49,0x97,0x05,0x3B,0x0A,0xDF,0x4C,0xC8,0xAC,0x70,0x7A,0x50,0xC4,0xBE,0x72,0x8F};
@@ -333,6 +334,14 @@ enum _BMDDeviceInterface {
     bmdDeviceInterfaceThunderbolt                                = 'thun'
 };
 
+/* Enum BMDDuplexMode - Duplex for configurable ports */
+
+typedef uint32_t BMDDuplexMode;
+enum _BMDDuplexMode {
+    bmdDuplexModeFull                                            = 'fdup',
+    bmdDuplexModeHalf                                            = 'hdup'
+};
+
 /* Enum BMDDeckLinkAttributeID - DeckLink Attribute ID */
 
 typedef uint32_t BMDDeckLinkAttributeID;
@@ -359,6 +368,7 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkSupportsQuadLinkSDI                               = 'sqls',
     BMDDeckLinkSupportsIdleOutput                                = 'idou',
     BMDDeckLinkHasLTCTimecodeInput                               = 'hltc',
+    BMDDeckLinkSupportsDuplexModeConfiguration                   = 'dupx',
 
     /* Integers */
 
@@ -367,12 +377,12 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkNumberOfSubDevices                                = 'nsbd',
     BMDDeckLinkSubDeviceIndex                                    = 'subi',
     BMDDeckLinkPersistentID                                      = 'peid',
+    BMDDeckLinkDeviceGroupID                                     = 'dgid',
     BMDDeckLinkTopologicalID                                     = 'toid',
     BMDDeckLinkVideoOutputConnections                            = 'vocn',
     BMDDeckLinkVideoInputConnections                             = 'vicn',
     BMDDeckLinkAudioOutputConnections                            = 'aocn',
     BMDDeckLinkAudioInputConnections                             = 'aicn',
-    BMDDeckLinkDeviceBusyState                                   = 'dbst',
     BMDDeckLinkVideoIOSupport                                    = 'vios',	// Returns a BMDVideoIOSupport bit field
     BMDDeckLinkDeckControlConnections                            = 'dccn',
     BMDDeckLinkDeviceInterface                                   = 'dbus',	// Returns a BMDDeviceInterface
@@ -380,6 +390,7 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkAudioInputXLRChannelCount                         = 'aixc',
     BMDDeckLinkAudioOutputRCAChannelCount                        = 'aorc',
     BMDDeckLinkAudioOutputXLRChannelCount                        = 'aoxc',
+    BMDDeckLinkPairedDevicePersistentID                          = 'ppid',
 
     /* Floats */
 
@@ -403,6 +414,51 @@ enum _BMDDeckLinkAttributeID {
 typedef uint32_t BMDDeckLinkAPIInformationID;
 enum _BMDDeckLinkAPIInformationID {
     BMDDeckLinkAPIVersion                                        = 'vers'
+};
+
+/* Enum BMDDeckLinkStatusID - DeckLink Status ID */
+
+typedef uint32_t BMDDeckLinkStatusID;
+enum _BMDDeckLinkStatusID {
+
+    /* Integers */
+
+    bmdDeckLinkStatusDetectedVideoInputMode                      = 'dvim',
+    bmdDeckLinkStatusDetectedVideoInputFlags                     = 'dvif',
+    bmdDeckLinkStatusCurrentVideoInputMode                       = 'cvim',
+    bmdDeckLinkStatusCurrentVideoInputPixelFormat                = 'cvip',
+    bmdDeckLinkStatusCurrentVideoInputFlags                      = 'cvif',
+    bmdDeckLinkStatusCurrentVideoOutputMode                      = 'cvom',
+    bmdDeckLinkStatusCurrentVideoOutputFlags                     = 'cvof',
+    bmdDeckLinkStatusPCIExpressLinkWidth                         = 'pwid',
+    bmdDeckLinkStatusPCIExpressLinkSpeed                         = 'plnk',
+    bmdDeckLinkStatusLastVideoOutputPixelFormat                  = 'opix',
+    bmdDeckLinkStatusReferenceSignalMode                         = 'refm',
+    bmdDeckLinkStatusDuplexMode                                  = 'dupx',
+    bmdDeckLinkStatusBusy                                        = 'busy',
+
+    /* Flags */
+
+    bmdDeckLinkStatusVideoInputSignalLocked                      = 'visl',
+    bmdDeckLinkStatusReferenceSignalLocked                       = 'refl'
+};
+
+/* Enum BMDDeckLinkVideoStatusFlags -  */
+
+typedef uint32_t BMDDeckLinkVideoStatusFlags;
+enum _BMDDeckLinkVideoStatusFlags {
+    bmdDeckLinkVideoStatusPsF                                    = 1 << 0,
+    bmdDeckLinkVideoStatusDualStream3D                           = 1 << 1
+};
+
+/* Enum BMDDuplexStatus - Duplex status of the device */
+
+typedef uint32_t BMDDuplexStatus;
+enum _BMDDuplexStatus {
+    bmdDuplexStatusFullDuplex                                    = 'fdup',
+    bmdDuplexStatusHalfDuplex                                    = 'hdup',
+    bmdDuplexStatusSimplex                                       = 'splx',
+    bmdDuplexStatusInactive                                      = 'inac'
 };
 
 /* Enum BMDDeviceBusyState - Current device busy state */
@@ -437,7 +493,8 @@ enum _BMD3DPreviewFormat {
 
 typedef uint32_t BMDNotifications;
 enum _BMDNotifications {
-    bmdPreferencesChanged                                        = 'pref'
+    bmdPreferencesChanged                                        = 'pref',
+    bmdStatusChanged                                             = 'stat'
 };
 
 #if defined(__cplusplus)
@@ -470,6 +527,7 @@ class IDeckLinkGLScreenPreviewHelper;
 class IDeckLinkNotificationCallback;
 class IDeckLinkNotification;
 class IDeckLinkAttributes;
+class IDeckLinkStatus;
 class IDeckLinkKeyer;
 class IDeckLinkVideoConversion;
 class IDeckLinkDeviceNotificationCallback;
@@ -892,6 +950,21 @@ public:
 
 protected:
     virtual ~IDeckLinkAttributes () {} // call Release method to drop reference count
+};
+
+/* Interface IDeckLinkStatus - DeckLink Status interface */
+
+class IDeckLinkStatus : public IUnknown
+{
+public:
+    virtual HRESULT GetFlag (/* in */ BMDDeckLinkStatusID statusID, /* out */ bool *value) = 0;
+    virtual HRESULT GetInt (/* in */ BMDDeckLinkStatusID statusID, /* out */ int64_t *value) = 0;
+    virtual HRESULT GetFloat (/* in */ BMDDeckLinkStatusID statusID, /* out */ double *value) = 0;
+    virtual HRESULT GetString (/* in */ BMDDeckLinkStatusID statusID, /* out */ CFStringRef *value) = 0;
+    virtual HRESULT GetBytes (/* in */ BMDDeckLinkStatusID statusID, /* out */ void *buffer, /* in, out */ uint32_t *bufferSize) = 0;
+
+protected:
+    virtual ~IDeckLinkStatus () {} // call Release method to drop reference count
 };
 
 /* Interface IDeckLinkKeyer - DeckLink Keyer interface */

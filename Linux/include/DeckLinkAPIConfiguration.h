@@ -63,6 +63,7 @@ enum _BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigHDMI3DPackingFormat                         = /* '3dpf' */ 0x33647066,
     bmdDeckLinkConfigBypass                                      = /* 'byps' */ 0x62797073,
     bmdDeckLinkConfigClockTimingAdjustment                       = /* 'ctad' */ 0x63746164,
+    bmdDeckLinkConfigDuplexMode                                  = /* 'dupx' */ 0x64757078,
 
     /* Audio Input/Output Flags */
 

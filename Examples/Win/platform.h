@@ -44,6 +44,7 @@
 
 #define	INT8_UNSIGNED			unsigned char
 #define	INT32_UNSIGNED			unsigned int
+#define INT64_UNSIGNED			ULONGLONG
 #define INT64_SIGNED			LONGLONG
 
 #define STRINGOBJ               BSTR
