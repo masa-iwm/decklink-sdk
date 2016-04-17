@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2015 Blackmagic Design
+** Copyright (c) 2016 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -94,6 +94,7 @@ typedef [v1_enum] enum	_BMDPacketType {
 [v1_enum] enum	_BMDFrameFlags {
     bmdFrameFlagDefault                                          = 0,
     bmdFrameFlagFlipVertical                                     = 1 << 0,
+    bmdFrameContainsHDRMetadata                                  = 1 << 1,
 
     /* Flags that are applicable only to instances of IDeckLinkVideoInputFrame */
 
@@ -291,6 +292,24 @@ typedef [v1_enum] enum	_BMDDeviceInterface {
     bmdDeviceInterfaceThunderbolt                                = /* 'thun' */ 0x7468756E
 } BMDDeviceInterface;
 
+/* Enum BMDDeckLinkFrameMetadataID - DeckLink Frame Metadata ID */
+
+typedef [v1_enum] enum	_BMDDeckLinkFrameMetadataID {
+    bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc        = /* 'eotf' */ 0x656F7466,	// EOTF in range 0-7 as per CEA 861.3
+    bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX              = /* 'hdrx' */ 0x68647278,	// Red display primaries in range 0.0 - 1.0
+    bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY              = /* 'hdry' */ 0x68647279,	// Red display primaries in range 0.0 - 1.0
+    bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX            = /* 'hdgx' */ 0x68646778,	// Green display primaries in range 0.0 - 1.0
+    bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY            = /* 'hdgy' */ 0x68646779,	// Green display primaries in range 0.0 - 1.0
+    bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX             = /* 'hdbx' */ 0x68646278,	// Blue display primaries in range 0.0 - 1.0
+    bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY             = /* 'hdby' */ 0x68646279,	// Blue display primaries in range 0.0 - 1.0
+    bmdDeckLinkFrameMetadataHDRWhitePointX                       = /* 'hdwx' */ 0x68647778,	// White point in range 0.0 - 1.0
+    bmdDeckLinkFrameMetadataHDRWhitePointY                       = /* 'hdwy' */ 0x68647779,	// White point in range 0.0 - 1.0
+    bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance      = /* 'hdml' */ 0x68646D6C,	// Max display mastering luminance in range 1 cd/m2 - 65535 cd/m2
+    bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance      = /* 'hmil' */ 0x686D696C,	// Min display mastering luminance in range 0.0001 cd/m2 - 6.5535 cd/m2
+    bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel          = /* 'mcll' */ 0x6D636C6C,	// Maximum Content Light Level in range 1 cd/m2 - 65535 cd/m2
+    bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel     = /* 'fall' */ 0x66616C6C	// Maximum Frame Average Light Level in range 1 cd/m2 - 65535 cd/m2
+} BMDDeckLinkFrameMetadataID;
+
 /* Enum BMDDuplexMode - Duplex for configurable ports */
 
 typedef [v1_enum] enum	_BMDDuplexMode {
@@ -324,6 +343,7 @@ typedef [v1_enum] enum	_BMDDeckLinkAttributeID {
     BMDDeckLinkSupportsIdleOutput                                = /* 'idou' */ 0x69646F75,
     BMDDeckLinkHasLTCTimecodeInput                               = /* 'hltc' */ 0x686C7463,
     BMDDeckLinkSupportsDuplexModeConfiguration                   = /* 'dupx' */ 0x64757078,
+    BMDDeckLinkSupportsHDRMetadata                               = /* 'hdrm' */ 0x6864726D,
 
     /* Integers */
 
@@ -459,6 +479,7 @@ interface IDeckLinkEncoderInput;
 interface IDeckLinkVideoFrame;
 interface IDeckLinkMutableVideoFrame;
 interface IDeckLinkVideoFrame3DExtensions;
+interface IDeckLinkVideoFrameMetadataExtensions;
 interface IDeckLinkVideoInputFrame;
 interface IDeckLinkVideoFrameAncillary;
 interface IDeckLinkEncoderPacket;
@@ -750,6 +771,21 @@ interface IDeckLinkDiscovery;
 {
     BMDVideo3DPackingFormat Get3DPackingFormat(void);
     HRESULT GetFrameForRightEye([out] IDeckLinkVideoFrame* *rightEyeFrame);
+};
+
+/* Interface IDeckLinkVideoFrameMetadataExtensions - Optional interface implemented on IDeckLinkVideoFrame to support frame metadata such as HDMI HDR information */
+
+[
+    object,
+    uuid(D5973DC9-6432-46D0-8F0B-2496F8A1238F),
+    local, 
+    helpstring("Optional interface implemented on IDeckLinkVideoFrame to support frame metadata such as HDMI HDR information")
+] interface IDeckLinkVideoFrameMetadataExtensions : IUnknown
+{
+    HRESULT GetInt([in] BMDDeckLinkFrameMetadataID metadataID, [out] LONGLONG *value);
+    HRESULT GetFloat([in] BMDDeckLinkFrameMetadataID metadataID, [out] double *value);
+    HRESULT GetFlag([in] BMDDeckLinkFrameMetadataID metadataID, [out] BOOL* value);
+    HRESULT GetString([in] BMDDeckLinkFrameMetadataID metadataID, [out] BSTR *value);
 };
 
 /* Interface IDeckLinkVideoInputFrame - Provided by the IDeckLinkVideoInput frame arrival callback. */

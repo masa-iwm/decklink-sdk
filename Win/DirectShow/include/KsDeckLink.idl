@@ -40,6 +40,73 @@ import "strmif.idl";
 ]
 library KsDeckLink
 {
+	[v1_enum] enum KsDeckLinkDisplayMode
+	{
+		/* SD Modes */
+
+		ksDeckLinkModeNTSC = /* 'ntsc' */ 0x6E747363,
+		ksDeckLinkModeNTSC2398 = /* 'nt23' */ 0x6E743233,	// 3:2 pulldown
+		ksDeckLinkModePAL = /* 'pal ' */ 0x70616C20,
+		ksDeckLinkModeNTSCp = /* 'ntsp' */ 0x6E747370,
+		ksDeckLinkModePALp = /* 'palp' */ 0x70616C70,
+
+		/* HD 1080 Modes */
+
+		ksDeckLinkModeHD1080p2398 = /* '23ps' */ 0x32337073,
+		ksDeckLinkModeHD1080p24 = /* '24ps' */ 0x32347073,
+		ksDeckLinkModeHD1080p25 = /* 'Hp25' */ 0x48703235,
+		ksDeckLinkModeHD1080p2997 = /* 'Hp29' */ 0x48703239,
+		ksDeckLinkModeHD1080p30 = /* 'Hp30' */ 0x48703330,
+		ksDeckLinkModeHD1080i50 = /* 'Hi50' */ 0x48693530,
+		ksDeckLinkModeHD1080i5994 = /* 'Hi59' */ 0x48693539,
+		ksDeckLinkModeHD1080i6000 = /* 'Hi60' */ 0x48693630,	// N.B. This _really_ is 60.00 Hz.
+		ksDeckLinkModeHD1080p50 = /* 'Hp50' */ 0x48703530,
+		ksDeckLinkModeHD1080p5994 = /* 'Hp59' */ 0x48703539,
+		ksDeckLinkModeHD1080p6000 = /* 'Hp60' */ 0x48703630,	// N.B. This _really_ is 60.00 Hz.
+
+		/* HD 720 Modes */
+
+		ksDeckLinkModeHD720p50 = /* 'hp50' */ 0x68703530,
+		ksDeckLinkModeHD720p5994 = /* 'hp59' */ 0x68703539,
+		ksDeckLinkModeHD720p60 = /* 'hp60' */ 0x68703630,
+
+		/* 2K DCI Modes */
+
+		ksDeckLinkMode2kDCI2398 = /* '2d23' */ 0x32643233,
+		ksDeckLinkMode2kDCI24 = /* '2d24' */ 0x32643234,
+		ksDeckLinkMode2kDCI25 = /* '2d25' */ 0x32643235,
+
+		/* 4K Modes */
+
+		ksDeckLinkMode4K2160p2398 = /* '4k23' */ 0x346B3233,
+		ksDeckLinkMode4K2160p24 = /* '4k24' */ 0x346B3234,
+		ksDeckLinkMode4K2160p25 = /* '4k25' */ 0x346B3235,
+		ksDeckLinkMode4K2160p2997 = /* '4k29' */ 0x346B3239,
+		ksDeckLinkMode4K2160p30 = /* '4k30' */ 0x346B3330,
+		ksDeckLinkMode4K2160p50 = /* '4k50' */ 0x346B3530,
+		ksDeckLinkMode4K2160p5994 = /* '4k59' */ 0x346B3539,
+		ksDeckLinkMode4K2160p60 = /* '4k60' */ 0x346B3630,
+
+		/* 4K DCI Modes */
+
+		ksDeckLinkMode4kDCI2398 = /* '4d23' */ 0x34643233,
+		ksDeckLinkMode4kDCI24 = /* '4d24' */ 0x34643234,
+		ksDeckLinkMode4kDCI25 = /* '4d25' */ 0x34643235,
+
+		/* Special Modes */
+
+		ksDeckLinkModeAuto = /* 'auto' */ 0x6175746F,
+		ksDeckLinkModeUnknown = /* 'iunk' */ 0x69756E6B
+	};
+
+	[v1_enum] enum KsDeckLinkPixelFormat
+	{
+		ksDeckLinkFormat8BitYUV = /* '2vuy' */ 0x32767579,
+		ksDeckLinkFormat10BitYUV = /* 'v210' */ 0x76323130,
+		ksDeckLinkFormat8BitBGRA = /* 'BGRA' */ 0x42475241,
+		ksDeckLinkFormat10BitRGB = /* 'r210' */ 0x72323130,	// Big-endian RGB 10-bit per component with SMPTE video levels (64-960). Packed as 2:10:10:10
+	};
+
 	[
 		object,
 		uuid(8A0B4C61-7827-4c79-84E8-AEC1D8DB1ACD),
@@ -104,6 +171,29 @@ library KsDeckLink
 		 * Disables automatic mode detection
 		 */
 		HRESULT DisableFormatDetection( );
+
+		/**
+		 * Contrain the modes enuperated by IAMStreamConfig to those that match the
+		 * provided details.
+		 */
+		HRESULT SetOverride( [in] enum KsDeckLinkDisplayMode displayMode, [in] enum KsDeckLinkPixelFormat pixelFormat );
+
+		/**
+		 * Returns the display mode/pixel format that is overriding the supported mode list.
+		 * If no override is set, the function will return S_FALSE.
+		 */
+		HRESULT GetOverride( [out] enum KsDeckLinkDisplayMode* displayMode, [out] enum KsDeckLinkPixelFormat* pixelFormat );
+
+		/**
+		 * Allow all supported modes to be enumerated by IAMStreamConfig.
+		 */
+		HRESULT ClearOverride( );
+
+		/**
+		 * Returns true if the device supports the ksDeckLinkModeAuto value being passed to
+		 * IKsDeckLinkCapture::SetOverride(...)
+		 */
+		HRESULT DoesSupportAutoOverride( [out] BOOL* supported );
 	};
 
 	/* Render filter interfaces */
