@@ -91,9 +91,9 @@ BOOL CStreamingPreviewApp::InitInstance()
 		return FALSE;
 	}
 
-	CStreamingPreviewDlg dlg;
-	m_pMainWnd = &dlg;
-	INT_PTR nResponse = dlg.DoModal();
+	CStreamingPreviewDlg* dlg = new CStreamingPreviewDlg();
+	m_pMainWnd = dlg;
+	INT_PTR nResponse = dlg->DoModal();
 	if (nResponse == IDOK)
 	{
 		// TODO: Place code here to handle when the dialog is
@@ -104,6 +104,8 @@ BOOL CStreamingPreviewApp::InitInstance()
 		// TODO: Place code here to handle when the dialog is
 		//  dismissed with Cancel
 	}
+
+	dlg->Release();
 
 	// Since the dialog has been closed, return FALSE so that we exit the
 	//  application, rather than start the application's message pump.

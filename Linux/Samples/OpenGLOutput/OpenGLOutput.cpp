@@ -34,21 +34,21 @@
 #include "ui_OpenGLOutput.h"
 
 OpenGLOutput::OpenGLOutput()
-:QDialog()
+	: QDialog()
 {
-    ui = new Ui::OpenGLOutputDialog();
-    ui->setupUi(this);
+	ui = new Ui::OpenGLOutputDialog();
+	ui->setupUi(this);
 
-    layout = new QGridLayout(ui->previewContainer);
-    layout->setMargin(0);
+	layout = new QGridLayout(ui->previewContainer);
+	layout->setMargin(0);
 
-    previewView = new CDeckLinkGLWidget(this);
-    previewView->resize(ui->previewContainer->size());
-    previewView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    layout->addWidget(previewView, 0, 0, 0, 0);
-    previewView->DrawFrame(NULL);
+	previewView = new CDeckLinkGLWidget(this);
+	previewView->resize(ui->previewContainer->size());
+	previewView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	layout->addWidget(previewView, 0, 0, 0, 0);
+	previewView->DrawFrame(NULL);
 
-    pOpenGLOutput = new BMDOpenGLOutput();
+	pOpenGLOutput = new BMDOpenGLOutput();
 
 	if (!pOpenGLOutput->InitDeckLink())
 		exit(0);
@@ -61,12 +61,12 @@ OpenGLOutput::OpenGLOutput()
 	connect(pTimer, SIGNAL(timeout()), this, SLOT(OnTimer()));
 
 	setWindowTitle("OpenGLOutput");
-    show();
+	show();
 }
 
 void OpenGLOutput::OnTimer()
 {
-    pOpenGLOutput->UpdateScene();
+	pOpenGLOutput->UpdateScene();
 }
 
 OpenGLOutput::~OpenGLOutput()
@@ -84,7 +84,7 @@ OpenGLOutput::~OpenGLOutput()
 		pOpenGLOutput = NULL;
 	}
 
-	delete previewView;
+	previewView->Release();
 	previewView = NULL;
 
 	delete layout;
@@ -96,10 +96,10 @@ OpenGLOutput::~OpenGLOutput()
 
 void OpenGLOutput::start()
 {
-    if (pOpenGLOutput != NULL)
+	if (pOpenGLOutput != NULL)
 	{
-        if (!pOpenGLOutput->Start())
-           exit(0);
+		if (!pOpenGLOutput->Start())
+			exit(0);
 		pTimer->start(1000 / pOpenGLOutput->GetFPS());
 	}
 }

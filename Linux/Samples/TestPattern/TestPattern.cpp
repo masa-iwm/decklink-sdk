@@ -58,6 +58,9 @@ void sigfunc(int signum)
 
 int main(int argc, char *argv[])
 {
+	int				exitStatus = 1;
+	TestPattern*	generator = NULL;
+
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
@@ -68,19 +71,33 @@ int main(int argc, char *argv[])
 	BMDConfig config;
 	if (!config.ParseArguments(argc, argv))
 	{
-		config.DisplayUsage(1);
-		return 1;
+		config.DisplayUsage(exitStatus);
+		goto bail;
 	}
 
-	TestPattern generator(&config);
+	generator = new TestPattern(&config);
 
-	if (!generator.Init())
-		return 1;
+	if (!generator->Run())
+		goto bail;
 
-	return 0;
+	// All Okay.
+	exitStatus = 0;
+
+bail:
+	if (generator)
+	{
+		generator->Release();
+		generator = NULL;
+	}
+	return exitStatus;
+}
+
+TestPattern::~TestPattern()
+{
 }
 
 TestPattern::TestPattern(BMDConfig *config) :
+	m_refCount(1),
 	m_config(config),
 	m_running(false),
 	m_deckLink(),
@@ -94,7 +111,7 @@ TestPattern::TestPattern(BMDConfig *config) :
 {
 }
 
-bool TestPattern::Init()
+bool TestPattern::Run()
 {
 	HRESULT							result;
 	int								idx;
@@ -474,6 +491,28 @@ void TestPattern::PrintStatusLine()
 }
 
 /************************* DeckLink API Delegate Methods *****************************/
+
+
+HRESULT TestPattern::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+ULONG TestPattern::AddRef()
+{
+	// gcc atomic operation builtin
+	return __sync_add_and_fetch(&m_refCount, 1);
+}
+
+ULONG TestPattern::Release()
+{
+	// gcc atomic operation builtin
+	ULONG newRefValue = __sync_sub_and_fetch(&m_refCount, 1);
+	if (!newRefValue)
+		delete this;
+	return newRefValue;
+}
 
 HRESULT TestPattern::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {

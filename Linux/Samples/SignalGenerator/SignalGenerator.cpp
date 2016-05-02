@@ -50,29 +50,23 @@ static uint32_t gHD75pcColourBars[8] =
 	0x3fcc3fc1, 0x33d4336d, 0x1c781cd4, 0x10801080
 };
 
-struct CTimeCode
-{
-	int hours;
-	int minutes;
-	int seconds;
-	int frames;
-};
-
 class CDeckLinkGLWidget : public QGLWidget, public IDeckLinkScreenPreviewCallback
 {
 private:
 	QAtomicInt refCount;
-	QMutex mutex;	
+	QMutex mutex;
 	IDeckLinkOutput* deckLinkOutput;
 	IDeckLinkGLScreenPreviewHelper* deckLinkScreenPreviewHelper;
 	
 public:
 	CDeckLinkGLWidget(QWidget* parent);
 	
-	// IDeckLinkScreenPreviewCallback
+	// IUnknown
 	virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv);
 	virtual ULONG AddRef();
 	virtual ULONG Release();
+
+	// IDeckLinkScreenPreviewCallback
 	virtual HRESULT DrawFrame(IDeckLinkVideoFrame* theFrame);
 	
 protected:
@@ -103,17 +97,17 @@ void	CDeckLinkGLWidget::paintGL ()
 {
 	mutex.lock();
 		glLoadIdentity();
-		
+
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-		
+
 		deckLinkScreenPreviewHelper->PaintGL();
 	mutex.unlock();
 }
 
 void	CDeckLinkGLWidget::resizeGL (int width, int height)
 {
-	mutex.lock();	
+	mutex.lock();
 		glViewport(0, 0, width, height);
 	mutex.unlock();
 }
@@ -156,7 +150,7 @@ HRESULT		CDeckLinkGLWidget::DrawFrame (IDeckLinkVideoFrame* theFrame)
 }
 
 SignalGenerator::SignalGenerator()
-:QDialog()
+	: QDialog()
 {
 	running = false;
 	deckLink = NULL;
@@ -191,10 +185,35 @@ SignalGenerator::SignalGenerator()
 	show();
 }
 
+SignalGenerator::~SignalGenerator()
+{
+	if (running)
+		stopRunning();
+
+	if (deckLinkOutput)
+	{
+		deckLinkOutput->Release();
+		deckLinkOutput = NULL;
+	}
+	if (deckLink)
+	{
+		deckLink->Release();
+		deckLink = NULL;
+	}
+	if (playerDelegate)
+	{
+		playerDelegate->Release();
+		playerDelegate = NULL;
+	}
+	delete timeCode;
+}
+
 void SignalGenerator::setup()
 {
-	IDeckLinkIterator*			deckLinkIterator = NULL;
-	bool						success = false;
+	IDeckLinkIterator*					deckLinkIterator = NULL;
+	IDeckLinkDisplayModeIterator*		displayModeIterator = NULL;
+	IDeckLinkDisplayMode*				deckLinkDisplayMode = NULL;
+	bool								success = false;
 	
 	// **** Find a DeckLink instance and obtain video output interface
 	deckLinkIterator = CreateDeckLinkIteratorInstance();
@@ -225,23 +244,25 @@ void SignalGenerator::setup()
 	
 	
 	// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
-	IDeckLinkDisplayModeIterator*		displayModeIterator;
-	IDeckLinkDisplayMode*				deckLinkDisplayMode;
-	
 	ui->videoFormatPopup->clear();
 	if (deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
 		goto bail;
+
 	while (displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
 	{
-		const char *		modeName;
+		char*		modeName;
 		
-		if (deckLinkDisplayMode->GetName(&modeName) == S_OK)
+		if (deckLinkDisplayMode->GetName(const_cast<const char**>(&modeName)) == S_OK)
 		{
-			ui->videoFormatPopup->addItem(modeName, QVariant::fromValue((void *)deckLinkDisplayMode));
+			ui->videoFormatPopup->addItem(modeName, QVariant::fromValue((unsigned int)deckLinkDisplayMode->GetDisplayMode()));
+
+			free(modeName);
 		}
+
+		deckLinkDisplayMode->Release();
+		deckLinkDisplayMode = NULL;
 	}
-	displayModeIterator->Release();
-	enableInterface(true);	
+	enableInterface(true);
 	deckLinkOutput->SetScreenPreviewCallback(previewView);
 	
 	success = true;
@@ -261,6 +282,11 @@ bail:
 			deckLink->Release();
 			deckLink = NULL;
 		}
+		if (playerDelegate != NULL)
+		{
+			playerDelegate->Release();
+			playerDelegate = NULL;
+		}
 
 		// Disable the user interface if we could not succsssfully connect to a DeckLink device
 		ui->startButton->setEnabled(false);
@@ -269,6 +295,8 @@ bail:
 	
 	if (deckLinkIterator != NULL)
 		deckLinkIterator->Release();
+	if (displayModeIterator != NULL)
+		displayModeIterator->Release();
 }
 
 void SignalGenerator::closeEvent(QCloseEvent *)
@@ -286,33 +314,37 @@ void SignalGenerator::enableInterface(bool enable)
 void SignalGenerator::toggleStart()
 {
 	if (running == false)
-	{
 		startRunning();
-	}
 	else
 		stopRunning();
 }
 
 void SignalGenerator::startRunning()
 {
+	bool					success = false;
+	BMDDisplayModeSupport	supported = bmdDisplayModeNotSupported;
+	BMDDisplayMode			displayMode = bmdModeUnknown;
 	IDeckLinkDisplayMode*	videoDisplayMode = NULL;
 	BMDVideoOutputFlags		videoOutputFlags = 0;
 	QVariant v;
 	// Determine the audio and video properties for the output stream
 	v = ui->outputSignalPopup->itemData(ui->outputSignalPopup->currentIndex());
-	outputSignal = (OutputSignal)v.value<int>();	
+	outputSignal = (OutputSignal)v.value<int>();
 	
 	v = ui->audioChannelPopup->itemData(ui->audioChannelPopup->currentIndex());
-	audioChannelCount = v.value<int>();	
+	audioChannelCount = v.value<int>();
 	
 	v = ui->audioSampleDepthPopup->itemData(ui->audioSampleDepthPopup->currentIndex());
-	audioSampleDepth = v.value<int>();	
+	audioSampleDepth = v.value<int>();
 	audioSampleRate = bmdAudioSampleRate48kHz;
 	
-	//
-	// - Extract the IDeckLinkDisplayMode from the display mode popup menu (stashed in the item's tag)
+	// - Extract the BMDDisplayMode from the display mode popup menu (stashed in the item's tag)
 	v = ui->videoFormatPopup->itemData(ui->videoFormatPopup->currentIndex());
-	videoDisplayMode = (IDeckLinkDisplayMode *)v.value<void*>();
+	displayMode = (BMDDisplayMode)v.value<unsigned int>();
+
+	// - Use DoesSupportVideoMode to obtain an IDeckLinkDisplayMode instance representing the selected BMDDisplayMode
+	if(deckLinkOutput->DoesSupportVideoMode(displayMode, bmdFormat8BitYUV, bmdFrameFlagDefault, &supported, &videoDisplayMode) != S_OK || supported == bmdDisplayModeNotSupported)
+		goto bail;
 	
 	frameWidth = videoDisplayMode->GetWidth();
 	frameHeight = videoDisplayMode->GetHeight();
@@ -322,8 +354,8 @@ void SignalGenerator::startRunning()
 	framesPerSecond = (frameTimescale + (frameDuration-1))  /  frameDuration;
 	
 	if (videoDisplayMode->GetDisplayMode() == bmdModeNTSC ||
-		videoDisplayMode->GetDisplayMode() == bmdModeNTSC2398 ||
-		videoDisplayMode->GetDisplayMode() == bmdModePAL)
+			videoDisplayMode->GetDisplayMode() == bmdModeNTSC2398 ||
+			videoDisplayMode->GetDisplayMode() == bmdModePAL)
 	{
 		timeCodeFormat = bmdTimecodeVITC;
 		videoOutputFlags |= bmdVideoOutputVITC;
@@ -382,12 +414,18 @@ void SignalGenerator::startRunning()
 	// Disable the user interface while running (prevent the user from making changes to the output signal)
 	enableInterface(false);
 	
-	return;
+	success = true;
 	
 bail:
-	QMessageBox::critical(this, "Failed to start output", "Failed to start output");
-	// *** Error-handling code.  Cleanup any resources that were allocated. *** //
-	stopRunning();
+	if(!success)
+	{
+		QMessageBox::critical(this, "Failed to start output", "Failed to start output");
+		// *** Error-handling code.  Cleanup any resources that were allocated. *** //
+		stopRunning();
+	}
+
+	if (videoDisplayMode != NULL)
+		videoDisplayMode->Release();
 }
 
 void SignalGenerator::stopRunning()
@@ -443,12 +481,12 @@ void SignalGenerator::scheduleNextFrame(bool prerolling)
 	}
 	
 	printf("frames: %d\n", timeCode->frames());
-	currentFrame->SetTimecodeFromComponents(timeCodeFormat, 
-		timeCode->hours(), 
-		timeCode->minutes(), 
-		timeCode->seconds(), 
-		timeCode->frames(), 
-		bmdTimecodeFlagDefault);
+	currentFrame->SetTimecodeFromComponents(timeCodeFormat,
+											timeCode->hours(),
+											timeCode->minutes(),
+											timeCode->seconds(),
+											timeCode->frames(),
+											bmdTimecodeFlagDefault);
 
 	if (deckLinkOutput->ScheduleVideoFrame(currentFrame, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale) != S_OK)
 		goto out;
@@ -456,7 +494,6 @@ void SignalGenerator::scheduleNextFrame(bool prerolling)
 	totalFramesScheduled += 1;
 out:	
 	timeCode->update();
-	
 }
 
 void SignalGenerator::writeNextAudioSamples()
@@ -483,13 +520,41 @@ void SignalGenerator::writeNextAudioSamples()
 
 PlaybackDelegate::PlaybackDelegate (SignalGenerator* owner, IDeckLinkOutput* deckLinkOutput)
 {
+	mRefCount = 1;
 	mController = owner;
 	mDeckLinkOutput = deckLinkOutput;
 }
 
+HRESULT		PlaybackDelegate::QueryInterface (REFIID, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+ULONG		PlaybackDelegate::AddRef ()
+{
+	int		oldValue;
+
+	oldValue = mRefCount.fetchAndAddAcquire(1);
+	return (ULONG)(oldValue + 1);
+}
+
+ULONG		PlaybackDelegate::Release ()
+{
+	int		oldValue;
+
+	oldValue = mRefCount.fetchAndAddAcquire(-1);
+	if (oldValue == 1)
+	{
+		delete this;
+	}
+
+	return (ULONG)(oldValue - 1);
+}
+
 HRESULT		PlaybackDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame*, BMDOutputFrameCompletionResult)
 {
-	// When a video frame has been 
+	// Schedule the next frame when a video frame has been completed
 	mController->scheduleNextFrame(false);
 	return S_OK;
 }

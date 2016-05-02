@@ -58,13 +58,14 @@ int main (int argc, char * const argv[])
 	
 	if (deckLink)
 	{
-		ETTHelper helper(deckLink);
-		if (helper.init())
+		ETTHelper* helper = new ETTHelper(deckLink);
+		if (helper->init())
 		{
-			helper.doExport();
+			helper->doExport();
 		}
 		
 		deckLink->Release();
+		helper->Release();
 	}
 
     return 0;

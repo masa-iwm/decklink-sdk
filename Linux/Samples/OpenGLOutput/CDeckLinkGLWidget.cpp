@@ -33,26 +33,31 @@
 
 CDeckLinkGLWidget::CDeckLinkGLWidget(QWidget* parent) : QGLWidget(parent)
 {
-    refCount = 1;
-    deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
+	refCount = 1;
+	deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
+}
+CDeckLinkGLWidget::~CDeckLinkGLWidget()
+{
+	if (deckLinkScreenPreviewHelper != NULL)
+		deckLinkScreenPreviewHelper->Release();
 }
 
 void CDeckLinkGLWidget::initializeGL ()
 {
-    if (deckLinkScreenPreviewHelper != NULL)
-    {
-        mutex.lock();
-            deckLinkScreenPreviewHelper->InitializeGL();
-        mutex.unlock();
-    }
+	if (deckLinkScreenPreviewHelper != NULL)
+	{
+		mutex.lock();
+			deckLinkScreenPreviewHelper->InitializeGL();
+		mutex.unlock();
+	}
 }
 
 void CDeckLinkGLWidget::paintGL ()
 {
-    mutex.lock();
-    
+	mutex.lock();
+
 		makeCurrent();
-	
+
 		glLoadIdentity();
 
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -60,49 +65,49 @@ void CDeckLinkGLWidget::paintGL ()
 
 		deckLinkScreenPreviewHelper->PaintGL();
 	
-    mutex.unlock();
+	mutex.unlock();
 }
 
 void CDeckLinkGLWidget::resizeGL (int width, int height)
 {
-    mutex.lock();
-        glViewport(0, 0, width, height);
-    mutex.unlock();
+	mutex.lock();
+		glViewport(0, 0, width, height);
+	mutex.unlock();
 }
 
 HRESULT CDeckLinkGLWidget::QueryInterface (REFIID /*iid*/, LPVOID *ppv)
 {
-    *ppv = NULL;
-    return E_NOINTERFACE;
+	*ppv = NULL;
+	return E_NOINTERFACE;
 }
 
 ULONG CDeckLinkGLWidget::AddRef ()
 {
-    int		oldValue;
+	int		oldValue;
 
-    oldValue = refCount.fetchAndAddAcquire(1);
-    return (ULONG)(oldValue + 1);
+	oldValue = refCount.fetchAndAddAcquire(1);
+	return (ULONG)(oldValue + 1);
 }
 
 ULONG CDeckLinkGLWidget::Release ()
 {
-    int		oldValue;
+	int		oldValue;
 
-    oldValue = refCount.fetchAndAddAcquire(-1);
-    if (oldValue == 1)
-    {
-        delete this;
-    }
+	oldValue = refCount.fetchAndAddAcquire(-1);
+	if (oldValue == 1)
+	{
+		delete this;
+	}
 
-    return (ULONG)(oldValue - 1);
+	return (ULONG)(oldValue - 1);
 }
 
 HRESULT CDeckLinkGLWidget::DrawFrame (IDeckLinkVideoFrame* theFrame)
 {
-    if (deckLinkScreenPreviewHelper != NULL)
-    {
-        deckLinkScreenPreviewHelper->SetFrame(theFrame);
-        update();
-    }
-    return S_OK;
+	if (deckLinkScreenPreviewHelper != NULL)
+	{
+		deckLinkScreenPreviewHelper->SetFrame(theFrame);
+		update();
+	}
+	return S_OK;
 }

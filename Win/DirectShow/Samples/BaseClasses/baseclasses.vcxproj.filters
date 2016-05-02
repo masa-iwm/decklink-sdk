@@ -123,91 +123,91 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\BaseClasses\amextra.cpp">
+    <ClCompile Include="amextra.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\amfilter.cpp">
+    <ClCompile Include="amfilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\amvideo.cpp">
+    <ClCompile Include="amvideo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\combase.cpp">
+    <ClCompile Include="combase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\cprop.cpp">
+    <ClCompile Include="cprop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\ctlutil.cpp">
+    <ClCompile Include="ctlutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\ddmm.cpp">
+    <ClCompile Include="ddmm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\dllentry.cpp">
+    <ClCompile Include="dllentry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\dllsetup.cpp">
+    <ClCompile Include="dllsetup.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\mtype.cpp">
+    <ClCompile Include="mtype.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\outputq.cpp">
+    <ClCompile Include="outputq.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\pstream.cpp">
+    <ClCompile Include="pstream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\pullpin.cpp">
+    <ClCompile Include="pullpin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\refclock.cpp">
+    <ClCompile Include="refclock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\renbase.cpp">
+    <ClCompile Include="renbase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\schedule.cpp">
+    <ClCompile Include="schedule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\seekpt.cpp">
+    <ClCompile Include="seekpt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\source.cpp">
+    <ClCompile Include="source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\strmctl.cpp">
+    <ClCompile Include="strmctl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\sysclock.cpp">
+    <ClCompile Include="sysclock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\transfrm.cpp">
+    <ClCompile Include="transfrm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\transip.cpp">
+    <ClCompile Include="transip.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\videoctl.cpp">
+    <ClCompile Include="videoctl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\vtrans.cpp">
+    <ClCompile Include="vtrans.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\winctrl.cpp">
+    <ClCompile Include="winctrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\winutil.cpp">
+    <ClCompile Include="winutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\wxdebug.cpp">
+    <ClCompile Include="wxdebug.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\wxlist.cpp">
+    <ClCompile Include="wxlist.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\BaseClasses\wxutil.cpp">
+    <ClCompile Include="wxutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

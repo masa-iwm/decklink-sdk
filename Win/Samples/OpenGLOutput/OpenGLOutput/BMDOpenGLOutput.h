@@ -67,28 +67,26 @@ private:
 	
 	IDeckLink*					pDL;
 	IDeckLinkOutput*			pDLOutput;
-	IDeckLinkMutableVideoFrame*	pDLVideoFrame;
 	
 	BMDTimeValue				frameDuration;
 	BMDTimeScale				frameTimescale;
 	unsigned __int32			uiFPS;
 	unsigned __int32			uiTotalFrames;
 
-	void ResetFrame();
 	void SetPreroll();
 
 public:
 	BMDOpenGLOutput();
 	~BMDOpenGLOutput();
 
-        bool InitDeckLink();
-		bool InitGUI(IDeckLinkScreenPreviewCallback *previewCallback);
-		bool InitOpenGL();
+	bool InitDeckLink();
+	bool InitGUI(IDeckLinkScreenPreviewCallback *previewCallback);
+	bool InitOpenGL();
 
-        bool Start();
-        bool Stop();
-	
-		void RenderToDevice();
+	bool Start();
+	bool Stop();
+
+	void RenderToDevice(IDeckLinkVideoFrame* pDLVideoFrame);
 };
 
 ////////////////////////////////////////////
@@ -97,17 +95,21 @@ public:
 
 class RenderDelegate : public IDeckLinkVideoOutputCallback
 {
+private:
+	ULONG				m_refCount;
 	BMDOpenGLOutput*	m_pOwner;
 	
+	~RenderDelegate();
+
 public:
 	RenderDelegate (BMDOpenGLOutput* pOwner);
-	~RenderDelegate ();
 	
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ()									{return 1;}
-	virtual ULONG	STDMETHODCALLTYPE	Release ()									{return 1;}
+	// IUnknown
+	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG	STDMETHODCALLTYPE	AddRef ();
+	virtual ULONG	STDMETHODCALLTYPE	Release ();
 	
+	// IDeckLinkVideoOutputCallback
 	virtual HRESULT	STDMETHODCALLTYPE	ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 	virtual HRESULT	STDMETHODCALLTYPE	ScheduledPlaybackHasStopped ();
 };

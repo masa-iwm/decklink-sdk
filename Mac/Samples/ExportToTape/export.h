@@ -39,8 +39,9 @@
 class ETTHelper : public IDeckLinkDeckControlStatusCallback , public IDeckLinkVideoOutputCallback
 {
 private:
+	int32_t						m_refCount;
 	IDeckLink *					m_deckLink;
-	IDeckLinkDeckControl *				m_deckControl;
+	IDeckLinkDeckControl *		m_deckControl;
 	IDeckLinkOutput *			m_deckLinkOutput;
 	
 	// The mutex and condition variable are used to wait for
@@ -63,6 +64,8 @@ private:
 	BMDTimeScale				m_timeScale;
 	BMDTimeValue				m_frameDuration;
 	
+	virtual			~ETTHelper();
+	
 	bool			fillFrame(int index);
 	void			releaseFrames();
 	bool			createFrames();
@@ -78,7 +81,6 @@ private:
 	
 public:
 	ETTHelper(IDeckLink *deckLink);
-	virtual			~ETTHelper();
 
 	// init() must be called after the constructor.
 	// if init() fails, call the destructor
@@ -98,9 +100,9 @@ public:
 	virtual HRESULT	ScheduledPlaybackHasStopped () {return S_OK;};
 	
 	// IUnknown
-	HRESULT			QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	ULONG			AddRef ()									{return 1;}
-	ULONG			Release ()									{return 1;}
+	HRESULT			QueryInterface (REFIID iid, LPVOID *ppv);
+	ULONG			AddRef ();
+	ULONG			Release ();
 };
 
 #endif		// __export_h__

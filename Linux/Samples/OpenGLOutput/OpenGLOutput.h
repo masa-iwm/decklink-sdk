@@ -48,23 +48,23 @@ class BMDOpenGLOutput;
 
 class OpenGLOutput : public QDialog
 {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    OpenGLOutput();
-    ~OpenGLOutput();
+	OpenGLOutput();
+	~OpenGLOutput();
 
-    void start();
+	void start();
 
 public slots:
-    void OnTimer();
+	void OnTimer();
 
 private:
-    Ui::OpenGLOutputDialog* ui;
-    QGridLayout*            layout;
-    CDeckLinkGLWidget*      previewView;
-    BMDOpenGLOutput*        pOpenGLOutput;
-    QTimer*                 pTimer;
+	Ui::OpenGLOutputDialog*	ui;
+	QGridLayout*			layout;
+	CDeckLinkGLWidget*		previewView;
+	BMDOpenGLOutput*		pOpenGLOutput;
+	QTimer*					pTimer;
 };
 
 #endif // __OPENGLOUTPUT_H__

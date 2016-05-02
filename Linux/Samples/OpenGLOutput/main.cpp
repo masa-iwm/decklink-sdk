@@ -34,13 +34,13 @@
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
-    if (!QGLFormat::hasOpenGL() || !QGLPixelBuffer::hasOpenGLPbuffers()) {
-        QMessageBox::critical(0, "OpenGL pbuffers",
-                                 "This system does not support OpenGL/pbuffers.");
-        return -1;
-    }
-    OpenGLOutput obj;
-    obj.start();
-    return app.exec();
+	QApplication app(argc, argv);
+	if (!QGLFormat::hasOpenGL() || !QGLPixelBuffer::hasOpenGLPbuffers()) {
+		QMessageBox::critical(0, "OpenGL pbuffers",
+							  "This system does not support OpenGL/pbuffers.");
+		return -1;
+	}
+	OpenGLOutput obj;
+	obj.start();
+	return app.exec();
 }

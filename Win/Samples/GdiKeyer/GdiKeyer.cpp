@@ -47,6 +47,40 @@ int	OutputGraphic (IDeckLinkDisplayMode *deckLink);
 void GdiDraw (IDeckLinkVideoFrame* theFrame);
 int	CheckFormatDetect (IDeckLinkAttributes		*deckLinkAttributes);
 
+DeckLinkKeyerDelegate::DeckLinkKeyerDelegate()
+	: m_refCount(1)
+{
+}
+
+DeckLinkKeyerDelegate::~DeckLinkKeyerDelegate()
+{
+}
+
+HRESULT DeckLinkKeyerDelegate::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+ULONG DeckLinkKeyerDelegate::AddRef(void)
+{
+	return InterlockedIncrement((LONG*)&m_refCount);
+}
+
+ULONG  DeckLinkKeyerDelegate::Release(void)
+{
+	ULONG           newRefValue;
+
+	newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+
+	return newRefValue;
+}
+
 HRESULT DeckLinkKeyerDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode* newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {
 	BMDTimeValue timeVal;
@@ -435,7 +469,7 @@ int		CheckFormatDetect (IDeckLinkAttributes		*deckLinkAttributes)
 			}
 
 			deckLinkInput->Release();
-			delete keyDelegate;
+			keyDelegate->Release();
 		}
 		else
 		{

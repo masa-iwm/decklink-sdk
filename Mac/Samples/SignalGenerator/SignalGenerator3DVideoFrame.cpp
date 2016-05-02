@@ -84,7 +84,7 @@ ULONG SignalGenerator3DVideoFrame::AddRef(void)
 ULONG SignalGenerator3DVideoFrame::Release(void)
 {
 	ULONG newRefValue = OSAtomicDecrement32(&m_refCount);
-	if (! newRefValue)
+	if (newRefValue == 0)
 		delete this;
 	return newRefValue;
 }

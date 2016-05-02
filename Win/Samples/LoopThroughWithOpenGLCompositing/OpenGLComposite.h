@@ -152,17 +152,18 @@ private:
 class CaptureDelegate : public IDeckLinkInputCallback
 {
 	OpenGLComposite*	m_pOwner;
+	LONG				mRefCount;
 
 public:
 	CaptureDelegate (OpenGLComposite* pOwner);
 
 	// IUnknown needs only a dummy implementation
-	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ()									{return 1;}
-	virtual ULONG	STDMETHODCALLTYPE	Release ()									{return 1;}
+	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG	STDMETHODCALLTYPE	AddRef ();
+	virtual ULONG	STDMETHODCALLTYPE	Release ();
 
-	virtual HRESULT STDMETHODCALLTYPE	VideoInputFrameArrived(IDeckLinkVideoInputFrame *videoFrame, IDeckLinkAudioInputPacket *audioPacket);
-	virtual HRESULT	STDMETHODCALLTYPE	VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags);
+	virtual HRESULT STDMETHODCALLTYPE	VideoInputFrameArrived (IDeckLinkVideoInputFrame *videoFrame, IDeckLinkAudioInputPacket *audioPacket);
+	virtual HRESULT	STDMETHODCALLTYPE	VideoInputFormatChanged (BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags);
 };
 
 ////////////////////////////////////////////
@@ -172,14 +173,15 @@ public:
 class PlayoutDelegate : public IDeckLinkVideoOutputCallback
 {
 	OpenGLComposite*	m_pOwner;
+	LONG				mRefCount;
 
 public:
 	PlayoutDelegate (OpenGLComposite* pOwner);
 
 	// IUnknown needs only a dummy implementation
-	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ()									{return 1;}
-	virtual ULONG	STDMETHODCALLTYPE	Release ()									{return 1;}
+	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG	STDMETHODCALLTYPE	AddRef ();
+	virtual ULONG	STDMETHODCALLTYPE	Release ();
 
 	virtual HRESULT	STDMETHODCALLTYPE	ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 	virtual HRESULT	STDMETHODCALLTYPE	ScheduledPlaybackHasStopped ();

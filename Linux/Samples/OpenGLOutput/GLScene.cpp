@@ -34,12 +34,6 @@
 GLScene::GLScene()
 	: flRtri(0.0f), flRquad(0.0f)
 {
-
-}
-
-GLScene::~GLScene()
-{
-
 }
 
 void GLScene::InitScene()
@@ -47,7 +41,7 @@ void GLScene::InitScene()
 	Mutex.lock();
 	
 	glShadeModel( GL_SMOOTH );                // Enable smooth shading
-    glClearColor( 0.0f, 0.0f, 0.0f, 0.5f );   // Black background
+	glClearColor( 0.0f, 0.0f, 0.0f, 0.5f );   // Black background
 	glClearDepth( 1.0f );                     // Depth buffer setup
 	glEnable( GL_DEPTH_TEST );                // Enable depth testing
 	glDepthFunc( GL_LEQUAL );                 // Type of depth test to do
@@ -127,7 +121,7 @@ void GLScene::DrawScene(GLint x, GLint y, GLsizei w, GLsizei h)
 	glVertex3f( -1.0f, -1.0f, -1.0f );   // Bottom left of bottom side
 	glVertex3f(  1.0f, -1.0f, -1.0f );   // Bottom right of bottom side
 	
-	glColor3f( 1.0f, 0.0f, 0.0f );       // Red  
+	glColor3f( 1.0f, 0.0f, 0.0f );       // Red
 	glVertex3f(  1.0f,  1.0f,  1.0f );   // Top right of front side
 	glVertex3f( -1.0f,  1.0f,  1.0f );   // Top left of front side
 	glVertex3f( -1.0f, -1.0f,  1.0f );   // Bottom left of front side
@@ -145,7 +139,7 @@ void GLScene::DrawScene(GLint x, GLint y, GLsizei w, GLsizei h)
 	glVertex3f( -1.0f, -1.0f, -1.0f );   // Bottom left of left side
 	glVertex3f( -1.0f, -1.0f,  1.0f );   // Bottom right of left side
 	
-	glColor3f( 1.0f, 0.0f, 1.0f );       // Violet 
+	glColor3f( 1.0f, 0.0f, 1.0f );       // Violet
 	glVertex3f(  1.0f,  1.0f, -1.0f );   // Top right of right side
 	glVertex3f(  1.0f,  1.0f,  1.0f );   // Top left of right side
 	glVertex3f(  1.0f, -1.0f,  1.0f );   // Bottom left of right side
@@ -155,7 +149,7 @@ void GLScene::DrawScene(GLint x, GLint y, GLsizei w, GLsizei h)
 	glFinish();
 	
 	flRtri += 0.8f;     // Increase the rotation variable for the triangle
-	flRquad -= 0.60f;   // Decrease the rotation variable for the quad	
+	flRquad -= 0.60f;   // Decrease the rotation variable for the quad
 	
 	Mutex.unlock();
 }

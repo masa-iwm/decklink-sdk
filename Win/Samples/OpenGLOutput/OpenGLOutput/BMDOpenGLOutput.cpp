@@ -32,7 +32,7 @@
 #include "BMDOpenGLOutput.h"
 
 BMDOpenGLOutput::BMDOpenGLOutput()
-	: pDL(NULL), pDLOutput(NULL), pDLVideoFrame(NULL),
+	: pDL(NULL), pDLOutput(NULL),
 	hGLWnd(NULL), hGLDC(NULL), hGLRC(NULL), hOldGLRC(NULL)	
 {
 	InitializeCriticalSection(&pMutex);
@@ -54,9 +54,11 @@ BMDOpenGLOutput::~BMDOpenGLOutput()
 		pDL->Release();
 		pDL = NULL;
 	}
-
-	delete pRenderDelegate;
-	pRenderDelegate = NULL;
+	if (pRenderDelegate != NULL)
+	{
+		pRenderDelegate->Release();
+		pRenderDelegate = NULL;
+	}
 
 	delete pGLScene;
 	pGLScene = NULL;
@@ -67,22 +69,39 @@ BMDOpenGLOutput::~BMDOpenGLOutput()
 	DeleteCriticalSection(&pMutex);
 }
 
-void BMDOpenGLOutput::ResetFrame()
-{
-	// Fill frame with black
-	void*	pFrame;
-	pDLVideoFrame->GetBytes((void**)&pFrame);
-	memset(pFrame, 0x00, pDLVideoFrame->GetRowBytes() * uiFrameHeight);
-}
-
 void BMDOpenGLOutput::SetPreroll()
 {
-	// Set 1 second preroll
-	for (unsigned __int32 i=0; i < uiFPS; i++)
+	IDeckLinkMutableVideoFrame* pDLVideoFrame;
+
+	// Set 3 frame preroll
+	for (unsigned i=0; i < 3; i++)
 	{
+		// Flip frame vertical, because OpenGL rendering starts from left bottom corner
+		if (pDLOutput->CreateVideoFrame(uiFrameWidth, uiFrameHeight, uiFrameWidth * 4, bmdFormat8BitBGRA, bmdFrameFlagFlipVertical, &pDLVideoFrame) != S_OK)
+			goto bail;
+
 		if (pDLOutput->ScheduleVideoFrame(pDLVideoFrame, (uiTotalFrames * frameDuration), frameDuration, frameTimescale) != S_OK)
-			return;
+			goto bail;
+
+		/* The local reference to the IDeckLinkVideoFrame is released here, as the ownership has now been passed to
+		 *  the DeckLinkAPI via ScheduleVideoFrame.
+		 *
+		 * After the API has finished with the frame, it is returned to the application via ScheduledFrameCompleted.
+		 * In ScheduledFrameCompleted, this application updates the video frame and passes it to ScheduleVideoFrame,
+		 * returning ownership to the DeckLink API.
+		 */
+		pDLVideoFrame->Release();
+		pDLVideoFrame = NULL;
+
 		uiTotalFrames++;
+	}
+	return;
+
+bail:
+	if (pDLVideoFrame)
+	{
+		pDLVideoFrame->Release();
+		pDLVideoFrame = NULL;
 	}
 }
 
@@ -130,6 +149,11 @@ error:
 		{
 			pDL->Release();
 			pDL = NULL;
+		}
+		if (pRenderDelegate != NULL)
+		{
+			pRenderDelegate->Release();
+			pRenderDelegate = NULL;
 		}
 	}
 
@@ -198,6 +222,7 @@ bool BMDOpenGLOutput::InitOpenGL()
 
 bool BMDOpenGLOutput::Start()
 {
+	bool								bSuccess = false;
 	IDeckLinkDisplayModeIterator*		pDLDisplayModeIterator;
 	IDeckLinkDisplayMode*				pDLDisplayMode = NULL;
 	
@@ -206,10 +231,8 @@ bool BMDOpenGLOutput::Start()
 		if (pDLDisplayModeIterator->Next(&pDLDisplayMode) != S_OK)
 		{
 			MessageBox(NULL, _T("Cannot find video mode."), _T("DeckLink error."), MB_OK);
-			pDLDisplayModeIterator->Release();
-			return false;
+			goto bail;
 		}
-		pDLDisplayModeIterator->Release();
 	}
 	
 	uiFrameWidth = pDLDisplayMode->GetWidth();
@@ -219,19 +242,29 @@ bool BMDOpenGLOutput::Start()
 	uiFPS = ((frameTimescale + (frameDuration-1))  /  frameDuration);
 	
 	if (pDLOutput->EnableVideoOutput(pDLDisplayMode->GetDisplayMode(), bmdVideoOutputFlagDefault) != S_OK)
-		return false;
-	
-	if (pDLOutput->CreateVideoFrame(uiFrameWidth, uiFrameHeight, uiFrameWidth*4, bmdFormat8BitBGRA, bmdFrameFlagFlipVertical, &pDLVideoFrame) != S_OK)
-		return false;
+		goto bail;
 	
 	uiTotalFrames = 0;
 	
-	ResetFrame();
 	SetPreroll();
 
 	pDLOutput->StartScheduledPlayback(0, 100, 1.0);
 	
-	return true;
+	bSuccess = true;
+	
+bail:
+	if (pDLDisplayMode)
+	{
+		pDLDisplayMode->Release();
+		pDLDisplayMode = NULL;
+	}
+	if (pDLDisplayModeIterator)
+	{
+		pDLDisplayModeIterator->Release();
+		pDLDisplayModeIterator = NULL;
+	}
+
+	return bSuccess;
 }
 
 bool BMDOpenGLOutput::Stop()
@@ -241,11 +274,6 @@ bool BMDOpenGLOutput::Stop()
 
 	// Let DeckLink finish with context
 	EnterCriticalSection(&pMutex);
-	if (pDLVideoFrame != NULL)
-	{
-		pDLVideoFrame->Release();
-		pDLVideoFrame = NULL;
-	}
 
 	if (hGLRC != NULL)
 	{
@@ -263,7 +291,7 @@ bool BMDOpenGLOutput::Stop()
 	return true;
 }
 
-void BMDOpenGLOutput::RenderToDevice()
+void BMDOpenGLOutput::RenderToDevice(IDeckLinkVideoFrame* pDLVideoFrame)
 {
 	EnterCriticalSection(&pMutex);
 	void*	pFrame;
@@ -330,17 +358,42 @@ void BMDOpenGLOutput::RenderToDevice()
 ////////////////////////////////////////////
 RenderDelegate::RenderDelegate (BMDOpenGLOutput* pOwner)
 {
+	m_refCount = 1;
 	m_pOwner = pOwner;
 }
 
-RenderDelegate::~RenderDelegate ()
+RenderDelegate::~RenderDelegate()
 {
-	
+}
+
+HRESULT	RenderDelegate::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+ULONG	RenderDelegate::AddRef()
+{
+	return InterlockedIncrement((LONG*)&m_refCount);
+}
+
+ULONG	RenderDelegate::Release()
+{
+	ULONG			newRefValue;
+
+	newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+
+	return newRefValue;
 }
 
 HRESULT	RenderDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {
-	m_pOwner->RenderToDevice();
+	m_pOwner->RenderToDevice(completedFrame);
 	return S_OK;
 }
 

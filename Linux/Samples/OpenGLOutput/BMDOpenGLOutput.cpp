@@ -32,7 +32,7 @@
 #include "BMDOpenGLOutput.h"
 
 BMDOpenGLOutput::BMDOpenGLOutput()
-        : pFrameBuf(NULL), pDL(NULL), pDLOutput(NULL), pDLVideoFrame(NULL)
+	: pFrameBuf(NULL), pDL(NULL), pDLOutput(NULL)
 {
 	QGLFormat fmt;
 	fmt.setRedBufferSize(8);
@@ -51,15 +51,17 @@ BMDOpenGLOutput::~BMDOpenGLOutput()
 	{
 		pDLOutput->Release();
 		pDLOutput = NULL;
-	}		
+	}
 	if (pDL != NULL)
 	{
 		pDL->Release();
 		pDL = NULL;
-	}		
-	
-	delete pRenderDelegate;
-	pRenderDelegate = NULL;
+	}
+	if (pRenderDelegate != NULL)
+	{
+		pRenderDelegate->Release();
+		pRenderDelegate = NULL;
+	}
 
 	delete pGLScene;
 	pGLScene = NULL;
@@ -68,28 +70,45 @@ BMDOpenGLOutput::~BMDOpenGLOutput()
 	pContext = NULL;
 }
 
-void BMDOpenGLOutput::ResetFrame()
-{
-	// Fill frame with black
-	void*	pFrame;
-	pDLVideoFrame->GetBytes((void**)&pFrame);
-	memset(pFrame, 0x00, pDLVideoFrame->GetRowBytes() * uiFrameHeight);
-}
-
 void BMDOpenGLOutput::SetPreroll()
 {
-	// Set 1 second preroll
-	for (uint32_t i=0; i < uiFPS; i++)
+	IDeckLinkMutableVideoFrame* pDLVideoFrame = NULL;
+
+	// Set 3 frame preroll
+	for (uint32_t i=0; i < 3; i++)
 	{
+		// Flip frame vertical, because OpenGL rendering starts from left bottom corner
+		if (pDLOutput->CreateVideoFrame(uiFrameWidth, uiFrameHeight, uiFrameWidth*4, bmdFormat8BitBGRA, bmdFrameFlagFlipVertical, &pDLVideoFrame) != S_OK)
+			goto bail;
+
 		if (pDLOutput->ScheduleVideoFrame(pDLVideoFrame, (uiTotalFrames * frameDuration), frameDuration, frameTimescale) != S_OK)
-			return;
+			goto bail;
+
+		/* The local reference to the IDeckLinkVideoFrame is released here, as the ownership has now been passed to
+		 *  the DeckLinkAPI via ScheduleVideoFrame.
+		 *
+		 * After the API has finished with the frame, it is returned to the application via ScheduledFrameCompleted.
+		 * In ScheduledFrameCompleted, this application updates the video frame and passes it to ScheduleVideoFrame,
+		 * returning ownership to the DeckLink API.
+		 */
+		pDLVideoFrame->Release();
+		pDLVideoFrame = NULL;
+
 		uiTotalFrames++;
+	}
+	return;
+
+bail:
+	if (pDLVideoFrame)
+	{
+		pDLVideoFrame->Release();
+		pDLVideoFrame = NULL;
 	}
 }
 
 bool BMDOpenGLOutput::InitDeckLink()
 {
-	bool bSuccess = FALSE;
+	bool bSuccess = false;
 	IDeckLinkIterator* pDLIterator = NULL;
 
 	pDLIterator = CreateDeckLinkIteratorInstance();
@@ -130,6 +149,11 @@ error:
 		{
 			pDL->Release();
 			pDL = NULL;
+		}
+		if (pRenderDelegate != NULL)
+		{
+			pRenderDelegate->Release();
+			pRenderDelegate = NULL;
 		}
 	}
 	
@@ -172,11 +196,12 @@ bool BMDOpenGLOutput::InitOpenGL()
 
 uint32_t BMDOpenGLOutput::GetFPS()
 {
-    return uiFPS;
+	return uiFPS;
 }
 
 bool BMDOpenGLOutput::Start()
 {
+	bool								bSuccess = false;
 	IDeckLinkDisplayModeIterator*		pDLDisplayModeIterator;
 	IDeckLinkDisplayMode*				pDLDisplayMode = NULL;
 	
@@ -186,10 +211,8 @@ bool BMDOpenGLOutput::Start()
 		if (pDLDisplayModeIterator->Next(&pDLDisplayMode) != S_OK)
 		{
 			QMessageBox::critical(NULL,"DeckLink error.", "Cannot find video mode.");
-			pDLDisplayModeIterator->Release();
-			return false;
+			goto bail;
 		}
-		pDLDisplayModeIterator->Release();
 	}
 	
 	uiFrameWidth = pDLDisplayMode->GetWidth();
@@ -199,15 +222,10 @@ bool BMDOpenGLOutput::Start()
 	uiFPS = ((frameTimescale + (frameDuration-1))  /  frameDuration);
 	
 	if (pDLOutput->EnableVideoOutput(pDLDisplayMode->GetDisplayMode(), bmdVideoOutputFlagDefault) != S_OK)
-		return false;
-	
-	// Flip frame vertical, because OpenGL rendering starts from left bottom corner
-	if (pDLOutput->CreateVideoFrame(uiFrameWidth, uiFrameHeight, uiFrameWidth*4, bmdFormat8BitBGRA, bmdFrameFlagFlipVertical, &pDLVideoFrame) != S_OK)
-		return false;
+		goto bail;
 	
 	uiTotalFrames = 0;
 	
-	ResetFrame();
 	SetPreroll();
 
 	pContext->makeCurrent();
@@ -217,14 +235,14 @@ bool BMDOpenGLOutput::Start()
 	glGenFramebuffersEXT(1, &idFrameBuf);
 	glGenRenderbuffersEXT(1, &idColorBuf);
 	glGenRenderbuffersEXT(1, &idDepthBuf);
-		
+
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, idFrameBuf);
 	
 	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, idColorBuf);
 	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA8, uiFrameWidth, uiFrameHeight);
 	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, idDepthBuf);
 	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT, uiFrameWidth, uiFrameHeight);
-		
+
 	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, idColorBuf);
 	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, idDepthBuf);
 	
@@ -232,15 +250,31 @@ bool BMDOpenGLOutput::Start()
 	if (glStatus != GL_FRAMEBUFFER_COMPLETE_EXT)
 	{
 		QMessageBox::critical(NULL,"OpenGL initialization error.", "Cannot initialize framebuffer.");
-		return false;
+		goto bail;
 	}
 
-	pFrameBuf = (char*)malloc(pDLVideoFrame->GetRowBytes() * uiFrameHeight);
+	pFrameBuf = (char*)malloc((uiFrameWidth*4) * uiFrameHeight);
 	UpdateScene();
 
 	pDLOutput->StartScheduledPlayback(0, 100, 1.0);
 	
-	return true;
+	bSuccess = true;
+
+bail:
+
+	if (pDLDisplayMode)
+	{
+		pDLDisplayMode->Release();
+		pDLDisplayMode = NULL;
+	}
+
+	if (pDLDisplayModeIterator)
+	{
+		pDLDisplayModeIterator->Release();
+		pDLDisplayModeIterator = NULL;
+	}
+
+	return bSuccess;
 }
 
 bool BMDOpenGLOutput::Stop()
@@ -249,17 +283,12 @@ bool BMDOpenGLOutput::Stop()
 	pDLOutput->DisableVideoOutput();
 	
 	Mutex.lock();
-	if (pDLVideoFrame != NULL)
-	{
-		pDLVideoFrame->Release();
-		pDLVideoFrame = NULL;
-	}
 	
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-		
+
 	glDeleteRenderbuffersEXT(1, &idDepthBuf);
 	glDeleteRenderbuffersEXT(1, &idColorBuf);
-	glDeleteFramebuffersEXT(1, &idFrameBuf);	
+	glDeleteFramebuffersEXT(1, &idFrameBuf);
 
 	free(pFrameBuf);
 	pFrameBuf = NULL;
@@ -270,24 +299,24 @@ bool BMDOpenGLOutput::Stop()
 
 void BMDOpenGLOutput::UpdateScene()
 {
-    Mutex.lock();
+	Mutex.lock();
 
-    pContext->makeCurrent();
+	pContext->makeCurrent();
 
-    pGLScene->DrawScene(0, 0, uiFrameWidth, uiFrameHeight);
+	pGLScene->DrawScene(0, 0, uiFrameWidth, uiFrameHeight);
 
-    glReadPixels(0, 0, uiFrameWidth, uiFrameHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pFrameBuf);
+	glReadPixels(0, 0, uiFrameWidth, uiFrameHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pFrameBuf);
 
-    Mutex.unlock();
+	Mutex.unlock();
 }
 
-void BMDOpenGLOutput::RenderToDevice()
+void BMDOpenGLOutput::RenderToDevice(IDeckLinkVideoFrame* pDLVideoFrame)
 {
 	Mutex.lock();
 
 	void*	pFrame;
 
-	pDLVideoFrame->GetBytes((void**)&pFrame);	
+	pDLVideoFrame->GetBytes((void**)&pFrame);
 
 	memcpy(pFrame, pFrameBuf, pDLVideoFrame->GetRowBytes() * uiFrameHeight);
 
@@ -307,20 +336,42 @@ void BMDOpenGLOutput::RenderToDevice()
 ////////////////////////////////////////////
 RenderDelegate::RenderDelegate (BMDOpenGLOutput* pOwner)
 {
+	m_refCount = 1;
 	m_pOwner = pOwner;
 }
 
-RenderDelegate::~RenderDelegate ()
+HRESULT RenderDelegate::QueryInterface (REFIID /*iid*/, LPVOID *ppv)
 {
-
+	*ppv = NULL;
+	return E_NOINTERFACE;
 }
 
-HRESULT	RenderDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* /*completedFrame*/, BMDOutputFrameCompletionResult /*result*/)
+ULONG RenderDelegate::AddRef ()
 {
-	m_pOwner->RenderToDevice();
+	int		oldValue;
+
+	oldValue = m_refCount.fetchAndAddAcquire(1);
+	return (ULONG)(oldValue + 1);
+}
+
+ULONG RenderDelegate::Release ()
+{
+	int		oldValue;
+
+	oldValue = m_refCount.fetchAndAddAcquire(-1);
+	if (oldValue == 1)
+	{
+		delete this;
+	}
+
+	return (ULONG)(oldValue - 1);
+}
+
+HRESULT	RenderDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult /*result*/)
+{
+	m_pOwner->RenderToDevice(completedFrame);
 	return S_OK;
 }
-
 
 HRESULT	RenderDelegate::ScheduledPlaybackHasStopped ()
 {

@@ -40,23 +40,26 @@
 class CDeckLinkGLWidget : public QGLWidget, public IDeckLinkScreenPreviewCallback
 {
 private:
-        QAtomicInt refCount;
-        QMutex mutex;
-        IDeckLinkGLScreenPreviewHelper* deckLinkScreenPreviewHelper;
+	QAtomicInt refCount;
+	QMutex mutex;
+	IDeckLinkGLScreenPreviewHelper* deckLinkScreenPreviewHelper;
 
 public:
-        CDeckLinkGLWidget(QWidget* parent);
+	CDeckLinkGLWidget(QWidget* parent);
+	~CDeckLinkGLWidget();
 
-        // IDeckLinkScreenPreviewCallback
-        virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv);
-        virtual ULONG AddRef();
-        virtual ULONG Release();
-        virtual HRESULT DrawFrame(IDeckLinkVideoFrame* theFrame);
+	// IUnknown
+	virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv);
+	virtual ULONG AddRef();
+	virtual ULONG Release();
+
+	// IDeckLinkScreenPreviewCallback
+	virtual HRESULT DrawFrame(IDeckLinkVideoFrame* theFrame);
 
 protected:
-        void initializeGL();
-        void paintGL();
-        void resizeGL(int width, int height);
+	void initializeGL();
+	void paintGL();
+	void resizeGL(int width, int height);
 };
 
 #endif // __CDECKLINKGLWIDGET_H__

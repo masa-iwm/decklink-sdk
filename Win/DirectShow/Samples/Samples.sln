@@ -20,7 +20,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GMFBridge", "3rd Party\GDCL
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DecklinkIngest", "DecklinkIngest\DecklinkIngest.vcxproj", "{1AE0704C-6301-47D4-AB42-70DA0E75A538}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BaseClasses", "..\..\..\BaseClasses\baseclasses.vcxproj", "{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BaseClasses", "BaseClasses\baseclasses.vcxproj", "{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -245,26 +245,26 @@ Global
 		{1AE0704C-6301-47D4-AB42-70DA0E75A538}.Release|Win32.Build.0 = Release|Win32
 		{1AE0704C-6301-47D4-AB42-70DA0E75A538}.Release|x64.ActiveCfg = Release|x64
 		{1AE0704C-6301-47D4-AB42-70DA0E75A538}.Release|x64.Build.0 = Release|x64
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug Unicode|Win32.ActiveCfg = Debug Unicode|Win32
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug Unicode|Win32.Build.0 = Debug Unicode|Win32
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug Unicode|x64.ActiveCfg = Debug Unicode|x64
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug Unicode|x64.Build.0 = Debug Unicode|x64
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug Unicode|Win32.ActiveCfg = Debug|Win32
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug Unicode|Win32.Build.0 = Debug|Win32
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug Unicode|x64.ActiveCfg = Debug|x64
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug Unicode|x64.Build.0 = Debug|x64
 		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug|Win32.ActiveCfg = Debug|Win32
 		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug|Win32.Build.0 = Debug|Win32
 		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug|x64.ActiveCfg = Debug|x64
 		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Debug|x64.Build.0 = Debug|x64
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity Release|Win32.ActiveCfg = Intensity Release|Win32
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity Release|Win32.Build.0 = Intensity Release|Win32
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity Release|x64.ActiveCfg = Intensity Release|x64
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity Release|x64.Build.0 = Intensity Release|x64
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity|Win32.ActiveCfg = Intensity|Win32
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity|Win32.Build.0 = Intensity|Win32
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity|x64.ActiveCfg = Intensity|x64
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity|x64.Build.0 = Intensity|x64
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release Unicode|Win32.ActiveCfg = Release Unicode|Win32
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release Unicode|Win32.Build.0 = Release Unicode|Win32
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release Unicode|x64.ActiveCfg = Release Unicode|x64
-		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release Unicode|x64.Build.0 = Release Unicode|x64
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity Release|Win32.ActiveCfg = Release|Win32
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity Release|Win32.Build.0 = Release|Win32
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity Release|x64.ActiveCfg = Release|x64
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity Release|x64.Build.0 = Release|x64
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity|Win32.ActiveCfg = Release|Win32
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity|Win32.Build.0 = Release|Win32
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity|x64.ActiveCfg = Release|x64
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Intensity|x64.Build.0 = Release|x64
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release Unicode|Win32.ActiveCfg = Release|Win32
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release Unicode|Win32.Build.0 = Release|Win32
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release Unicode|x64.ActiveCfg = Release|x64
+		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release Unicode|x64.Build.0 = Release|x64
 		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release|Win32.ActiveCfg = Release|Win32
 		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release|Win32.Build.0 = Release|Win32
 		{EF2CF0E8-F7F6-400B-B9C1-EF2A830EC047}.Release|x64.ActiveCfg = Release|x64

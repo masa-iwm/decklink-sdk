@@ -57,14 +57,12 @@ private:
 	
 	IDeckLink*					pDL;
 	IDeckLinkOutput*			pDLOutput;
-	IDeckLinkMutableVideoFrame*	pDLVideoFrame;
 	
 	BMDTimeValue				frameDuration;
 	BMDTimeScale				frameTimescale;
 	uint32_t					uiFPS;
 	uint32_t					uiTotalFrames;
 
-	void ResetFrame();
 	void SetPreroll();
 
 public:
@@ -78,7 +76,7 @@ public:
 	bool Start();
 	bool Stop();
 	
-	void RenderToDevice();
+	void RenderToDevice(IDeckLinkVideoFrame* pDLVideoFrame);
 };
 
 ////////////////////////////////////////////
@@ -87,17 +85,19 @@ public:
 
 class RenderDelegate : public IDeckLinkVideoOutputCallback
 {
+private:
+	int32_t				m_refCount;
 	BMDOpenGLOutput*	m_pOwner;
 	
 public:
 	RenderDelegate (BMDOpenGLOutput* pOwner);
-	~RenderDelegate ();
 	
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ()									{return 1;}
-	virtual ULONG	STDMETHODCALLTYPE	Release ()									{return 1;}
+	// IUnknown
+	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG	STDMETHODCALLTYPE	AddRef ();
+	virtual ULONG	STDMETHODCALLTYPE	Release ();
 	
+	// IDeckLinkVideoOutputCallback
 	virtual HRESULT	STDMETHODCALLTYPE	ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 	virtual HRESULT	STDMETHODCALLTYPE	ScheduledPlaybackHasStopped ();
 };

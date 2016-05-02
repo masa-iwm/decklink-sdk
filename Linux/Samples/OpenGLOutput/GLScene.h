@@ -46,7 +46,6 @@ private:
 public:
 
 	GLScene();
-	~GLScene();
 	
 	void InitScene();
 	void DrawScene(GLint x, GLint y, GLsizei width, GLsizei height);

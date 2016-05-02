@@ -32,25 +32,25 @@
 class PreviewWindow : public IDeckLinkScreenPreviewCallback
 {
 private:
+	ULONG								m_refCount;
 	IDeckLinkGLScreenPreviewHelper*		m_deckLinkScreenPreviewHelper;
 	CStatic*							m_previewBox;
 	CDC*								m_previewBoxDC;
 	HGLRC								m_openGLctx;
-	LONG								m_refCount;
 
 	bool								initOpenGL();
+	~PreviewWindow();
 
 public:
 	PreviewWindow();
-	~PreviewWindow();
 
 	// Initialise members and OpenGL rendering context
 	bool								init(CStatic* previewBox);
 
 	// IUnknown only needs a dummy implementation
-	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ()									{return 1;}
-	virtual ULONG	STDMETHODCALLTYPE	Release ()									{return 1;}
+	virtual HRESULT STDMETHODCALLTYPE	QueryInterface(REFIID iid, LPVOID *ppv);
+	virtual ULONG	STDMETHODCALLTYPE	AddRef();
+	virtual ULONG	STDMETHODCALLTYPE	Release();
 
 	// IDeckLinkScreenPreviewCallback
 	virtual HRESULT STDMETHODCALLTYPE	DrawFrame(IDeckLinkVideoFrame* theFrame);

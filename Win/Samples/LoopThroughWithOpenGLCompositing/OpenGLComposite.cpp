@@ -47,29 +47,47 @@ OpenGLComposite::OpenGLComposite(HWND hWnd, HDC hDC, HGLRC hRC) :
 
 OpenGLComposite::~OpenGLComposite()
 {
+	// Cleanup for Capture
 	if (mDLInput != NULL)
 	{
-		// Cleanup for Capture
 		mDLInput->SetCallback(NULL);
 
 		mDLInput->Release();
 		mDLInput = NULL;
 	}
 
-	delete mCaptureDelegate;
-	delete mCaptureAllocator;
+	if (mCaptureDelegate != NULL)
+	{
+		mCaptureDelegate->Release();
+		mCaptureDelegate = NULL;
+	}
 
+	if (mCaptureAllocator != NULL)
+	{
+		mCaptureAllocator->Release();
+		mCaptureAllocator = NULL;
+	}
+
+	// Cleanup for Playout
 	if (mDLOutput != NULL)
 	{
-		// Cleanup for Playout
 		mDLOutput->SetScheduledFrameCompletionCallback(NULL);
 
 		mDLOutput->Release();
 		mDLOutput = NULL;
 	}
 
-	delete mPlayoutDelegate;
-	delete mPlayoutAllocator;
+	if (mPlayoutDelegate != NULL)
+	{
+		mPlayoutDelegate->Release();
+		mPlayoutDelegate = NULL;
+	}
+
+	if (mPlayoutAllocator != NULL)
+	{
+		mPlayoutAllocator->Release();
+		mPlayoutAllocator = NULL;
+	}
 
 	DeleteCriticalSection(&pMutex);
 }
@@ -79,6 +97,7 @@ bool OpenGLComposite::InitDeckLink()
 	bool							bSuccess = false;
 	IDeckLinkIterator*				pDLIterator = NULL;
 	IDeckLink*						pDL = NULL;
+	IDeckLinkAttributes*			deckLinkAttributes = NULL;
 	IDeckLinkDisplayModeIterator*	pDLDisplayModeIterator = NULL;
 	IDeckLinkDisplayMode*			pDLDisplayMode = NULL;
 	BMDDisplayMode					displayMode = bmdModeHD1080i5994;		// mode to use for capture and playout
@@ -94,17 +113,39 @@ bool OpenGLComposite::InitDeckLink()
 
 	while (pDLIterator->Next(&pDL) == S_OK)
 	{
-		// Use first board found as capture device, second board will be playout device
-		if (! mDLInput)
+		BOOL supportsFullDuplex = FALSE;
+
+		if (result = pDL->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes) != S_OK)
 		{
-			if (pDL->QueryInterface(IID_IDeckLinkInput, (void**)&mDLInput) != S_OK)
-				goto error;
+			printf("Could not obtain the IDeckLinkAttributes interface - result %08x\n", result);
+			pDL->Release();
+			pDL = NULL;
+			continue;
 		}
-		else if (! mDLOutput)
+
+		if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsFullDuplex, &supportsFullDuplex) != S_OK)
+			supportsFullDuplex = FALSE;
+
+		deckLinkAttributes->Release();
+		deckLinkAttributes = NULL;
+
+		// Use a full duplex device as capture and playback, or half-duplex device
+		// as capture or playback.
+		bool inputUsed = false;
+		if (!mDLInput && pDL->QueryInterface(IID_IDeckLinkInput, (void**)&mDLInput) == S_OK)
+			inputUsed = true;
+
+		if (!mDLOutput && (!inputUsed || supportsFullDuplex))
 		{
 			if (pDL->QueryInterface(IID_IDeckLinkOutput, (void**)&mDLOutput) != S_OK)
-				goto error;
+				mDLOutput = NULL;
 		}
+
+		pDL->Release();
+		pDL = NULL;
+
+		if (mDLOutput && mDLInput)
+			break;
 	}
 
 	if (! mDLOutput || ! mDLInput)
@@ -128,6 +169,7 @@ bool OpenGLComposite::InitDeckLink()
 		pDLDisplayMode = NULL;
 	}
 	pDLDisplayModeIterator->Release();
+	pDLDisplayModeIterator = NULL;
 
 	if (pDLDisplayMode == NULL)
 	{
@@ -231,6 +273,12 @@ error:
 	{
 		pDL->Release();
 		pDL = NULL;
+	}
+
+	if (pDLDisplayMode != NULL)
+	{
+		pDLDisplayMode->Release();
+		pDLDisplayMode = NULL;
 	}
 
 	if (pDLIterator != NULL)
@@ -410,10 +458,6 @@ void OpenGLComposite::PlayoutFrameCompleted(IDeckLinkVideoFrame* completedFrame,
 
 	void*	pFrame;
 	outputVideoFrame->GetBytes(&pFrame);
-
-	long rowbytes = outputVideoFrame->GetRowBytes();
-	long height = outputVideoFrame->GetHeight();
-	long memSize = rowbytes * height;
 
 	// make GL context current in this thread
 	wglMakeCurrent( hGLDC, hGLRC );
@@ -838,8 +882,27 @@ HRESULT STDMETHODCALLTYPE	PinnedMemoryAllocator::Decommit ()
 ////////////////////////////////////////////
 // DeckLink Capture Delegate Class
 ////////////////////////////////////////////
-CaptureDelegate::CaptureDelegate(OpenGLComposite* pOwner) : m_pOwner(pOwner)
+CaptureDelegate::CaptureDelegate(OpenGLComposite* pOwner) :
+	m_pOwner(pOwner),
+	mRefCount(1)
 {
+}
+
+HRESULT	CaptureDelegate::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+ULONG	CaptureDelegate::AddRef()
+{
+	return InterlockedIncrement(&mRefCount);
+}
+ULONG	CaptureDelegate::Release()
+{
+	int newCount = InterlockedDecrement(&mRefCount);
+	if (newCount == 0)
+		delete this;
+	return newCount;
 }
 
 HRESULT	CaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* inputFrame, IDeckLinkAudioInputPacket* /*audioPacket*/)
@@ -864,26 +927,45 @@ HRESULT	CaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvent
 ////////////////////////////////////////////
 // DeckLink Playout Delegate Class
 ////////////////////////////////////////////
-PlayoutDelegate::PlayoutDelegate (OpenGLComposite* pOwner) : m_pOwner(pOwner)
+PlayoutDelegate::PlayoutDelegate(OpenGLComposite* pOwner) :
+	m_pOwner(pOwner),
+	mRefCount(1)
 {
+}
+
+HRESULT	PlayoutDelegate::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+ULONG	PlayoutDelegate::AddRef()
+{
+	return InterlockedIncrement(&mRefCount);
+}
+ULONG	PlayoutDelegate::Release()
+{
+	int newCount = InterlockedDecrement(&mRefCount);
+	if (newCount == 0)
+		delete this;
+	return newCount;
 }
 
 HRESULT	PlayoutDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {
-	// Don't log bmdOutputFrameFlushed result since it is expected when Stop() is called
-	if (result != bmdOutputFrameCompleted && result != bmdOutputFrameFlushed)
+	switch (result)
 	{
-		switch (result)
-		{
-			case bmdOutputFrameDisplayedLate:
-				OutputDebugStringA("ScheduledFrameCompleted() frame did not complete: Frame Displayed Late\n");
-				break;
-			case bmdOutputFrameDropped:
-				OutputDebugStringA("ScheduledFrameCompleted() frame did not complete: Frame Dropped\n");
-				break;
-			default:
-				OutputDebugStringA("ScheduledFrameCompleted() frame did not complete: Unknown error\n");
-		}
+		case bmdOutputFrameDisplayedLate:
+			OutputDebugStringA("ScheduledFrameCompleted() frame did not complete: Frame Displayed Late\n");
+			break;
+		case bmdOutputFrameDropped:
+			OutputDebugStringA("ScheduledFrameCompleted() frame did not complete: Frame Dropped\n");
+			break;
+		case bmdOutputFrameCompleted:
+		case bmdOutputFrameFlushed:
+			// Don't log bmdOutputFrameFlushed result since it is expected when Stop() is called
+			break;
+		default:
+			OutputDebugStringA("ScheduledFrameCompleted() frame did not complete: Unknown error\n");
 	}
 
 	m_pOwner->PlayoutFrameCompleted(completedFrame, result);

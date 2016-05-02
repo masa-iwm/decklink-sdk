@@ -141,7 +141,7 @@
     <Midl Include="DecklinkFilters.idl">
       <Filter>DLL Source Files\Interface</Filter>
     </Midl>
-    <Midl Include="..\..\..\DecklinkInterface.idl">
+    <Midl Include="..\include\DecklinkInterface.idl">
       <Filter>DLL Source Files\Interface</Filter>
     </Midl>
   </ItemGroup>

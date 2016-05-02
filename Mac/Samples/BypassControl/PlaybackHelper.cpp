@@ -27,6 +27,7 @@
 
 #include "PlaybackHelper.h"
 #include <unistd.h>
+#include <libkern/OSAtomic.h>
 
 #define PIXEL_FMT			bmdFormat8BitYUV
 #define	BYPASS_TIMEOUT_MS	40
@@ -92,7 +93,7 @@ bool	PlaybackHelper::createFrames()
 		{
 			fprintf(stderr, "Could not obtain frame %d\n", (i+1));
 			goto bail;
-		}		
+		}
 		
 		// fill in frame buffer
 		fillFrame(i);				  
@@ -177,14 +178,17 @@ bool	PlaybackHelper::setupDeckLinkOutput()
 			m_height = deckLinkDisplayMode->GetHeight();
 			deckLinkDisplayMode->GetFrameRate(&m_frameDuration, &m_timeScale);
 			deckLinkDisplayMode->Release();
+			deckLinkDisplayMode = NULL;
 			
 			break;
 		}
 		
 		deckLinkDisplayMode->Release();
+		deckLinkDisplayMode = NULL;
     }
 	
-    displayModeIterator->Release();
+	displayModeIterator->Release();
+	displayModeIterator = NULL;
 	
 	if (m_width == -1)
 	{
@@ -306,13 +310,37 @@ HRESULT	PlaybackHelper::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedF
 	return S_OK;
 }
 
+HRESULT	PlaybackHelper::QueryInterface (REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+ULONG	PlaybackHelper::AddRef ()
+{
+	return OSAtomicIncrement32(&m_refCount);
+}
+
+ULONG	PlaybackHelper::Release ()
+{
+	int32_t		newRefValue;
+	
+	newRefValue = OSAtomicDecrement32(&m_refCount);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+	
+	return newRefValue;
+}
 
 #pragma mark CTOR DTOR
 /*
  * CTOR DTOR
  */
 PlaybackHelper::PlaybackHelper(IDeckLink *deckLink)
-: m_deckLink(deckLink), m_deckLinkOutput(NULL), m_playbackStarted(false)
+: m_refCount(1), m_deckLink(deckLink), m_deckLinkOutput(NULL), m_playbackStarted(false)
 , m_videoFrames(NULL), m_nextFrameIndex(0), m_totalFrameScheduled(0)
 , m_width(-1), m_height(-1), m_timeScale(0), m_frameDuration(0), m_configuration(NULL)
 {
@@ -381,7 +409,10 @@ bool	PlaybackHelper::init()
 	
 bail:
 	if (attributes)
+	{
 		attributes->Release();
+		attributes = NULL;
+	}
 	
 	return result;
 }

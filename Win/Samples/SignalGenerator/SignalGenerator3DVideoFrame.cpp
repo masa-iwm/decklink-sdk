@@ -86,7 +86,7 @@ ULONG SignalGenerator3DVideoFrame::Release(void)
 {
 	ULONG newRefValue = _InterlockedDecrement((volatile long*)&m_refCount);
 
-	if (! newRefValue)
+	if (newRefValue == 0)
 		delete this;
 	return newRefValue;
 }

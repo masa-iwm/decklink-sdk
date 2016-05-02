@@ -44,42 +44,43 @@
 class Timecode
 {
 public:
-		Timecode(int f) 
-			: fps(f),frames_(0),seconds_(0),minutes_(0),hours_(0)
-			{ return; }
-		void update() 
-		{ 
-			if (frames_ >= (unsigned)fps - 1)
-			{
-				frames_ = 0;
-				seconds_++;
-			}
-			else
-				frames_++;
-			
-			if (seconds_ >= 60)
-			{
-				seconds_ = 0;
-				minutes_++;
-			}
-			
-			if (minutes_ >= 60)
-			{
-				minutes_ = 0;
-				hours_++;
-			}
-			if (hours_ >= 24)
-			{
-				frames_ = 0;
-				seconds_ = 0;
-				minutes_ = 0;
-				hours_ = 0;
-			}
+	Timecode(int f)
+		: fps(f),frames_(0),seconds_(0),minutes_(0),hours_(0)
+	{
+	}
+	void update()
+	{
+		if (frames_ >= (unsigned)fps - 1)
+		{
+			frames_ = 0;
+			seconds_++;
 		}
-		int hours() { return hours_; }
-		int minutes() { return minutes_; }
-		int seconds() { return seconds_; }
-		int frames() { return frames_; }
+		else
+			frames_++;
+
+		if (seconds_ >= 60)
+		{
+			seconds_ = 0;
+			minutes_++;
+		}
+
+		if (minutes_ >= 60)
+		{
+			minutes_ = 0;
+			hours_++;
+		}
+		if (hours_ >= 24)
+		{
+			frames_ = 0;
+			seconds_ = 0;
+			minutes_ = 0;
+			hours_ = 0;
+		}
+	}
+	int hours() const { return hours_; }
+	int minutes() const { return minutes_; }
+	int seconds() const { return seconds_; }
+	int frames() const { return frames_; }
 private:
 	int fps;
 	unsigned long frames_;
@@ -88,7 +89,8 @@ private:
 	int hours_;
 };
 
-enum OutputSignal {
+enum OutputSignal
+{
 	kOutputSignalPip		= 0,
 	kOutputSignalDrop		= 1
 };
@@ -97,10 +99,12 @@ enum OutputSignal {
 class CDeckLinkGLWidget;
 class PlaybackDelegate;
 
-class SignalGenerator : public QDialog {
-Q_OBJECT
+class SignalGenerator : public QDialog
+{
+	Q_OBJECT
 public:
 	SignalGenerator();
+	~SignalGenerator();
 	Ui::SignalGeneratorDialog *ui;
 	CDeckLinkGLWidget *previewView;
 	
@@ -134,7 +138,7 @@ public:
 
 	void setup();
 
- 	void scheduleNextFrame(bool prerolling);
+	void scheduleNextFrame(bool prerolling);
 	void writeNextAudioSamples();
 	void enableInterface(bool);
 
@@ -150,16 +154,17 @@ private:
 
 class PlaybackDelegate : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
 {
-	SignalGenerator*				mController;
+	QAtomicInt					mRefCount;
+	SignalGenerator*			mController;
 	IDeckLinkOutput*			mDeckLinkOutput;
 	
 public:
-						PlaybackDelegate (SignalGenerator* owner, IDeckLinkOutput* deckLinkOutput);
+	PlaybackDelegate (SignalGenerator* owner, IDeckLinkOutput* deckLinkOutput);
 	
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT		QueryInterface (REFIID, LPVOID *)	{return E_NOINTERFACE;}
-	virtual ULONG		AddRef ()									{return 1;}
-	virtual ULONG		Release ()									{return 1;}
+	// IUnknown
+	virtual HRESULT		QueryInterface (REFIID, LPVOID *);
+	virtual ULONG		AddRef ();
+	virtual ULONG		Release ();
 	
 	virtual HRESULT		ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 	virtual HRESULT		ScheduledPlaybackHasStopped ();

@@ -30,6 +30,7 @@
 //
 
 #import <CoreFoundation/CFString.h>
+#include <libkern/OSAtomic.h>
 
 #import "SyncController.h"
 #import "SignalGenerator3DVideoFrame.h"
@@ -85,7 +86,11 @@ static uint32_t gHD75pcColourBars[8] =
 		HRESULT					hr;
 
 		if (deckLinkDisplayMode->GetName(&modeName) != S_OK)
+		{
+			deckLinkDisplayMode->Release();
+			deckLinkDisplayMode = NULL;
 			continue;
+		}
 
 		// Add this item to the video format poup menu
 		[videoFormatPopup addItemWithTitle:(NSString*)modeName];
@@ -114,6 +119,7 @@ static uint32_t gHD75pcColourBars[8] =
 	}
 
 	displayModeIterator->Release();
+	displayModeIterator = NULL;
 
 	if ([videoFormatPopup numberOfItems] == 0)
 		[startButton setEnabled:false];
@@ -162,11 +168,20 @@ static uint32_t gHD75pcColourBars[8] =
 
 bail:
 	if (referenceBlack)
+	{
 		referenceBlack->Release();
+		referenceBlack = NULL;
+	}
 	if (scheduleBlack)
+	{
 		scheduleBlack->Release();
+		scheduleBlack = NULL;
+	}
 	if (frameConverter)
+	{
 		frameConverter->Release();
+		frameConverter = NULL;
+	}
 
 	return ret;
 }
@@ -229,15 +244,30 @@ bail:
 
 bail:
 	if (referenceBarsLeft)
+	{
 		referenceBarsLeft->Release();
+		referenceBarsLeft = NULL;
+	}
 	if (referenceBarsRight)
+	{
 		referenceBarsRight->Release();
+		referenceBarsRight = NULL;
+	}
 	if (scheduleBarsLeft)
+	{
 		scheduleBarsLeft->Release();
+		scheduleBarsLeft = NULL;
+	}
 	if (scheduleBarsRight)
+	{
 		scheduleBarsRight->Release();
+		scheduleBarsRight = NULL;
+	}
 	if (frameConverter)
+	{
 		frameConverter->Release();
+		frameConverter = NULL;
+	}
 
 	return ret;
 }
@@ -302,7 +332,10 @@ bail:
 	}
 	
 	if (deckLinkIterator != NULL)
+	{
 		deckLinkIterator->Release();
+		deckLinkIterator = NULL;
+	}
 }
 
 - (void)enableInterface:(BOOL)enable
@@ -502,6 +535,25 @@ PlaybackDelegate::PlaybackDelegate (SyncController* owner, IDeckLinkOutput* deck
 {
 	mController = owner;
 	mDeckLinkOutput = deckLinkOutput;
+}
+
+HRESULT	PlaybackDelegate::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+ULONG	PlaybackDelegate::AddRef(void)
+{
+	return OSAtomicIncrement32(&m_refCount);
+}
+
+ULONG	PlaybackDelegate::Release(void)
+{
+	ULONG newRefValue = OSAtomicDecrement32(&m_refCount);
+	if (newRefValue == 0)
+		delete this;
+	return newRefValue;
 }
 
 HRESULT		PlaybackDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)

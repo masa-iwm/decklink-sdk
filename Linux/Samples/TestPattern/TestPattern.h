@@ -28,7 +28,8 @@
 #include "DeckLinkAPI.h"
 #include "Config.h"
 
-enum OutputSignal {
+enum OutputSignal
+{
 	kOutputSignalPip		= 0,
 	kOutputSignalDrop		= 1
 };
@@ -36,10 +37,8 @@ enum OutputSignal {
 
 class TestPattern : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
 {
-public:
-	TestPattern(BMDConfig *config);
-
-protected:
+private:
+	int32_t					m_refCount;
 	BMDConfig*				m_config;
 	bool					m_running;
 	IDeckLink*				m_deckLink;
@@ -63,7 +62,7 @@ protected:
 	unsigned long			m_audioBufferOffset;
 	BMDAudioSampleRate		m_audioSampleRate;
 
-	// Generated message map functions
+	~TestPattern();
 
 	// Signal Generator Implementation
 	void			StartRunning();
@@ -74,24 +73,14 @@ protected:
 	void			PrintStatusLine();
 
 public:
-	bool Init();
+	TestPattern(BMDConfig *config);
+	bool Run();
 
 	// *** DeckLink API implementation of IDeckLinkVideoOutputCallback IDeckLinkAudioOutputCallback *** //
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv)
-	{
-		return E_NOINTERFACE;
-	}
-
-	virtual ULONG STDMETHODCALLTYPE AddRef()
-	{
-		return 1;
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release()
-	{
-		return 1;
-	}
+	// IUnknown
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
+	virtual ULONG STDMETHODCALLTYPE AddRef();
+	virtual ULONG STDMETHODCALLTYPE Release();
 
 	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 	virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped();

@@ -41,7 +41,7 @@ class CStreamingPreviewDlg : public CDialog,
 {
 // Construction
 public:
-	CStreamingPreviewDlg(CWnd* pParent = NULL);	// standard constructor
+	explicit CStreamingPreviewDlg(CWnd* pParent = NULL);	// standard constructor
 
 // Dialog Data
 	enum { IDD = IDD_STREAMINGPREVIEW_DIALOG };
@@ -51,7 +51,8 @@ public:
 
 
 // Implementation
-protected:
+private:
+	ULONG							m_refCount;
 	HICON							m_hIcon;
 	//
 	CButton							m_startButton;
@@ -71,9 +72,12 @@ protected:
 	PreviewWindow*					m_previewWindow;
 	DecoderMF*						m_decoder;
 
+	~CStreamingPreviewDlg();
+
 	// Generated message map functions
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
+	afx_msg void OnClose();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 
@@ -95,11 +99,10 @@ private:
 	void							OnPreviewWindowClosed(PreviewWindow* previewWindow);
 
 public:
-	// IUknown
-	// We need to correctly implement QueryInterface, but not the AddRef/Release
+	// IUnknown
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID* ppv);
-	virtual ULONG STDMETHODCALLTYPE		AddRef ()	{return 1;}
-	virtual ULONG STDMETHODCALLTYPE		Release ()	{return 1;}
+	virtual ULONG STDMETHODCALLTYPE		AddRef ();
+	virtual ULONG STDMETHODCALLTYPE		Release ();
 
 public:
 	// IBMDStreamingDeviceNotificationCallback
@@ -109,6 +112,7 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE StreamingDeviceFirmwareUpdateProgress(IDeckLink* device, unsigned char percent);
 
 public:
+	// IBMDStreamingH264InputCallback
 	virtual HRESULT STDMETHODCALLTYPE H264NALPacketArrived(IBMDStreamingH264NALPacket* nalPacket);
 	virtual HRESULT STDMETHODCALLTYPE H264AudioPacketArrived(IBMDStreamingAudioPacket* audioPacket);
 	virtual HRESULT STDMETHODCALLTYPE MPEG2TSPacketArrived(IBMDStreamingMPEG2TSPacket* mpeg2TSPacket);

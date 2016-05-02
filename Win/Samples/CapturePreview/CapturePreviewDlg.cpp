@@ -134,7 +134,7 @@ void CCapturePreviewDlg::OnClose()
 
 	if (m_previewWindow != NULL)
 	{
-		delete m_previewWindow;
+		m_previewWindow->Release();
 		m_previewWindow = NULL;
 	}
 

@@ -26,6 +26,7 @@
  */
 #include "capture.h"
 #include "common.h"
+#include <libkern/OSAtomic.h>
 
 
 // settings for NTSC 29.97 - UYVY pixel format
@@ -64,14 +65,17 @@ bool	CaptureHelper::setupDeckLinkInput()
 			m_height = deckLinkDisplayMode->GetHeight();
 			deckLinkDisplayMode->GetFrameRate(&m_frameDuration, &m_timeScale);
 			deckLinkDisplayMode->Release();
+			deckLinkDisplayMode = NULL;
 			
 			break;
 		}
 		
 		deckLinkDisplayMode->Release();
+		deckLinkDisplayMode = NULL;
     }
 	
-    displayModeIterator->Release();
+	displayModeIterator->Release();
+	displayModeIterator = NULL;
 	
 	if (m_width == -1)
 	{
@@ -279,9 +283,35 @@ HRESULT	CaptureHelper::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrived
 		}
 		
 		timecode->Release();
+		timecode = NULL;
 	}
 	
 	return S_OK;
+}
+
+HRESULT	CaptureHelper::QueryInterface (REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+ULONG	CaptureHelper::AddRef ()
+{
+	return OSAtomicIncrement32(&m_refCount);
+}
+
+ULONG	CaptureHelper::Release ()
+{
+	int32_t		newRefValue;
+	
+	newRefValue = OSAtomicDecrement32(&m_refCount);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+	
+	return newRefValue;
 }
 
 #pragma mark CTOR / DTOR
@@ -289,7 +319,7 @@ HRESULT	CaptureHelper::VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrived
  * CTOR / DTOR
  */
 CaptureHelper::CaptureHelper(IDeckLink *deckLink)
-	: m_deckLink(deckLink), m_deckControl(NULL), m_deckLinkInput(NULL)
+	: m_refCount(1), m_deckLink(deckLink), m_deckControl(NULL), m_deckLinkInput(NULL)
 	, m_waitingForDeckConnected(false), m_waitingForCaptureEnd(false), m_captureStarted(false)
 	, m_width(-1), m_height(-1), m_timeScale(0), m_frameDuration(0), m_inPointFrameCount(0)
 	, m_outPointFrameCount(0)
@@ -318,7 +348,11 @@ CaptureHelper::~CaptureHelper()
 	pthread_cond_destroy(&m_condition);
 	pthread_mutex_destroy(&m_mutex);
 	
-	m_deckLink->Release();
+	if (m_deckLink)
+	{
+		m_deckLink->Release();
+		m_deckLink = NULL;
+	}
 }
 
 // Call init() before any other method. if init() fails, destroy the object

@@ -42,13 +42,20 @@
 
 
 CStreamingPreviewDlg::CStreamingPreviewDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CStreamingPreviewDlg::IDD, pParent)
+	: CDialog(CStreamingPreviewDlg::IDD, pParent), m_refCount(1)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
 	m_streamingDiscovery = NULL;
 	m_streamingDevice = NULL;
 	m_streamingDeviceInput = NULL;
+
+	m_previewWindow = NULL;
+	m_decoder = NULL;
+}
+
+CStreamingPreviewDlg::~CStreamingPreviewDlg()
+{
 }
 
 void CStreamingPreviewDlg::DoDataExchange(CDataExchange* pDX)
@@ -68,6 +75,7 @@ BEGIN_MESSAGE_MAP(CStreamingPreviewDlg, CDialog)
 	ON_CBN_SELENDOK(IDC_COMBO_INPUT_MODE, &CStreamingPreviewDlg::OnInputModeChanged)
 	ON_MESSAGE(WM_PREVIEWSTART, &CStreamingPreviewDlg::StartPreview)
 	ON_MESSAGE(WM_PREVIEWSTOP, &CStreamingPreviewDlg::StopPreview)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -155,6 +163,41 @@ void CStreamingPreviewDlg::OnPaint()
 	{
 		CDialog::OnPaint();
 	}
+}
+
+void CStreamingPreviewDlg::OnClose()
+{
+	if (m_decoder != NULL)
+	{
+		m_decoder->SetPreviewWindow(NULL);
+		delete m_decoder;
+		m_decoder = NULL;
+	}
+
+	delete m_previewWindow;
+	m_previewWindow = NULL;
+
+	if (m_streamingDeviceInput != NULL)
+	{
+		m_streamingDeviceInput->SetCallback(NULL);
+		m_streamingDeviceInput->Release();
+		m_streamingDeviceInput = NULL;
+	}
+
+	if (m_streamingDevice != NULL)
+	{
+		m_streamingDevice->Release();
+		m_streamingDevice = NULL;
+	}
+
+	if (m_streamingDiscovery != NULL)
+	{
+		m_streamingDiscovery->UninstallDeviceNotifications();
+		m_streamingDiscovery->Release();
+		m_streamingDiscovery = NULL;
+	}
+
+	CDialog::OnClose();
 }
 
 // The system calls this function to obtain the cursor to display while the user drags
@@ -452,6 +495,25 @@ HRESULT CStreamingPreviewDlg::QueryInterface(REFIID iid, LPVOID* ppv)
 	}
 	
 	return result;	
+}
+
+ULONG CStreamingPreviewDlg::AddRef()
+{
+	return InterlockedIncrement((LONG*)&m_refCount);
+}
+
+ULONG CStreamingPreviewDlg::Release()
+{
+	ULONG			newRefValue;
+
+	newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+
+	return newRefValue;
 }
 
 HRESULT CStreamingPreviewDlg::StreamingDeviceArrived(IDeckLink* device)

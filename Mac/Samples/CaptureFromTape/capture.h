@@ -38,8 +38,9 @@
 class CaptureHelper : public IDeckLinkDeckControlStatusCallback , public IDeckLinkInputCallback
 {
 private:
+	int32_t						m_refCount;
 	IDeckLink *					m_deckLink;
-	IDeckLinkDeckControl *				m_deckControl;
+	IDeckLinkDeckControl *		m_deckControl;
 	IDeckLinkInput *			m_deckLinkInput;
 	
 	// The mutex and condition variable are used to wait for
@@ -61,6 +62,8 @@ private:
 	uint32_t					m_inPointFrameCount;
 	uint32_t					m_outPointFrameCount;
 	
+	virtual			~CaptureHelper();
+	
 	// setup the IDeckLinkInput interface (video standard, pixel format, callback object, ...)
 	bool			setupDeckLinkInput();
 	// setup the IDeckLinkDeckControl interface
@@ -72,7 +75,6 @@ private:
 	
 public:
 	CaptureHelper(IDeckLink *deckLink);
-	virtual			~CaptureHelper();
 	
 	// init() must be called after the constructor.
 	// if init() fails, call the destructor
@@ -92,9 +94,9 @@ public:
 	virtual HRESULT	VideoInputFrameArrived (IDeckLinkVideoInputFrame* arrivedFrame, IDeckLinkAudioInputPacket*);
 	
 	// IUnknown
-	HRESULT			QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	ULONG			AddRef ()									{return 1;}
-	ULONG			Release ()									{return 1;}
+	HRESULT			QueryInterface (REFIID iid, LPVOID *ppv);
+	ULONG			AddRef ();
+	ULONG			Release ();
 };
 
 #endif		// __capture_h__

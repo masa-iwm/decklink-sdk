@@ -33,7 +33,8 @@
 #import "DeckLinkAPI.h"
 #import "SignalGenerator3DVideoFrame.h"
 
-enum OutputSignal {
+enum OutputSignal
+{
 	kOutputSignalPip		= 0,
 	kOutputSignalDrop		= 1
 };
@@ -88,20 +89,24 @@ class PlaybackDelegate;
 
 class PlaybackDelegate : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
 {
+private:
+	int32_t						m_refCount;
 	SyncController*				mController;
 	IDeckLinkOutput*			mDeckLinkOutput;
 	
 public:
-						PlaybackDelegate (SyncController* owner, IDeckLinkOutput* deckLinkOutput);
+	PlaybackDelegate (SyncController* owner, IDeckLinkOutput* deckLinkOutput);
 	
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT		QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	virtual ULONG		AddRef ()									{return 1;}
-	virtual ULONG		Release ()									{return 1;}
+	// IUnknown
+	virtual HRESULT		QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG		AddRef ();
+	virtual ULONG		Release ();
 	
+	// IDeckLinkVideoOutputCallback
 	virtual HRESULT		ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 	virtual HRESULT		ScheduledPlaybackHasStopped ();
 	
+	// IDeckLinkAudioOutputCallback
 	virtual HRESULT		RenderAudioSamples (bool preroll);
 };
 

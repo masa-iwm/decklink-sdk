@@ -77,10 +77,12 @@ int main (int argc, char * const argv[])
 	
 	
 bail:
-	delete helper;
 		
 	if (deckLink)
 		deckLink->Release();
+	
+	if(helper)
+		helper->Release();
 	
     return 0;
 }

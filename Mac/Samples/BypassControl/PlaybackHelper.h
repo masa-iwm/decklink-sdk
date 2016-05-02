@@ -39,6 +39,7 @@
 class PlaybackHelper : public IDeckLinkVideoOutputCallback
 {
 private:
+	int32_t						m_refCount;
 	IDeckLink *					m_deckLink;
 	IDeckLinkOutput *			m_deckLinkOutput;
 	IDeckLinkConfiguration *	m_configuration;
@@ -88,9 +89,9 @@ public:
 	virtual HRESULT	ScheduledPlaybackHasStopped () {return S_OK;};
 	
 	// IUnknown
-	HRESULT			QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	ULONG			AddRef ()									{return 1;}
-	ULONG			Release ()									{return 1;}
+	HRESULT			QueryInterface (REFIID iid, LPVOID *ppv);
+	ULONG			AddRef ();
+	ULONG			Release ();
 };
 
 

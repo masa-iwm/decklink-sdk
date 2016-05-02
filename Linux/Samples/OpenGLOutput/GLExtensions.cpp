@@ -33,26 +33,25 @@
 
 bool GLExtensions::ResolveExtensions(const QGLContext *context)
 {
+	pGenFramebuffersEXT = (BMD_glGenFramebuffersEXT) context->getProcAddress(QLatin1String("glGenFramebuffersEXT"));
+	pGenRenderbuffersEXT = (BMD_glGenRenderbuffersEXT) context->getProcAddress(QLatin1String("glGenRenderbuffersEXT"));
+	pBindRenderbufferEXT = (BMD_glBindRenderbufferEXT) context->getProcAddress(QLatin1String("glBindRenderbufferEXT"));
+	pRenderbufferStorageEXT = (BMD_glRenderbufferStorageEXT) context->getProcAddress(QLatin1String("glRenderbufferStorageEXT"));
+	pDeleteFramebuffersEXT = (BMD_glDeleteFramebuffersEXT) context->getProcAddress(QLatin1String("glDeleteFramebuffersEXT"));
+	pDeleteRenderbuffersEXT = (BMD_glDeleteRenderbuffersEXT) context->getProcAddress(QLatin1String("glDeleteRenderbuffersEXT"));
+	pBindFramebufferEXT = (BMD_glBindFramebufferEXT) context->getProcAddress(QLatin1String("glBindFramebufferEXT"));
+	pFramebufferTexture2DEXT = (BMD_glFramebufferTexture2DEXT) context->getProcAddress(QLatin1String("glFramebufferTexture2DEXT"));
+	pFramebufferRenderbufferEXT = (BMD_glFramebufferRenderbufferEXT) context->getProcAddress(QLatin1String("glFramebufferRenderbufferEXT"));
+	pCheckFramebufferStatusEXT = (BMD_glCheckFramebufferStatusEXT) context->getProcAddress(QLatin1String("glCheckFramebufferStatusEXT"));
 
-        pGenFramebuffersEXT = (BMD_glGenFramebuffersEXT) context->getProcAddress(QLatin1String("glGenFramebuffersEXT"));
-        pGenRenderbuffersEXT = (BMD_glGenRenderbuffersEXT) context->getProcAddress(QLatin1String("glGenRenderbuffersEXT"));
-        pBindRenderbufferEXT = (BMD_glBindRenderbufferEXT) context->getProcAddress(QLatin1String("glBindRenderbufferEXT"));
-        pRenderbufferStorageEXT = (BMD_glRenderbufferStorageEXT) context->getProcAddress(QLatin1String("glRenderbufferStorageEXT"));
-        pDeleteFramebuffersEXT = (BMD_glDeleteFramebuffersEXT) context->getProcAddress(QLatin1String("glDeleteFramebuffersEXT"));
-        pDeleteRenderbuffersEXT = (BMD_glDeleteRenderbuffersEXT) context->getProcAddress(QLatin1String("glDeleteRenderbuffersEXT"));
-        pBindFramebufferEXT = (BMD_glBindFramebufferEXT) context->getProcAddress(QLatin1String("glBindFramebufferEXT"));
-        pFramebufferTexture2DEXT = (BMD_glFramebufferTexture2DEXT) context->getProcAddress(QLatin1String("glFramebufferTexture2DEXT"));
-        pFramebufferRenderbufferEXT = (BMD_glFramebufferRenderbufferEXT) context->getProcAddress(QLatin1String("glFramebufferRenderbufferEXT"));
-        pCheckFramebufferStatusEXT = (BMD_glCheckFramebufferStatusEXT) context->getProcAddress(QLatin1String("glCheckFramebufferStatusEXT"));
-
-        return glGenFramebuffersEXT
-                && glGenRenderbuffersEXT
-                && glBindRenderbufferEXT
-                && glRenderbufferStorageEXT
-                && glDeleteFramebuffersEXT
-                && glDeleteRenderbuffersEXT
-                && glBindFramebufferEXT
-                && glFramebufferTexture2DEXT
-                && glFramebufferRenderbufferEXT
-                && glCheckFramebufferStatusEXT;
+	return glGenFramebuffersEXT
+			&& glGenRenderbuffersEXT
+			&& glBindRenderbufferEXT
+			&& glRenderbufferStorageEXT
+			&& glDeleteFramebuffersEXT
+			&& glDeleteRenderbuffersEXT
+			&& glBindFramebufferEXT
+			&& glFramebufferTexture2DEXT
+			&& glFramebufferRenderbufferEXT
+			&& glCheckFramebufferStatusEXT;
 }

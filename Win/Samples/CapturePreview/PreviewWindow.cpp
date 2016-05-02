@@ -31,7 +31,7 @@
 #include "PreviewWindow.h"
 
 PreviewWindow::PreviewWindow()
-: m_deckLinkScreenPreviewHelper(NULL), m_refCount(1), m_previewBox(NULL), m_previewBoxDC(NULL), m_openGLctx(NULL)
+ : m_refCount(1), m_deckLinkScreenPreviewHelper(NULL), m_previewBox(NULL), m_previewBoxDC(NULL), m_openGLctx(NULL)
 {}
 
 PreviewWindow::~PreviewWindow()
@@ -113,6 +113,29 @@ bool		PreviewWindow::initOpenGL()
 	wglMakeCurrent(NULL, NULL);
 
 	return result;
+}
+
+HRESULT 	PreviewWindow::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+ULONG		PreviewWindow::AddRef()
+{
+	return InterlockedIncrement((LONG*)&m_refCount);
+}
+ULONG		PreviewWindow::Release()
+{
+	ULONG		newRefValue;
+
+	newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+
+	return newRefValue;
 }
 
 HRESULT			PreviewWindow::DrawFrame(IDeckLinkVideoFrame* theFrame)

@@ -55,7 +55,7 @@ static DWORD gHD75pcColourBars[8] =
 
 
 CSignalGeneratorDlg::CSignalGeneratorDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CSignalGeneratorDlg::IDD, pParent)
+	: CDialog(CSignalGeneratorDlg::IDD, pParent), m_refCount(1)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	
@@ -67,6 +67,22 @@ CSignalGeneratorDlg::CSignalGeneratorDlg(CWnd* pParent /*=NULL*/)
 	m_videoFrameBlack = NULL;
 	m_videoFrameBars = NULL;
 	m_audioBuffer = NULL;
+}
+CSignalGeneratorDlg::~CSignalGeneratorDlg()
+{
+	if (m_running)
+		StopRunning();
+
+	if (m_deckLinkOutput)
+	{
+		m_deckLinkOutput->Release();
+		m_deckLinkOutput = NULL;
+	}
+	if (m_deckLink)
+	{
+		m_deckLink->Release();
+		m_deckLink = NULL;
+	}
 }
 
 void CSignalGeneratorDlg::DoDataExchange(CDataExchange* pDX)
@@ -87,6 +103,7 @@ BEGIN_MESSAGE_MAP(CSignalGeneratorDlg, CDialog)
 	//}}AFX_MSG_MAP
 	ON_BN_CLICKED(IDOK, &CSignalGeneratorDlg::OnBnClickedOk)
 	ON_CBN_SELCHANGE(IDC_COMBO_PIXEL_FORMAT, &CSignalGeneratorDlg::OnCbnSelchangeComboPixelFormat)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -118,7 +135,10 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 		BMDVideoOutputFlags		videoOutputFlags = bmdVideoOutputDualStream3D;
 
 		if (deckLinkDisplayMode->GetName(&modeName) != S_OK)
+		{
+			deckLinkDisplayMode->Release();
 			continue;
+		}
 		
 		CString modeNameCString(modeName);
 		newIndex = m_videoFormatCombo.AddString(modeNameCString);
@@ -566,6 +586,26 @@ void	CSignalGeneratorDlg::WriteNextAudioSamples ()
 
 /************************* DeckLink API Delegate Methods *****************************/
 
+HRESULT CSignalGeneratorDlg::QueryInterface(REFIID iid, LPVOID *ppv)
+{
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+ULONG 	CSignalGeneratorDlg::AddRef()
+{
+	return _InterlockedIncrement((volatile long *)&m_refCount);
+}
+
+ULONG 	CSignalGeneratorDlg::Release()
+{
+	ULONG newRefValue = _InterlockedDecrement((volatile long*)&m_refCount);
+
+	if (newRefValue == 0)
+		delete this;
+	return newRefValue;
+}
+
 HRESULT		CSignalGeneratorDlg::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {
 	// When a video frame has been 
@@ -620,6 +660,20 @@ void CSignalGeneratorDlg::OnPaint()
 	{
 		CDialog::OnPaint();
 	}
+}
+
+void CSignalGeneratorDlg::OnClose()
+{
+	if (m_running)
+		StopRunning();
+
+	if (m_deckLinkOutput)
+	{
+		m_deckLinkOutput->SetScheduledFrameCompletionCallback(NULL);
+		m_deckLinkOutput->SetAudioCallback(NULL);
+	}
+
+	CDialog::OnClose();
 }
 
 // The system calls this function to obtain the cursor to display while the user drags

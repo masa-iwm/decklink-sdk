@@ -110,7 +110,7 @@
     <ClInclude Include="..\include\Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\BaseClasses\streams.h">
+    <ClInclude Include="..\BaseClasses\streams.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

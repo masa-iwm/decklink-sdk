@@ -58,12 +58,14 @@ int main (int argc, char * const argv[])
 	
 	if (deckLink)
 	{
-		CaptureHelper helper(deckLink);
-		if (helper.init())
+		CaptureHelper* helper = new CaptureHelper(deckLink);
+		if (helper->init())
 		{
-			helper.doCapture();
+			helper->doCapture();
 		}
+		
 		deckLink->Release();
+		helper->Release();
 	}
 	
     return 0;

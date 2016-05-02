@@ -31,7 +31,8 @@
 #include "DeckLinkAPI_h.h"
 #include "SignalGenerator3DVideoFrame.h"
 
-enum OutputSignal {
+enum OutputSignal
+{
 	kOutputSignalPip		= 0,
 	kOutputSignalDrop		= 1
 };
@@ -42,7 +43,7 @@ class CSignalGeneratorDlg : public CDialog, public IDeckLinkVideoOutputCallback,
 {
 // Construction
 public:
-	CSignalGeneratorDlg(CWnd* pParent = NULL);	// standard constructor
+	explicit CSignalGeneratorDlg(CWnd* pParent = NULL);	// standard constructor
 
 	// Dialog Data
 	enum { IDD = IDD_SIGNALGENERATOR_DIALOG };
@@ -52,7 +53,8 @@ protected:
 
 
 // Implementation
-protected:
+private:
+	int32_t						m_refCount;
 	HICON						m_hIcon;
 	//
 	CButton						m_startButton;
@@ -84,10 +86,13 @@ protected:
 	BMDAudioSampleType			m_audioSampleDepth;
 	unsigned long				m_totalAudioSecondsScheduled;
 	
+	~CSignalGeneratorDlg();
+
 	// Generated message map functions
 	virtual BOOL	OnInitDialog();
 	void			EnableInterface (BOOL enable);
 	afx_msg void	OnPaint();
+	afx_msg void	OnClose();
 	afx_msg HCURSOR	OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 	
@@ -97,17 +102,16 @@ protected:
 	void			ScheduleNextFrame (bool prerolling);
 	void			WriteNextAudioSamples ();
 
-private:
 	void			RefreshDisplayModeMenu(void);
 
 public:
 	afx_msg void OnBnClickedOk();
 	
 	// *** DeckLink API implementation of IDeckLinkVideoOutputCallback IDeckLinkAudioOutputCallback *** //
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv)	{return E_NOINTERFACE;}
-	virtual ULONG STDMETHODCALLTYPE		AddRef ()									{return 1;}
-	virtual ULONG STDMETHODCALLTYPE		Release ()									{return 1;}
+	// IUnknown
+	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG STDMETHODCALLTYPE		AddRef ();
+	virtual ULONG STDMETHODCALLTYPE		Release ();
 	
 	virtual HRESULT STDMETHODCALLTYPE	ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 	virtual HRESULT STDMETHODCALLTYPE	ScheduledPlaybackHasStopped (void);
