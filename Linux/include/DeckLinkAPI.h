@@ -291,8 +291,7 @@ enum _BMDVideo3DPackingFormat {
 typedef uint32_t BMDIdleVideoOutputOperation;
 enum _BMDIdleVideoOutputOperation {
     bmdIdleVideoOutputBlack                                      = /* 'blac' */ 0x626C6163,
-    bmdIdleVideoOutputLastFrame                                  = /* 'lafa' */ 0x6C616661,
-    bmdIdleVideoOutputDesktop                                    = /* 'desk' */ 0x6465736B
+    bmdIdleVideoOutputLastFrame                                  = /* 'lafa' */ 0x6C616661
 };
 
 /* Enum BMDVideoEncoderFrameCodingMode - Video frame coding mode */
@@ -376,7 +375,6 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkCanOnlyAdjustOverallVideoOutputGain               = /* 'ovog' */ 0x6F766F67,
     BMDDeckLinkHasVideoInputAntiAliasingFilter                   = /* 'aafl' */ 0x6161666C,
     BMDDeckLinkHasBypass                                         = /* 'byps' */ 0x62797073,
-    BMDDeckLinkSupportsDesktopDisplay                            = /* 'extd' */ 0x65787464,
     BMDDeckLinkSupportsClockTimingAdjustment                     = /* 'ctad' */ 0x63746164,
     BMDDeckLinkSupportsFullDuplex                                = /* 'fdup' */ 0x66647570,
     BMDDeckLinkSupportsFullFrameReferenceInputTimingOffset       = /* 'frin' */ 0x6672696E,
@@ -424,7 +422,8 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkSerialPortDeviceName                              = /* 'slpn' */ 0x736C706E,
     BMDDeckLinkVendorName                                        = /* 'vndr' */ 0x766E6472,
     BMDDeckLinkDisplayName                                       = /* 'dspn' */ 0x6473706E,
-    BMDDeckLinkModelName                                         = /* 'mdln' */ 0x6D646C6E
+    BMDDeckLinkModelName                                         = /* 'mdln' */ 0x6D646C6E,
+    BMDDeckLinkDeviceHandle                                      = /* 'devh' */ 0x64657668
 };
 
 /* Enum BMDDeckLinkAPIInformationID - DeckLinkAPI information ID */
