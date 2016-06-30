@@ -455,6 +455,7 @@ enum _BMDDeckLinkStatusID {
     bmdDeckLinkStatusPCIExpressLinkSpeed                         = 'plnk',
     bmdDeckLinkStatusLastVideoOutputPixelFormat                  = 'opix',
     bmdDeckLinkStatusReferenceSignalMode                         = 'refm',
+    bmdDeckLinkStatusReferenceSignalFlags                        = 'reff',
     bmdDeckLinkStatusDuplexMode                                  = 'dupx',
     bmdDeckLinkStatusBusy                                        = 'busy',
 
