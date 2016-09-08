@@ -128,6 +128,7 @@ typedef [v1_enum] enum	_BMDPacketType {
 /* Enum BMDDeckLinkCapturePassthroughMode - Enumerates whether the video output is electrically connected to the video input or if the clean switching mode is enabled */
 
 [v1_enum] enum	_BMDDeckLinkCapturePassthroughMode {
+    bmdDeckLinkCapturePassthroughModeDisabled                    = /* 'pdis' */ 0x70646973,
     bmdDeckLinkCapturePassthroughModeDirect                      = /* 'pdir' */ 0x70646972,
     bmdDeckLinkCapturePassthroughModeCleanSwitch                 = /* 'pcln' */ 0x70636C6E
 };
