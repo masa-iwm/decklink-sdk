@@ -4,7 +4,7 @@
 
 
  /* File created by MIDL compiler version 8.00.0603 */
-/* at Mon Sep 05 13:23:52 2016
+/* at Fri Nov 11 13:30:14 2016
  */
 /* Compiler settings for DecklinkFilters.idl:
     Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.00.0603 

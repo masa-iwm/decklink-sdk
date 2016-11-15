@@ -26,25 +26,9 @@
 */
 #include "cube.hlsli"
 
-float4 main(VS_OUTPUT input) : SV_Target{
-	float tx, ty, Y, Cb, Cr, r, g, b;
-	tx = input.Tex.x;
-	ty = input.Tex.y;
-
-	// The UYVY texture appears to the shader with 1/2 the true width since we used RGBA format to pass UYVY
-	uint w, h;
-	UYVYtex.GetDimensions(w, h);
-	uint true_width = w * 2;
-
-	// For U0 Y0 V0 Y1 macropixel, lookup Y0 or Y1 based on whether
-	// the original texture x coord is even or odd.
-	if (frac(floor(tx * true_width + 0.5) / 2.0) > 0.0)
-		Y = UYVYtex.Sample(samLinear, float2(tx, ty)).a;		// odd so choose Y1
-	else
-		Y = UYVYtex.Sample(samLinear, float2(tx, ty)).g;		// even so choose Y0
-	Cb = UYVYtex.Sample(samLinear, float2(tx, ty)).b;
-	Cr = UYVYtex.Sample(samLinear, float2(tx, ty)).r;
-
+float4 rec709YCbCr2rgba(float Y, float Cb, float Cr, float a)
+{
+	float r, g, b;
 	// Y: Undo 1/256 texture value scaling and scale [16..235] to [0..1] range
 	// C: Undo 1/256 texture value scaling and scale [16..240] to [-0.5 .. + 0.5] range
 	Y = (Y * 256.0 - 16.0) / 219.0;
@@ -54,8 +38,71 @@ float4 main(VS_OUTPUT input) : SV_Target{
 	r = Y + 1.5748 * Cr;
 	g = Y - 0.1873 * Cb - 0.4681 * Cr;
 	b = Y + 1.8556 * Cb;
+	return float4(r, g, b, a);
+}
 
-	// Set alpha to 0.7 for partial transparency when GL_BLEND is enabled
-	return float4(r, g, b, 0.7);
+// Perform bilinear interpolation between the provided components.
+// The samples are expected as shown:
+// ---------
+// | X | Y |
+// |---+---|
+// | W | Z |
+// ---------
+float4 bilinear(float4 W, float4 X, float4 Y, float4 Z, float2 weight)
+{
+	float4 m0 = lerp(W, Z, weight.x);
+	float4 m1 = lerp(X, Y, weight.x);
+	return lerp(m0, m1, weight.y);
+}
 
+// Gather neighboring YUV macropixels from the given texture coordinate
+void textureGatherYUV(Texture2D UYVYsampler, float2 tc, out float4 W, out float4 X, out float4 Y, out float4 Z)
+{
+	int2 ts;
+	UYVYtex.GetDimensions(ts.x, ts.y);
+	int2 tx = tc*ts;
+	int2 tmin = {0, 0};
+	int2 tmax = ts - int2(1,1);
+	W = UYVYsampler.Load(int3(tx.xy, 0));
+	X = UYVYsampler.Load(int3(clamp(tx + int3(0, 1, 0), tmin, tmax).xy, 0));
+	Y = UYVYsampler.Load(int3(clamp(tx + int3(1, 1, 0), tmin, tmax).xy, 0));
+	Z = UYVYsampler.Load(int3(clamp(tx + int3(1, 0, 0), tmin, tmax).xy, 0));
+}
+
+float4 main(VS_OUTPUT input) : SV_Target{
+	/* The shader uses Texture2D::Load to obtain the YUV macropixels to avoid unwanted interpolation
+	 * introduced by the GPU interpreting the YUV data as RGBA pixels.
+	 * The YUV macropixels are converted into individual RGB pixels and bilinear interpolation is applied. */
+	float2 tc = input.Tex.xy;
+	float alpha = 0.7;
+	uint w, h;
+	UYVYtex.GetDimensions(w, h);
+
+	float4 macro, macro_u, macro_r, macro_ur;
+	float4 pixel, pixel_r, pixel_u, pixel_ur;
+	textureGatherYUV(UYVYtex, tc, macro, macro_u, macro_ur, macro_r);
+
+	//   Select the components for the bilinear interpolation based on the texture coordinate
+	//   location within the YUV macropixel:
+	//   -----------------          ----------------------
+	//   | UY/VY | UY/VY |          | macro_u | macro_ur |
+	//   |-------|-------|    =>    |---------|----------|
+	//   | UY/VY | UY/VY |          | macro   | macro_r  |
+	//   |-------|-------|          ----------------------
+	//   | RG/BA | RG/BA |
+	//   -----------------
+	float2 off = frac(tc * float2(w, h));
+	if (off.x > 0.5) {			// right half of macropixel
+		pixel = rec709YCbCr2rgba(macro.a, macro.b, macro.r, alpha);
+		pixel_r = rec709YCbCr2rgba(macro_r.g, macro_r.b, macro_r.r, alpha);
+		pixel_u = rec709YCbCr2rgba(macro_u.a, macro_u.b, macro_u.r, alpha);
+		pixel_ur = rec709YCbCr2rgba(macro_ur.g, macro_ur.b, macro_ur.r, alpha);
+	} else {					// left half & center of macropixel
+		pixel = rec709YCbCr2rgba(macro.g, macro.b, macro.r, alpha);
+		pixel_r = rec709YCbCr2rgba(macro.a, macro.b, macro.r, alpha);
+		pixel_u = rec709YCbCr2rgba(macro_u.g, macro_u.b, macro_u.r, alpha);
+		pixel_ur = rec709YCbCr2rgba(macro_u.a, macro_u.b, macro_u.r, alpha);
+	}
+
+	return bilinear(pixel, pixel_u, pixel_ur, pixel_r, off);
 }

@@ -1,0 +1,259 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		61F2DED11C21074A00D735E3 /* CEA708_Commands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 61F2DECB1C21074A00D735E3 /* CEA708_Commands.cpp */; };
+		61F2DED21C21074A00D735E3 /* CEA708_Encoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 61F2DECD1C21074A00D735E3 /* CEA708_Encoder.cpp */; };
+		61F2DED31C21074A00D735E3 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 61F2DED01C21074A00D735E3 /* main.cpp */; };
+		61F2DED71C210A1F00D735E3 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 61F2DED61C210A1F00D735E3 /* DeckLinkAPIDispatch.cpp */; };
+		61F2DED91C210F4700D735E3 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 61F2DED81C210F4700D735E3 /* CoreFoundation.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		61F2DEBD1C2106CA00D735E3 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		61F2DEBF1C2106CA00D735E3 /* ClosedCaptions */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ClosedCaptions; sourceTree = BUILT_PRODUCTS_DIR; };
+		61F2DECB1C21074A00D735E3 /* CEA708_Commands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CEA708_Commands.cpp; sourceTree = "<group>"; };
+		61F2DECC1C21074A00D735E3 /* CEA708_Commands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CEA708_Commands.h; sourceTree = "<group>"; };
+		61F2DECD1C21074A00D735E3 /* CEA708_Encoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CEA708_Encoder.cpp; sourceTree = "<group>"; };
+		61F2DECE1C21074A00D735E3 /* CEA708_Encoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CEA708_Encoder.h; sourceTree = "<group>"; };
+		61F2DECF1C21074A00D735E3 /* CEA708_Types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CEA708_Types.h; sourceTree = "<group>"; };
+		61F2DED01C21074A00D735E3 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		61F2DED51C210A1F00D735E3 /* DeckLinkAPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeckLinkAPI.h; path = ../../../Mac/include/DeckLinkAPI.h; sourceTree = "<group>"; };
+		61F2DED61C210A1F00D735E3 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../../Mac/include/DeckLinkAPIDispatch.cpp; sourceTree = "<group>"; };
+		61F2DED81C210F4700D735E3 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		61F2DEBC1C2106CA00D735E3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				61F2DED91C210F4700D735E3 /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		61F2DEB61C2106CA00D735E3 = {
+			isa = PBXGroup;
+			children = (
+				61F2DED81C210F4700D735E3 /* CoreFoundation.framework */,
+				61F2DED61C210A1F00D735E3 /* DeckLinkAPIDispatch.cpp */,
+				61F2DED51C210A1F00D735E3 /* DeckLinkAPI.h */,
+				61F2DED41C21076D00D735E3 /* Source */,
+				61F2DEC01C2106CA00D735E3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		61F2DEC01C2106CA00D735E3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				61F2DEBF1C2106CA00D735E3 /* ClosedCaptions */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		61F2DED41C21076D00D735E3 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				61F2DECB1C21074A00D735E3 /* CEA708_Commands.cpp */,
+				61F2DECC1C21074A00D735E3 /* CEA708_Commands.h */,
+				61F2DECD1C21074A00D735E3 /* CEA708_Encoder.cpp */,
+				61F2DECE1C21074A00D735E3 /* CEA708_Encoder.h */,
+				61F2DECF1C21074A00D735E3 /* CEA708_Types.h */,
+				61F2DED01C21074A00D735E3 /* main.cpp */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		61F2DEBE1C2106CA00D735E3 /* ClosedCaptions */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 61F2DEC81C2106CA00D735E3 /* Build configuration list for PBXNativeTarget "ClosedCaptions" */;
+			buildPhases = (
+				61F2DEBB1C2106CA00D735E3 /* Sources */,
+				61F2DEBC1C2106CA00D735E3 /* Frameworks */,
+				61F2DEBD1C2106CA00D735E3 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ClosedCaptions;
+			productName = ClosedCaptions;
+			productReference = 61F2DEBF1C2106CA00D735E3 /* ClosedCaptions */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		61F2DEB71C2106CA00D735E3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0510;
+				ORGANIZATIONNAME = "Blackmagic Design";
+			};
+			buildConfigurationList = 61F2DEBA1C2106CA00D735E3 /* Build configuration list for PBXProject "ClosedCaptions" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 61F2DEB61C2106CA00D735E3;
+			productRefGroup = 61F2DEC01C2106CA00D735E3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				61F2DEBE1C2106CA00D735E3 /* ClosedCaptions */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		61F2DEBB1C2106CA00D735E3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				61F2DED21C21074A00D735E3 /* CEA708_Encoder.cpp in Sources */,
+				61F2DED11C21074A00D735E3 /* CEA708_Commands.cpp in Sources */,
+				61F2DED31C21074A00D735E3 /* main.cpp in Sources */,
+				61F2DED71C210A1F00D735E3 /* DeckLinkAPIDispatch.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		61F2DEC61C2106CA00D735E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++98";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		61F2DEC71C2106CA00D735E3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++98";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		61F2DEC91C2106CA00D735E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.closedcaptions";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		61F2DECA1C2106CA00D735E3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.closedcaptions";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		61F2DEBA1C2106CA00D735E3 /* Build configuration list for PBXProject "ClosedCaptions" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				61F2DEC61C2106CA00D735E3 /* Debug */,
+				61F2DEC71C2106CA00D735E3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		61F2DEC81C2106CA00D735E3 /* Build configuration list for PBXNativeTarget "ClosedCaptions" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				61F2DEC91C2106CA00D735E3 /* Debug */,
+				61F2DECA1C2106CA00D735E3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 61F2DEB71C2106CA00D735E3 /* Project object */;
+}
