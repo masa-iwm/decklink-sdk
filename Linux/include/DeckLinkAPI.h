@@ -390,18 +390,19 @@ enum _BMDDeckLinkAttributeID {
     /* Integers */
 
     BMDDeckLinkMaximumAudioChannels                              = /* 'mach' */ 0x6D616368,
-    BMDDeckLinkMaximumAnalogAudioChannels                        = /* 'aach' */ 0x61616368,
+    BMDDeckLinkMaximumAnalogAudioInputChannels                   = /* 'iach' */ 0x69616368,
+    BMDDeckLinkMaximumAnalogAudioOutputChannels                  = /* 'aach' */ 0x61616368,
     BMDDeckLinkNumberOfSubDevices                                = /* 'nsbd' */ 0x6E736264,
     BMDDeckLinkSubDeviceIndex                                    = /* 'subi' */ 0x73756269,
     BMDDeckLinkPersistentID                                      = /* 'peid' */ 0x70656964,
     BMDDeckLinkDeviceGroupID                                     = /* 'dgid' */ 0x64676964,
     BMDDeckLinkTopologicalID                                     = /* 'toid' */ 0x746F6964,
-    BMDDeckLinkVideoOutputConnections                            = /* 'vocn' */ 0x766F636E,
-    BMDDeckLinkVideoInputConnections                             = /* 'vicn' */ 0x7669636E,
-    BMDDeckLinkAudioOutputConnections                            = /* 'aocn' */ 0x616F636E,
-    BMDDeckLinkAudioInputConnections                             = /* 'aicn' */ 0x6169636E,
+    BMDDeckLinkVideoOutputConnections                            = /* 'vocn' */ 0x766F636E,	// Returns a BMDVideoConnection bit field
+    BMDDeckLinkVideoInputConnections                             = /* 'vicn' */ 0x7669636E,	// Returns a BMDVideoConnection bit field
+    BMDDeckLinkAudioOutputConnections                            = /* 'aocn' */ 0x616F636E,	// Returns a BMDAudioConnection bit field
+    BMDDeckLinkAudioInputConnections                             = /* 'aicn' */ 0x6169636E,	// Returns a BMDAudioConnection bit field
     BMDDeckLinkVideoIOSupport                                    = /* 'vios' */ 0x76696F73,	// Returns a BMDVideoIOSupport bit field
-    BMDDeckLinkDeckControlConnections                            = /* 'dccn' */ 0x6463636E,
+    BMDDeckLinkDeckControlConnections                            = /* 'dccn' */ 0x6463636E,	// Returns a BMDDeckControlConnection bit field
     BMDDeckLinkDeviceInterface                                   = /* 'dbus' */ 0x64627573,	// Returns a BMDDeviceInterface
     BMDDeckLinkAudioInputRCAChannelCount                         = /* 'airc' */ 0x61697263,
     BMDDeckLinkAudioInputXLRChannelCount                         = /* 'aixc' */ 0x61697863,
