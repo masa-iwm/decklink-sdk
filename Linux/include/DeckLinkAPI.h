@@ -456,6 +456,7 @@ enum _BMDDeckLinkStatusID {
     bmdDeckLinkStatusReferenceSignalFlags                        = /* 'reff' */ 0x72656666,
     bmdDeckLinkStatusDuplexMode                                  = /* 'dupx' */ 0x64757078,
     bmdDeckLinkStatusBusy                                        = /* 'busy' */ 0x62757379,
+    bmdDeckLinkStatusInterchangeablePanelType                    = /* 'icpt' */ 0x69637074,
 
     /* Flags */
 
@@ -479,6 +480,14 @@ enum _BMDDuplexStatus {
     bmdDuplexStatusHalfDuplex                                    = /* 'hdup' */ 0x68647570,
     bmdDuplexStatusSimplex                                       = /* 'splx' */ 0x73706C78,
     bmdDuplexStatusInactive                                      = /* 'inac' */ 0x696E6163
+};
+
+/* Enum BMDPanelType - The type of interchangeable panel */
+
+typedef uint32_t BMDPanelType;
+enum _BMDPanelType {
+    bmdPanelNotDetected                                          = /* 'npnl' */ 0x6E706E6C,
+    bmdPanelTeranexMiniSmartPanel                                = /* 'tmsm' */ 0x746D736D
 };
 
 /* Enum BMDDeviceBusyState - Current device busy state */
