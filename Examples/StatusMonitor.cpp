@@ -122,11 +122,24 @@ static const char* getFourCCName(FourCCNameMapping* mappings, INT32_UNSIGNED fou
 	return "Unknown";
 }
 
+static void printHex(INT8_UNSIGNED* buffer, INT32_UNSIGNED size)
+{
+	for (INT32_UNSIGNED i = 0; i < size; )
+	{
+		printf("%02x ", buffer[i]);
+		++i;
+		if ((i % 16) == 0)
+			printf("\n");
+	}
+}
+
 static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID statusId)
 {
-	HRESULT      result;
-	INT64_SIGNED intVal;
-    BOOL         boolVal;
+	HRESULT        result;
+	INT64_SIGNED   intVal;
+	BOOL           boolVal;
+	INT8_UNSIGNED* bytesVal = NULL;
+	INT32_UNSIGNED bytesSize = 0;
 
 	switch (statusId)
 	{
@@ -151,12 +164,24 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 			result = deckLinkStatus->GetFlag(statusId, &boolVal);
 			break;
 
+		case bmdDeckLinkStatusReceivedEDID:
+			result = deckLinkStatus->GetBytes(statusId, NULL, &bytesSize);
+			if (result == S_OK)
+			{
+				bytesVal = (INT8_UNSIGNED*)malloc(bytesSize * sizeof(INT8_UNSIGNED));
+				if (bytesVal)
+					result = deckLinkStatus->GetBytes(statusId, bytesVal, &bytesSize);
+				else
+					result = E_OUTOFMEMORY;
+			}
+			break;
+
 		default:
 			fprintf(stderr, "Unknown status ID: %08x", statusId);
 			return;
 	}
 
-	if (result != S_OK)
+	if (FAILED(result))
 	{
 		/*
 		 * Failed to retrieve the status value. Don't complain as this is
@@ -172,11 +197,17 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 	switch (statusId)
 	{
 		case bmdDeckLinkStatusDetectedVideoInputMode:
+			if (result == S_FALSE)
+				break;
+
 			printf("%-40s %s\n", "Detected Video Input Mode:",
 				getFourCCName(kDisplayModeMappings, (BMDDisplayMode)intVal));
 			break;
 
 		case bmdDeckLinkStatusDetectedVideoInputFlags:
+			if (result == S_FALSE)
+				break;
+
 			printf("%-40s %08x\n", "Detected Video Input Flags:",
 				(BMDDeckLinkVideoStatusFlags)intVal);
 			break;
@@ -244,6 +275,16 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 		case bmdDeckLinkStatusReferenceSignalLocked:
 			printf("%-40s %s\n", "Reference Signal Locked:",
 				boolVal ? "yes" : "no");
+			break;
+
+		case bmdDeckLinkStatusReceivedEDID:
+			if (result == S_FALSE)
+			{
+				printf("%-40s %s\n", "EDID Received:", "Not Available");
+				break;
+			}
+			printf("EDID Received:\n");
+			printHex(bytesVal, bytesSize);
 			break;
 
 		default:
@@ -353,6 +394,7 @@ int main(int argc, const char * argv[])
 	printStatus(deckLinkStatus, bmdDeckLinkStatusLastVideoOutputPixelFormat);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusReferenceSignalLocked);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusReferenceSignalMode);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusReceivedEDID);
 
 	// Obtain the notification interface
 	result = deckLink->QueryInterface(IID_IDeckLinkNotification, (void**)&deckLinkNotification);

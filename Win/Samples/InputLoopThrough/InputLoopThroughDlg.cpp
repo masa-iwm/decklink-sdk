@@ -81,17 +81,17 @@ BOOL CInputLoopThroughDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// Setup video format combo
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("NTSC"),bmdModeNTSC);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("PAL"),bmdModePAL);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("1080PsF 23.98"),bmdModeHD1080p2398);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("1080PsF 24"),bmdModeHD1080p24);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("1080i 50"),bmdModeHD1080i50);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("1080i 59.94"),bmdModeHD1080i5994);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p 50"),bmdModeHD720p50);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p 59.94"),bmdModeHD720p5994);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p 60"),bmdModeHD720p60);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("2K 23.98"),bmdMode2k2398);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("2K 24"),bmdMode2k24);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("525i59.94 NTSC"),bmdModeNTSC);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("625i50 PAL"),bmdModePAL);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("1080PsF23.98"),bmdModeHD1080p2398);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("1080PsF24"),bmdModeHD1080p24);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("1080i50"),bmdModeHD1080i50);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("1080i59.94"),bmdModeHD1080i5994);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p50"),bmdModeHD720p50);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p59.94"),bmdModeHD720p5994);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p60"),bmdModeHD720p60);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("2K 23.98p"),bmdMode2k2398);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("2K 24p"),bmdMode2k24);
 	m_VideoFormatCombo.SetCurSel(0);
 
 	CComPtr<IDeckLinkIterator>	pIterator = NULL;

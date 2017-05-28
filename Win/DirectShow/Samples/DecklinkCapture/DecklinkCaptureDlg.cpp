@@ -1143,6 +1143,60 @@ HRESULT CDecklinkCaptureDlg::PopulateDeviceControl(const GUID* pCategory, CCombo
 	return hr;
 }
 
+static void FormatDisplayModeString(char *buffer, size_t bufferLen, VIDEOINFOHEADER* pvih)
+{
+	ASSERT(buffer != nullptr);
+	ASSERT(pvih != nullptr);
+
+	float frameRate = (float)(long)UNITS / pvih->AvgTimePerFrame;;
+	const LONG height = pvih->bmiHeader.biHeight;
+	const int frameRatePrecision = (frameRate - (int)frameRate > 0.01) ? 2 : 0;
+	char format[128];
+
+	// 2K <frameRate>p or <height><scanFormat><frameRate>
+	if (height == 1556)
+	{
+		StringCbPrintfA(format, 128, "2K %%.%dfp", frameRatePrecision);
+		StringCbPrintfA(buffer, bufferLen, format, height, frameRate);
+	}
+	else if ((height == 486) || (height == 576) || (height == 720) || (height == 1080))
+	{
+		const char* scanFormat = ((height == 486) && (417083 != pvih->AvgTimePerFrame)) ||
+					   (height == 576) ||
+					   ((1080 == pvih->bmiHeader.biHeight) && ((frameRate >= 25.00) && (frameRate < 50.0))) ? "i" : "p";
+		int scanHeight;
+		if (height == 486) 
+			scanHeight = 525;
+		else if (height == 576)
+			scanHeight = 625;
+		else
+			scanHeight = height;
+		
+		if (strncmp(scanFormat, "i", 10) == 0)
+			frameRate *= 2;
+			
+		StringCbPrintfA(format, 128, "%%d%s%%.%df", scanFormat, frameRatePrecision);
+		StringCbPrintfA(buffer, bufferLen, format, scanHeight, frameRate);
+	}
+
+	if (height == 486)
+	{
+		StringCchCatA(buffer, bufferLen, " NTSC");
+
+		if ((height == 486) && (417083 == pvih->AvgTimePerFrame))
+			StringCchCatA(buffer, bufferLen, " Pulldown");
+	}
+	else if (height == 576)
+		StringCchCatA(buffer, bufferLen, " PAL");
+
+	if (pvih->bmiHeader.biBitCount == 16)
+		StringCchCatA(buffer, bufferLen, " 8 bit 4:2:2 YUV");
+	else if (pvih->bmiHeader.biBitCount == 20)
+		StringCchCatA(buffer, bufferLen, " 10 bit 4:2:2 YUV");
+	else if (pvih->bmiHeader.biBitCount == 30)
+		StringCchCatA(buffer, bufferLen, " 10 bit 4:4:4 RGB");
+}
+
 //-----------------------------------------------------------------------------
 // PopulateVideoControl
 // Fill video format combo box with supported video formats using the IAMStreamConfig
@@ -1192,87 +1246,8 @@ HRESULT CDecklinkCaptureDlg::PopulateVideoControl()
 							ZeroMemory(buffer, sizeof(buffer));
 
 							pvih = (VIDEOINFOHEADER*)pmt->pbFormat;
-							//
-							if (pvih->bmiHeader.biBitCount == 16)
-								pixelFormatString = TEXT("8 bit 4:2:2 YUV");
-							else if (pvih->bmiHeader.biBitCount == 20)
-								pixelFormatString = TEXT("10 bit 4:2:2 YUV");
-							else if (pvih->bmiHeader.biBitCount == 30)
-								pixelFormatString = TEXT("10 bit 4:4:4 RGB");
-							else
-								pixelFormatString = TEXT("");			// Unknown pixel format
 							
-							// provide a useful description of the formats
-							if (486 == pvih->bmiHeader.biHeight)
-							{
-								if (417083 == pvih->AvgTimePerFrame)
-								{
-									StringCbPrintf(buffer, sizeof(buffer), TEXT("NTSC - %s (3:2 pulldown removal)"), pixelFormatString);
-								}
-								else
-								{
-									StringCbPrintf(buffer, sizeof(buffer), TEXT("NTSC - %s"), pixelFormatString);
-								}
-							}
-							else if (576 == pvih->bmiHeader.biHeight)
-							{
-								StringCbPrintf(buffer, sizeof(buffer), TEXT("PAL - %s"), pixelFormatString);
-							}
-							else
-							{
-								frameRate = (float)UNITS / pvih->AvgTimePerFrame;
-
-								if (720 == pvih->bmiHeader.biHeight)
-								{
-									// 720p
-									if ((frameRate - (int)frameRate) > 0.01)
-									{
-										StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 720p %.2f - %s"), frameRate, pixelFormatString);
-									}
-									else
-									{
-										StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 720p %.0f - %s"), frameRate, pixelFormatString);
-									}
-								}
-								else if (1080 == pvih->bmiHeader.biHeight)
-								{
-									if ((frameRate < 25.00) || (frameRate >= 50.0))		// 1080p23, 1080p24, 1080p50, 1080p5994, 1080p60
-									{
-										// Progressive 1080
-										if ((frameRate - (int)frameRate) > 0.01)
-										{
-											StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 1080p %.2f - %s"), frameRate, pixelFormatString);
-										}
-										else
-										{
-											StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 1080p %.0f - %s"), frameRate, pixelFormatString);
-										}
-									}
-									else
-									{
-										// Interlaced 1080
-										if ((frameRate - (int)frameRate) > 0.01)
-										{
-											StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 1080i %.2f - %s"), frameRate*2.0f, pixelFormatString);
-										}
-										else
-										{
-											StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 1080i %.0f - %s"), frameRate*2.0f, pixelFormatString);
-										}
-									}
-								}
-								else if (1556 == pvih->bmiHeader.biHeight)
-								{
-									if ((frameRate - (int)frameRate) > 0.01)
-									{
-										StringCbPrintf(buffer, sizeof(buffer), TEXT("2K 1556p %.2f - %s"), frameRate, pixelFormatString);
-									}
-									else
-									{
-										StringCbPrintf(buffer, sizeof(buffer), TEXT("2K 1556p %.0f - %s"), frameRate, pixelFormatString);
-									}
-								}
-							}
+							FormatDisplayModeString(buffer, sizeof(buffer), pvih);
 							
 							// If the display mode was recognized, add it to the listbox UI
 							if (buffer[0] != 0)

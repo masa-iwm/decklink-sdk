@@ -613,6 +613,60 @@ HRESULT CDecklinkFrameSourceDlg::PopulateDeviceControl(void)
 	return hr;
 }
 
+static void FormatDisplayModeString(char *buffer, size_t bufferLen, VIDEOINFOHEADER* pvih)
+{
+	ASSERT(buffer != nullptr);
+	ASSERT(pvih != nullptr);
+
+	float frameRate = (float)(long)UNITS / pvih->AvgTimePerFrame;;
+	const LONG height = pvih->bmiHeader.biHeight;
+	const int frameRatePrecision = (frameRate - (int)frameRate > 0.01) ? 2 : 0;
+	char format[128];
+
+	// 2K <frameRate>p or <height><scanFormat><frameRate>
+	if (height == 1556)
+	{
+		StringCbPrintfA(format, 128, "2K %%.%dfp", frameRatePrecision);
+		StringCbPrintfA(buffer, bufferLen, format, height, frameRate);
+	}
+	else if ((height == 486) || (height == 576) || (height == 720) || (height == 1080))
+	{
+		const char* scanFormat = ((height == 486) && (417083 != pvih->AvgTimePerFrame)) ||
+					   (height == 576) ||
+					   ((1080 == pvih->bmiHeader.biHeight) && ((frameRate >= 25.00) && (frameRate < 50.0))) ? "i" : "p";
+		StringCbPrintfA(format, 128, "%%d%s%%.%df", scanFormat, frameRatePrecision);
+		int scanHeight;
+		if (height == 486) 
+			scanHeight = 525;
+		else if (height == 576) 
+			scanHeight = 625;
+		else 
+			scanHeight = height;
+
+		if (strncmp(scanFormat, "i", 10) == 0)
+			frameRate *= 2;
+
+		StringCbPrintfA(buffer, bufferLen, format, scanHeight, frameRate);
+	}
+
+	if (height == 486)
+	{
+		StringCchCatA(buffer, bufferLen, " NTSC");
+
+		if ((height == 486) && (417083 == pvih->AvgTimePerFrame))
+			StringCchCatA(buffer, bufferLen, " Pulldown");
+	}
+	else if (height == 576)
+		StringCchCatA(buffer, bufferLen, " PAL");
+
+	if (pvih->bmiHeader.biBitCount == 16)
+		StringCchCatA(buffer, bufferLen, " 8 bit 4:2:2 YUV");
+	else if (pvih->bmiHeader.biBitCount == 20)
+		StringCchCatA(buffer, bufferLen, " 10 bit 4:2:2 YUV");
+	else if (pvih->bmiHeader.biBitCount == 30)
+		StringCchCatA(buffer, bufferLen, " 10 bit 4:4:4 RGB");
+}
+
 //-----------------------------------------------------------------------------
 // PopulateVideoControl
 // Fill video format combo box with supported video formats.
@@ -690,63 +744,7 @@ HRESULT CDecklinkFrameSourceDlg::PopulateVideoControl(void)
 									TCHAR	buffer[128];
 									ZeroMemory(buffer, sizeof(buffer));
 
-									// provide a useful description of the formats
-									if (486 == pvih->bmiHeader.biHeight)
-									{
-										if (417083 == pvih->AvgTimePerFrame)
-										{
-											StringCbPrintf(buffer, sizeof(buffer), TEXT("NTSC - RGB (3:2 pulldown removal)"));
-										}
-										else
-										{
-											StringCbPrintf(buffer, sizeof(buffer), TEXT("NTSC - RGB"));
-										}
-									}
-									else if (576 == pvih->bmiHeader.biHeight)
-									{
-										StringCbPrintf(buffer, sizeof(buffer), TEXT("PAL - RGB"));
-									}
-									else
-									{
-										if (720 == pvih->bmiHeader.biHeight)
-										{
-											// 720p
-											if ((frameRate - (int)frameRate) > 0.01)
-											{
-												StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 720p %.2f - RGB"), frameRate);
-											}
-											else
-											{
-												StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 720p %.0f - RGB"), frameRate);
-											}
-										}
-										else if (1080 == pvih->bmiHeader.biHeight)
-										{
-											if ((frameRate < 25.0) || (frameRate >= 50.0))		// 1080p23, 1080p24, 1080p50, 1080p60
-											{
-												if ((frameRate - (int)frameRate) > 0.01)
-												{
-													StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 1080p %.2f - RGB"), frameRate);
-												}
-												else
-												{
-													StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 1080p %.0f - RGB"), frameRate);
-												}
-											}
-											else
-											{
-												// 1080i
-												if ((frameRate - (int)frameRate) > 0.01)
-												{
-													StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 1080i %.2f - RGB"), frameRate*2.0f);
-												}
-												else
-												{
-													StringCbPrintf(buffer, sizeof(buffer), TEXT("HD 1080i %.0f - RGB"), frameRate*2.0f);
-												}
-											}
-										}
-									}
+									FormatDisplayModeString(buffer, sizeof(buffer), pvih);
 									
 									// If the display mode was recognized, add it to the listbox UI
 									if (buffer[0] != 0)

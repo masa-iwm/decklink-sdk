@@ -113,6 +113,7 @@ enum _BMDFrameFlags {
     bmdFrameFlagDefault                                          = 0,
     bmdFrameFlagFlipVertical                                     = 1 << 0,
     bmdFrameContainsHDRMetadata                                  = 1 << 1,
+    bmdFrameContainsCintelMetadata                               = 1 << 2,
 
     /* Flags that are applicable only to instances of IDeckLinkVideoInputFrame */
 
@@ -337,6 +338,32 @@ enum _BMDDeviceInterface {
 typedef uint32_t BMDDeckLinkFrameMetadataID;
 enum _BMDDeckLinkFrameMetadataID {
     bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc        = /* 'eotf' */ 0x656F7466,	// EOTF in range 0-7 as per CEA 861.3
+    bmdDeckLinkFrameMetadataCintelFilmType                       = /* 'cfty' */ 0x63667479,	// Current film type
+    bmdDeckLinkFrameMetadataCintelFilmGauge                      = /* 'cfga' */ 0x63666761,	// Current film gauge
+    bmdDeckLinkFrameMetadataCintelOffsetDetectedHorizontal       = /* 'odfh' */ 0x6F646668,	// Horizontal offset (pixels) detected in image
+    bmdDeckLinkFrameMetadataCintelOffsetDetectedVertical         = /* 'odfv' */ 0x6F646676,	// Vertical offset (pixels) detected in image
+    bmdDeckLinkFrameMetadataCintelOffsetAppliedHorizontal        = /* 'odah' */ 0x6F646168,	// Horizontal offset (pixels) applied to image
+    bmdDeckLinkFrameMetadataCintelOffsetAppliedVertical          = /* 'odav' */ 0x6F646176,	// Vertical offset (pixels) applied to image
+    bmdDeckLinkFrameMetadataCintelKeykodeLow                     = /* 'ckkl' */ 0x636B6B6C,	// Raw keykode value - low 64 bits
+    bmdDeckLinkFrameMetadataCintelKeykodeHigh                    = /* 'ckkh' */ 0x636B6B68,	// Raw keykode value - high 64 bits
+    bmdDeckLinkFrameMetadataCintelLinearMaskingRedInRed          = /* 'mrir' */ 0x6D726972,	// Red in red linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLinearMaskingGreenInRed        = /* 'mgir' */ 0x6D676972,	// Green in red linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLinearMaskingBlueInRed         = /* 'mbir' */ 0x6D626972,	// Blue in red linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLinearMaskingRedInGreen        = /* 'mrig' */ 0x6D726967,	// Red in green linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLinearMaskingGreenInGreen      = /* 'mgig' */ 0x6D676967,	// Green in green linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLinearMaskingBlueInGreen       = /* 'mbig' */ 0x6D626967,	// Blue in green linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLinearMaskingRedInBlue         = /* 'mrib' */ 0x6D726962,	// Red in blue linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLinearMaskingGreenInBlue       = /* 'mgib' */ 0x6D676962,	// Green in blue linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLinearMaskingBlueInBlue        = /* 'mbib' */ 0x6D626962,	// Blue in blue linear masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingRedInRed             = /* 'mlrr' */ 0x6D6C7272,	// Red in red log masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingGreenInRed           = /* 'mlgr' */ 0x6D6C6772,	// Green in red log masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingBlueInRed            = /* 'mlbr' */ 0x6D6C6272,	// Blue in red log masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingRedInGreen           = /* 'mlrg' */ 0x6D6C7267,	// Red in green log masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingGreenInGreen         = /* 'mlgg' */ 0x6D6C6767,	// Green in green log masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingBlueInGreen          = /* 'mlbg' */ 0x6D6C6267,	// Blue in green log masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingRedInBlue            = /* 'mlrb' */ 0x6D6C7262,	// Red in blue log masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingGreenInBlue          = /* 'mlgb' */ 0x6D6C6762,	// Green in blue log masking parameter
+    bmdDeckLinkFrameMetadataCintelLogMaskingBlueInBlue           = /* 'mlbb' */ 0x6D6C6262,	// Blue in blue log masking parameter
     bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX              = /* 'hdrx' */ 0x68647278,	// Red display primaries in range 0.0 - 1.0
     bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY              = /* 'hdry' */ 0x68647279,	// Red display primaries in range 0.0 - 1.0
     bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX            = /* 'hdgx' */ 0x68646778,	// Green display primaries in range 0.0 - 1.0
@@ -348,7 +375,12 @@ enum _BMDDeckLinkFrameMetadataID {
     bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance      = /* 'hdml' */ 0x68646D6C,	// Max display mastering luminance in range 1 cd/m2 - 65535 cd/m2
     bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance      = /* 'hmil' */ 0x686D696C,	// Min display mastering luminance in range 0.0001 cd/m2 - 6.5535 cd/m2
     bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel          = /* 'mcll' */ 0x6D636C6C,	// Maximum Content Light Level in range 1 cd/m2 - 65535 cd/m2
-    bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel     = /* 'fall' */ 0x66616C6C	// Maximum Frame Average Light Level in range 1 cd/m2 - 65535 cd/m2
+    bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel     = /* 'fall' */ 0x66616C6C,	// Maximum Frame Average Light Level in range 1 cd/m2 - 65535 cd/m2
+    bmdDeckLinkFrameMetadataCintel16mmCropRequired               = /* 'c16c' */ 0x63313663,	// The image should be cropped to 16mm size
+    bmdDeckLinkFrameMetadataCintelInversionRequired              = /* 'cinv' */ 0x63696E76,	// The image should be colour inverted
+    bmdDeckLinkFrameMetadataCintelFlipRequired                   = /* 'cflr' */ 0x63666C72,	// The image should be flipped horizontally
+    bmdDeckLinkFrameMetadataCintelFocusAssistEnabled             = /* 'cfae' */ 0x63666165,	// Focus Assist is currently enabled
+    bmdDeckLinkFrameMetadataCintelKeykodeIsInterpolated          = /* 'kkii' */ 0x6B6B6969	// The keykode for this frame is interpolated from nearby keykodes
 };
 
 /* Enum BMDDuplexMode - Duplex for configurable ports */
@@ -461,7 +493,8 @@ enum _BMDDeckLinkStatusID {
     /* Flags */
 
     bmdDeckLinkStatusVideoInputSignalLocked                      = /* 'visl' */ 0x7669736C,
-    bmdDeckLinkStatusReferenceSignalLocked                       = /* 'refl' */ 0x7265666C
+    bmdDeckLinkStatusReferenceSignalLocked                       = /* 'refl' */ 0x7265666C,
+    bmdDeckLinkStatusReceivedEDID                                = /* 'edid' */ 0x65646964
 };
 
 /* Enum BMDDeckLinkVideoStatusFlags -  */
