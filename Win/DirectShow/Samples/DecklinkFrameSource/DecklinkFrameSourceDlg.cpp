@@ -618,53 +618,54 @@ static void FormatDisplayModeString(char *buffer, size_t bufferLen, VIDEOINFOHEA
 	ASSERT(buffer != nullptr);
 	ASSERT(pvih != nullptr);
 
-	float frameRate = (float)(long)UNITS / pvih->AvgTimePerFrame;;
-	const LONG height = pvih->bmiHeader.biHeight;
+	buffer[0] = 0;
+	float frameRate = (float)(long)UNITS / pvih->AvgTimePerFrame;
+	const int width = pvih->bmiHeader.biWidth;
+	const int height = pvih->bmiHeader.biHeight;
+	char frameRateBuffer[128];
 	const int frameRatePrecision = (frameRate - (int)frameRate > 0.01) ? 2 : 0;
-	char format[128];
+	if (frameRatePrecision == 2)
+		StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.2f", frameRate);
+	else
+		StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.0f", frameRate);
 
-	// 2K <frameRate>p or <height><scanFormat><frameRate>
-	if (height == 1556)
+	if ((width == 2048) && (height == 1556))
+		StringCbPrintfA(buffer, bufferLen, "2K %sPsF RGB", frameRateBuffer);
+	else if ((width == 2048) && (height == 1112))
+		StringCbPrintfA(buffer, bufferLen, "1112p%s RGB", frameRateBuffer);
+	else if ((width == 2048) && (height == 1080))
+		StringCbPrintfA(buffer, bufferLen, "2K DCI %sp RGB", frameRateBuffer);
+	else if ((width == 1920) && (height == 1080))
 	{
-		StringCbPrintfA(format, 128, "2K %%.%dfp", frameRatePrecision);
-		StringCbPrintfA(buffer, bufferLen, format, height, frameRate);
+		// The VIDEOINFOHEADER structure does not contain any information to indicate whether a mode is interlaced or progressive.
+		// For the cases where the frame rates overlap, we assume the mode is interlaced.
+		const bool progressive = (frameRate < 25.0) || (frameRate >= 50.0);
+		const char* p = progressive ? "p" : "i";
+		if (!progressive)
+		{
+			if (frameRatePrecision == 2)
+				StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.2f", frameRate * 2);
+			else
+				StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.0f", frameRate * 2);
+		}
+		StringCbPrintfA(buffer, bufferLen, "1080%s%s RGB", p, frameRateBuffer);
 	}
-	else if ((height == 486) || (height == 576) || (height == 720) || (height == 1080))
+	else if ((width == 1280) && (height == 720))
+		StringCbPrintfA(buffer, bufferLen, "720p%s RGB", frameRateBuffer);
+	else if ((width == 720) && (height == 576))
 	{
-		const char* scanFormat = ((height == 486) && (417083 != pvih->AvgTimePerFrame)) ||
-					   (height == 576) ||
-					   ((1080 == pvih->bmiHeader.biHeight) && ((frameRate >= 25.00) && (frameRate < 50.0))) ? "i" : "p";
-		StringCbPrintfA(format, 128, "%%d%s%%.%df", scanFormat, frameRatePrecision);
-		int scanHeight;
-		if (height == 486) 
-			scanHeight = 525;
-		else if (height == 576) 
-			scanHeight = 625;
-		else 
-			scanHeight = height;
-
-		if (strncmp(scanFormat, "i", 10) == 0)
-			frameRate *= 2;
-
-		StringCbPrintfA(buffer, bufferLen, format, scanHeight, frameRate);
+		StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.0f", frameRate * 2);
+		StringCbPrintfA(buffer, bufferLen, "625i%s PAL RGB", frameRateBuffer);
 	}
-
-	if (height == 486)
+	else if ((width == 720) && (height == 486))
 	{
-		StringCchCatA(buffer, bufferLen, " NTSC");
+		bool progressive = 417083 == pvih->AvgTimePerFrame;
 
-		if ((height == 486) && (417083 == pvih->AvgTimePerFrame))
-			StringCchCatA(buffer, bufferLen, " Pulldown");
+		const char* p = progressive ? "p" : "i";
+		if (!progressive)
+			StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.2f", frameRate * 2);
+		StringCbPrintfA(buffer, bufferLen, "525%s%s NTSC RGB", p, frameRateBuffer);
 	}
-	else if (height == 576)
-		StringCchCatA(buffer, bufferLen, " PAL");
-
-	if (pvih->bmiHeader.biBitCount == 16)
-		StringCchCatA(buffer, bufferLen, " 8 bit 4:2:2 YUV");
-	else if (pvih->bmiHeader.biBitCount == 20)
-		StringCchCatA(buffer, bufferLen, " 10 bit 4:2:2 YUV");
-	else if (pvih->bmiHeader.biBitCount == 30)
-		StringCchCatA(buffer, bufferLen, " 10 bit 4:4:4 RGB");
 }
 
 //-----------------------------------------------------------------------------

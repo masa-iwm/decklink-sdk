@@ -1577,6 +1577,10 @@ HRESULT CDecklinkIngestDlg::CreateCaptureSourceGraph(void)
 				}
 			}
 		}
+		else
+		{
+			MessageBox(TEXT("Unable to create GMFBridgeController, please ensure that GMFBridge is registered."), TEXT("GMFBridge missing"), MB_OK | MB_ICONEXCLAMATION);
+		}
 	}
 
 	return hr;
@@ -1659,6 +1663,9 @@ HRESULT CDecklinkIngestDlg::CreateCaptureSinkGraph(LPCTSTR pszFilename)
 {
 	HRESULT hr = S_OK;
 	
+	if (!m_pIGMFBridgeController)
+		return E_FAIL;
+
 	if (pszFilename)
 	{
 		hr = DestroySinkGraph();
