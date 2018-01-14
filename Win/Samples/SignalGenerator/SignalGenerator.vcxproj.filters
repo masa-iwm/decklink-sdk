@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="DeckLink API">
-      <UniqueIdentifier>{f0b2225a-c679-49c1-9efe-f94b8f9feebd}</UniqueIdentifier>
+      <UniqueIdentifier>{ba9601b2-9ebf-4f0b-a90b-2f294ef8ee2e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -32,6 +32,12 @@
     </ClCompile>
     <ClCompile Include="DeckLinkAPI_i.c">
       <Filter>DeckLink API</Filter>
+    </ClCompile>
+    <ClCompile Include="DeckLinkDeviceDiscovery.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DeckLinkOutputDevice.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -51,6 +57,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DeckLinkOutputDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DeckLinkDeviceDiscovery.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

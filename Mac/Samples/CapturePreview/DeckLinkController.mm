@@ -202,7 +202,7 @@ void		DeckLinkDevice::stopCapture()
 	
 	// Delete capture callback
 	deckLinkInput->SetCallback(NULL);
-    deckLinkInput->DisableVideoInput();
+	deckLinkInput->DisableVideoInput();
 	
 	currentlyCapturing = false;
 }
@@ -263,62 +263,64 @@ bail:
 
 HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFrame* videoFrame, /* in */ IDeckLinkAudioInputPacket* audioPacket)
 {
-	BOOL					hasValidInputSource = (videoFrame->GetFlags() & bmdFrameHasNoInputSource) != 0 ? NO : YES;
-	AncillaryDataStruct		ancillaryData;
-	
-	NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+	BOOL							hasValidInputSource = (videoFrame->GetFlags() & bmdFrameHasNoInputSource) != 0 ? NO : YES;
+	NSAutoreleasePool* 				pool = [[NSAutoreleasePool alloc] init];
+	AncillaryDataStruct*			ancillaryData = [[[AncillaryDataStruct alloc] init] autorelease];
 	
 	// Update input source label
 	[uiDelegate updateInputSourceState:hasValidInputSource];
 	
 	// Get the various timecodes and userbits for this frame
-	getAncillaryDataFromFrame(videoFrame, bmdTimecodeVITC, &ancillaryData.vitcF1Timecode, &ancillaryData.vitcF1UserBits);
-	getAncillaryDataFromFrame(videoFrame, bmdTimecodeVITCField2, &ancillaryData.vitcF2Timecode, &ancillaryData.vitcF2UserBits);
-	getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC1, &ancillaryData.rp188vitc1Timecode, &ancillaryData.rp188vitc1UserBits);
-	getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC, &ancillaryData.rp188ltcTimecode, &ancillaryData.rp188ltcUserBits);
-	getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2, &ancillaryData.rp188vitc2Timecode, &ancillaryData.rp188vitc2UserBits);
-	
-	[uiDelegate setAncillaryData:&ancillaryData];
+	ancillaryData.vitcF1 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeVITC);
+	ancillaryData.vitcF2 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeVITCField2);
+	ancillaryData.rp188vitc1 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC1);
+	ancillaryData.rp188ltc = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC);
+	ancillaryData.rp188vitc2 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2);
 	
 	// Update the UI
-	dispatch_async(dispatch_get_main_queue(), ^{
+	dispatch_block_t updateAncillary = ^{
+		[uiDelegate setAncillaryData:ancillaryData];
 		[uiDelegate reloadAncillaryTable];
-	});
+	};
 	
+	dispatch_async(dispatch_get_main_queue(), updateAncillary);
+
 	[pool release];
 	return S_OK;
 }
 
 
-void            DeckLinkDevice::getAncillaryDataFromFrame(IDeckLinkVideoInputFrame* videoFrame, BMDTimecodeFormat timecodeFormat, NSString** timecodeString, NSString** userBitsString)
+TimecodeStruct*				DeckLinkDevice::getAncillaryDataFromFrame(IDeckLinkVideoInputFrame* videoFrame, BMDTimecodeFormat timecodeFormat)
 {
 	IDeckLinkTimecode*		timecode = NULL;
 	CFStringRef				timecodeCFString;
 	BMDTimecodeUserBits		userBits = 0;
+	TimecodeStruct*			returnTimeCode = [[[TimecodeStruct alloc] init] autorelease];
 	
-	if ((videoFrame != NULL) && (timecodeString != NULL) && (userBitsString != NULL)
-		&& (videoFrame->GetTimecode(timecodeFormat, &timecode) == S_OK))
+	if ((videoFrame != NULL) && (videoFrame->GetTimecode(timecodeFormat, &timecode) == S_OK))
 	{
 		if (timecode->GetString(&timecodeCFString) == S_OK)
 		{
-			*timecodeString = [NSString stringWithString: (NSString *)timecodeCFString];
+			returnTimeCode.timecode = [NSString stringWithString: (NSString *)timecodeCFString];
 			CFRelease(timecodeCFString);
 		}
 		else
 		{
-			*timecodeString = @"";
+			returnTimeCode.timecode = @"";
 		}
 		
 		timecode->GetTimecodeUserBits(&userBits);
-		*userBitsString = [NSString stringWithFormat:@"0x%08X", userBits];
+		returnTimeCode.userBits = [NSString stringWithFormat:@"0x%08X", userBits];
 		
 		timecode->Release();
 	}
 	else
 	{
-		*timecodeString = @"";
-		*userBitsString = @"";
+		returnTimeCode.timecode = @"";
+		returnTimeCode.userBits = @"";
 	}
+	
+	return returnTimeCode;
 }
 
 

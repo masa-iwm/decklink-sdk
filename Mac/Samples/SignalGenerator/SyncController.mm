@@ -55,11 +55,89 @@ static uint32_t gHD75pcColourBars[8] =
 
 @implementation SyncController
 
+@synthesize window;
+
+- (void)addDevice:(IDeckLink*)deckLink
+{
+	// Create new PlaybackDelegate object to wrap around new IDeckLink instance
+	PlaybackDelegate* device = new PlaybackDelegate(self, deckLink);
+
+	// Initialise new PlaybackDelegate object
+	if (! device->init())
+	{
+		[self showErrorMessage:@"Error initialising the new device" title:@"This application is unable to initialise the new device"];
+		device->Release();
+		return;
+	}
+
+	[[deviceListPopup menu] addItemWithTitle:(NSString*)device->getDeviceName() action:nil keyEquivalent:@""];
+	[[deviceListPopup lastItem] setTag:(NSInteger)device];
+
+	if ([deviceListPopup numberOfItems] == 1)
+	{
+		// We have added our first item, enable the interface
+		[deviceListPopup selectItemAtIndex:0];
+		[self newDeviceSelected:nil];
+		
+		[startButton setEnabled:YES];
+		[self enableInterface:YES];
+	}
+}
+
+- (void)removeDevice:(IDeckLink*)deckLink
+{
+	PlaybackDelegate* deviceToRemove = NULL;
+	PlaybackDelegate* removalCandidate = NULL;
+	NSInteger index = 0;
+
+	// Find the DeckLinkDevice that wraps the IDeckLink being removed
+	for (NSMenuItem* item in [deviceListPopup itemArray])
+	{
+		removalCandidate = (PlaybackDelegate*)[item tag];
+		
+		if (removalCandidate->getDeckLinkDevice() == deckLink)
+		{
+			deviceToRemove = removalCandidate;
+			break;
+		}
+		++index;
+	}
+
+	if (deviceToRemove == NULL)
+		return;
+
+	// If playback is ongoing, stop it
+	if ( (selectedDevice == deviceToRemove) && (running == YES) )
+		[self stopRunning];
+
+	[deviceListPopup removeItemAtIndex:index];
+
+	if ([deviceListPopup numberOfItems] == 0)
+	{
+		// We have removed the last item, disable the interface
+		[startButton setEnabled:NO];
+		[self enableInterface:NO];
+		selectedDevice = NULL;
+	}
+	else if (selectedDevice == deviceToRemove)
+	{
+		// Select the first device in the list and enable the interface
+		[deviceListPopup selectItemAtIndex:0];
+		[self newDeviceSelected:nil];
+		
+		[startButton setEnabled:YES];
+	}
+
+	// Release DeckLinkDevice instance
+	deviceToRemove->Release();
+}
+
 - (void) refreshDisplayModeMenu
 {
 	// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
 	IDeckLinkDisplayModeIterator*		displayModeIterator;
 	IDeckLinkDisplayMode*				deckLinkDisplayMode;
+	IDeckLinkOutput*					deckLinkOutput;
 	BMDPixelFormat						pixelFormat;
 	int									i;
 
@@ -74,6 +152,9 @@ static uint32_t gHD75pcColourBars[8] =
 	}
 
 	[videoFormatPopup removeAllItems];
+
+	deckLinkOutput = selectedDevice->getDeviceOutput();
+
 	if (deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
 		return;
 
@@ -127,8 +208,75 @@ static uint32_t gHD75pcColourBars[8] =
 		[startButton setEnabled:true];
 }
 
+- (void)refreshAudioChannelMenu
+{
+	IDeckLink*				deckLink;
+	IDeckLinkAttributes*	deckLinkAttributes;
+	int64_t					maxAudioChannels;
+	NSMenuItem*				audioChannelPopupItem;
+	int						audioChannelSelected;
+	int						currentAudioChannel;
+
+	audioChannelSelected = [[audioChannelPopup selectedItem] tag];
+
+	deckLink = selectedDevice->getDeckLinkDevice();
+
+	// Get DeckLink attributes to determine number of audio channels
+	if (deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**) &deckLinkAttributes) != S_OK)
+		goto bail;
+		
+	// Get max number of audio channels supported by DeckLink device
+	if (deckLinkAttributes->GetInt(BMDDeckLinkMaximumAudioChannels, &maxAudioChannels) != S_OK)
+		goto bail;
+	
+	// Scan through Audio channel popup menu and disable invalid entries
+	for (int i = 0; i < [audioChannelPopup numberOfItems]; i++)
+	{
+		audioChannelPopupItem = [audioChannelPopup itemAtIndex:i];
+		currentAudioChannel = [audioChannelPopupItem tag];
+		
+		if ( maxAudioChannels >= (int64_t) currentAudioChannel )
+		{
+			[audioChannelPopupItem setHidden:NO];
+			if ( audioChannelSelected >= currentAudioChannel )
+				[audioChannelPopup selectItemAtIndex:i];
+		}
+		else
+			[audioChannelPopupItem setHidden:YES];
+	}
+
+bail:
+	if (deckLinkAttributes)
+	{
+		deckLinkAttributes->Release();
+		deckLinkAttributes = NULL;
+	}
+}
+
+- (IBAction)newDeviceSelected:(id)sender
+{
+	IDeckLinkOutput*	deckLinkOutput;
+
+	// Get the DeckLinkDevice object for the selected menu item.
+	selectedDevice = (PlaybackDelegate*)[[deviceListPopup selectedItem] tag];
+	
+	// Update the display mode popup menu
+	[self refreshDisplayModeMenu];
+
+	// Set Screen Preview callback for selected device
+	deckLinkOutput = selectedDevice->getDeviceOutput();
+	deckLinkOutput->SetScreenPreviewCallback(CreateCocoaScreenPreview(previewView));
+	
+	// Update available audio channels
+	[self refreshAudioChannelMenu];
+
+	// Enable the interface
+	[self enableInterface:YES];
+}
+
 - (SignalGenerator3DVideoFrame*) CreateBlackFrame
 {
+	IDeckLinkOutput*				deckLinkOutput;
 	IDeckLinkMutableVideoFrame*		referenceBlack = NULL;
 	IDeckLinkMutableVideoFrame*		scheduleBlack = NULL;
 	HRESULT							hr;
@@ -140,6 +288,8 @@ static uint32_t gHD75pcColourBars[8] =
 	pixelFormat = [[pixelFormatPopup selectedItem] tag];
 	bytesPerPixel = GetBytesPerPixel(pixelFormat);
 
+	deckLinkOutput = selectedDevice->getDeviceOutput();
+	
 	hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, frameWidth*bytesPerPixel, pixelFormat, bmdFrameFlagDefault, &scheduleBlack);
 	if (hr != S_OK)
 		goto bail;
@@ -188,6 +338,7 @@ bail:
 
 - (SignalGenerator3DVideoFrame*) CreateBarsFrame
 {
+	IDeckLinkOutput*				deckLinkOutput;
 	IDeckLinkMutableVideoFrame*		referenceBarsLeft = NULL;
 	IDeckLinkMutableVideoFrame*		referenceBarsRight = NULL;
 	IDeckLinkMutableVideoFrame*		scheduleBarsLeft = NULL;
@@ -200,6 +351,8 @@ bail:
 
 	pixelFormat = [[pixelFormatPopup selectedItem] tag];
 	bytesPerPixel = GetBytesPerPixel(pixelFormat);
+
+	deckLinkOutput = selectedDevice->getDeviceOutput();
 
 	// Request a left and right frame from the device
 	hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, frameWidth*bytesPerPixel, pixelFormat, bmdFrameFlagDefault, &scheduleBarsLeft);
@@ -274,73 +427,35 @@ bail:
 
 - (void)applicationDidFinishLaunching:(NSNotification*)notification
 {
-	IDeckLinkIterator*			deckLinkIterator = NULL;
-	BOOL						success = NO;
+	//
+	// Setup UI
 
-	// **** Find a DeckLink instance and obtain video output interface
-	deckLinkIterator = CreateDeckLinkIteratorInstance();
-	if (deckLinkIterator == NULL)
-	{
-		NSRunAlertPanel(@"This application requires the DeckLink drivers installed.", @"Please install the Blackmagic DeckLink drivers to use the features of this application.", @"OK", nil, nil);
-		goto bail;
-	}
-	
-	// Connect to the first DeckLink instance
-	if (deckLinkIterator->Next(&deckLink) != S_OK)
-	{
-		NSRunAlertPanel(@"This application requires a DeckLink PCI card.", @"You will not be able to use the features of this application until a DeckLink PCI card is installed.", @"OK", nil, nil);
-		goto bail;
-	}
-	
-	// Obtain the audio/video output interface (IDeckLinkOutput)
-	if (deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput) != S_OK)
-		goto bail;
-	
-	// Create a delegate class to allow the DeckLink API to call into our code
-	playerDelegate = new PlaybackDelegate(self, deckLinkOutput);
-	if (playerDelegate == NULL)
-		goto bail;
-	// Provide the delegate to the audio and video output interfaces
-	deckLinkOutput->SetScheduledFrameCompletionCallback(playerDelegate);
-	deckLinkOutput->SetAudioCallback(playerDelegate);
-	
-	[self refreshDisplayModeMenu];
+	// Empty popup menus
+	[deviceListPopup removeAllItems];
+	[videoFormatPopup removeAllItems];
 
-	deckLinkOutput->SetScreenPreviewCallback(CreateCocoaScreenPreview(previewView));
-	
-	success = YES;
+	// Disable the interface
+	[startButton setEnabled:NO];
+	[self enableInterface:NO];
 
-bail:
-	if (success == NO)
+	//
+	// Create and initialise DeckLink device discovery and preview objects
+	deckLinkDiscovery = new DeckLinkDeviceDiscovery(self);
+	if (deckLinkDiscovery != NULL)
 	{
-		// Release any resources that were partially allocated
-		if (deckLinkOutput != NULL)
-		{
-			deckLinkOutput->Release();
-			deckLinkOutput = NULL;
-		}
-		//
-		if (deckLink != NULL)
-		{
-			deckLink->Release();
-			deckLink = NULL;
-		}
-		
-		// Disable the user interface if we could not succsssfully connect to a DeckLink device
-		[startButton setEnabled:NO];
-		[self enableInterface:NO];
+		deckLinkDiscovery->enable();
 	}
-	
-	if (deckLinkIterator != NULL)
+	else
 	{
-		deckLinkIterator->Release();
-		deckLinkIterator = NULL;
+		[self showErrorMessage:@"This application requires the Desktop Video drivers installed." title:@"Please install the Blackmagic Desktop Video drivers to use the features of this application."];
 	}
+
 }
 
 - (void)enableInterface:(BOOL)enable
 {
 	// Set the enable state of user interface elements
+	[deviceListPopup setEnabled:enable];
 	[outputSignalPopup setEnabled:enable];
 	[audioChannelPopup setEnabled:enable];
 	[audioSampleDepthPopup setEnabled:enable];
@@ -363,6 +478,7 @@ bail:
 
 - (void)startRunning
 {
+	IDeckLinkOutput*		deckLinkOutput;
 	IDeckLinkDisplayMode*	videoDisplayMode = NULL;
 	BMDVideoOutputFlags		videoOutputFlags;
 	NSMenuItem*				videoDisplayItem;
@@ -390,6 +506,7 @@ bail:
 	framesPerSecond = (frameTimescale + (frameDuration-1))  /  frameDuration;
 
 	// Set the video output mode
+	deckLinkOutput = selectedDevice->getDeviceOutput();
 	if (deckLinkOutput->EnableVideoOutput(videoDisplayMode->GetDisplayMode(), videoOutputFlags) != S_OK)
 		goto bail;
 	
@@ -438,6 +555,8 @@ bail:
 
 - (void)stopRunning
 {
+	IDeckLinkOutput* deckLinkOutput = selectedDevice->getDeviceOutput();
+
 	// Stop the audio and video output streams immediately
 	deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
 	//
@@ -465,6 +584,8 @@ bail:
 
 - (void)scheduleNextFrame:(BOOL)prerolling
 {
+	IDeckLinkOutput* deckLinkOutput = selectedDevice->getDeviceOutput();
+
 	if (prerolling == NO)
 	{
 		// If not prerolling, make sure that playback is still active
@@ -508,8 +629,9 @@ bail:
 
 - (void)writeNextAudioSamples
 {
+	IDeckLinkOutput* deckLinkOutput = selectedDevice->getDeviceOutput();
+
 	// Write one second of audio to the DeckLink API.
-	
 	if (outputSignal == kOutputSignalPip)
 	{
 		// Schedule one-frame of audio tone
@@ -526,21 +648,107 @@ bail:
 	totalAudioSecondsScheduled += 1;
 }
 
+- (void)applicationWillTerminate:(NSNotification *)notification
+{
+	// Stop the output signal
+	[self stopRunning];
+
+	// Disable DeckLink device discovery
+	deckLinkDiscovery->disable();
+
+	// Release all DeckLinkDevice instances
+	while([deviceListPopup numberOfItems] > 0)
+	{
+		PlaybackDelegate* device = (PlaybackDelegate*)[[deviceListPopup itemAtIndex:0] tag];
+		device->Release();
+		[deviceListPopup removeItemAtIndex:0];
+	}
+
+	// Release all DisplayMode instances
+	while([videoFormatPopup numberOfItems] > 0)
+	{
+		IDeckLinkDisplayMode* displayMode = (IDeckLinkDisplayMode*)[[videoFormatPopup itemAtIndex:0] tag];
+		displayMode->Release();
+		[videoFormatPopup removeItemAtIndex:0];
+	}
+	
+	// Release DeckLink discovery instance
+	if (deckLinkDiscovery != NULL)
+	{
+		deckLinkDiscovery->Release();
+		deckLinkDiscovery = NULL;
+	}
+}
+
 @end
 
 
 /*****************************************/
 
-PlaybackDelegate::PlaybackDelegate (SyncController* owner, IDeckLinkOutput* deckLinkOutput)
+PlaybackDelegate::PlaybackDelegate (SyncController* owner, IDeckLink* deckLink)
+	: m_controller(owner), m_deckLink(deckLink)
 {
-	mController = owner;
-	mDeckLinkOutput = deckLinkOutput;
+}
+
+PlaybackDelegate::~PlaybackDelegate()
+{
+	if (m_deckLinkOutput)
+	{
+		m_deckLinkOutput->Release();
+		m_deckLinkOutput = NULL;
+	}
+	
+	if (m_deckLink)
+	{
+		m_deckLink->Release();
+		m_deckLink = NULL;
+	}
+	
+	if (m_deviceName)
+		CFRelease(m_deviceName);
+}
+
+bool PlaybackDelegate::init()
+{
+	// Get output interface
+	if (m_deckLink->QueryInterface(IID_IDeckLinkOutput, (void**) &m_deckLinkOutput) != S_OK)
+		return false;
+
+	// Get device name
+	if (m_deckLink->GetDisplayName(&m_deviceName) != S_OK)
+		m_deviceName = CFStringCreateCopy(NULL, CFSTR("DeckLink"));
+
+	// Provide the delegate to the audio and video output interfaces
+	m_deckLinkOutput->SetScheduledFrameCompletionCallback(this);
+	m_deckLinkOutput->SetAudioCallback(this);
+
+	return true;
 }
 
 HRESULT	PlaybackDelegate::QueryInterface(REFIID iid, LPVOID *ppv)
 {
+	CFUUIDBytes		iunknown;
+	HRESULT			result = E_NOINTERFACE;
+
+	// Initialise the return result
 	*ppv = NULL;
-	return E_NOINTERFACE;
+
+	// Obtain the IUnknown interface and compare it the provided REFIID
+	iunknown = CFUUIDGetUUIDBytes(IUnknownUUID);
+	if (memcmp(&iid, &iunknown, sizeof(REFIID)) == 0)
+	{
+		*ppv = this;
+		AddRef();
+		result = S_OK;
+	}
+	else if (memcmp(&iid, &IID_IDeckLinkNotificationCallback, sizeof(REFIID)) == 0)
+	{
+		*ppv = (IDeckLinkNotificationCallback*)this;
+		AddRef();
+		result = S_OK;
+	}
+
+	return result;
 }
 
 ULONG	PlaybackDelegate::AddRef(void)
@@ -559,7 +767,7 @@ ULONG	PlaybackDelegate::Release(void)
 HRESULT		PlaybackDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {
 	// When a video frame has been 
-	[mController scheduleNextFrame:NO];
+	[m_controller scheduleNextFrame:NO];
 	return S_OK;
 }
 
@@ -571,17 +779,119 @@ HRESULT		PlaybackDelegate::ScheduledPlaybackHasStopped ()
 HRESULT		PlaybackDelegate::RenderAudioSamples (bool preroll)
 {
 	// Provide further audio samples to the DeckLink API until our preferred buffer waterlevel is reached
-	[mController writeNextAudioSamples];
+	[m_controller writeNextAudioSamples];
 	
 	if (preroll)
 	{
 		// Start audio and video output
-		mDeckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
+		m_deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
 	}
 	
 	return S_OK;
 }
 
+/*****************************************/
+
+DeckLinkDeviceDiscovery::DeckLinkDeviceDiscovery(SyncController* delegate)
+: m_uiDelegate(delegate), m_deckLinkDiscovery(NULL), m_refCount(1)
+{
+	m_deckLinkDiscovery = CreateDeckLinkDiscoveryInstance();
+}
+
+
+DeckLinkDeviceDiscovery::~DeckLinkDeviceDiscovery()
+{
+	if (m_deckLinkDiscovery != NULL)
+	{
+		// Uninstall device arrival notifications and release discovery object
+		m_deckLinkDiscovery->UninstallDeviceNotifications();
+		m_deckLinkDiscovery->Release();
+		m_deckLinkDiscovery = NULL;
+	}
+}
+
+bool		DeckLinkDeviceDiscovery::enable()
+{
+	HRESULT		result = E_FAIL;
+
+	// Install device arrival notifications
+	if (m_deckLinkDiscovery != NULL)
+		result = m_deckLinkDiscovery->InstallDeviceNotifications(this);
+
+	return result == S_OK;
+}
+
+void		DeckLinkDeviceDiscovery::disable()
+{
+	// Uninstall device arrival notifications
+	if (m_deckLinkDiscovery != NULL)
+		m_deckLinkDiscovery->UninstallDeviceNotifications();
+}
+
+HRESULT		DeckLinkDeviceDiscovery::DeckLinkDeviceArrived (/* in */ IDeckLink* deckLink)
+{
+	// Update UI (add new device to menu) from main thread
+	// AddRef the IDeckLink instance before handing it off to the main thread
+	deckLink->AddRef();
+	dispatch_async(dispatch_get_main_queue(), ^{
+		[m_uiDelegate addDevice:deckLink];
+	});
+
+	return S_OK;
+}
+
+HRESULT		DeckLinkDeviceDiscovery::DeckLinkDeviceRemoved (/* in */ IDeckLink* deckLink)
+{
+	dispatch_async(dispatch_get_main_queue(), ^{
+		[m_uiDelegate removeDevice:deckLink];
+	});
+	return S_OK;
+}
+
+HRESULT		DeckLinkDeviceDiscovery::QueryInterface (REFIID iid, LPVOID *ppv)
+{
+	CFUUIDBytes		iunknown;
+	HRESULT			result = E_NOINTERFACE;
+
+	// Initialise the return result
+	*ppv = NULL;
+
+	// Obtain the IUnknown interface and compare it the provided REFIID
+	iunknown = CFUUIDGetUUIDBytes(IUnknownUUID);
+	if (memcmp(&iid, &iunknown, sizeof(REFIID)) == 0)
+	{
+		*ppv = this;
+		AddRef();
+		result = S_OK;
+	}
+	else if (memcmp(&iid, &IID_IDeckLinkDeviceNotificationCallback, sizeof(REFIID)) == 0)
+	{
+		*ppv = (IDeckLinkDeviceNotificationCallback*)this;
+		AddRef();
+		result = S_OK;
+	}
+
+	return result;
+}
+
+ULONG		DeckLinkDeviceDiscovery::AddRef (void)
+{
+	return OSAtomicIncrement32(&m_refCount);
+}
+
+ULONG		DeckLinkDeviceDiscovery::Release (void)
+{
+	int32_t		newRefValue;
+
+	newRefValue = OSAtomicDecrement32(&m_refCount);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+
+	return newRefValue;
+}
 
 /*****************************************/
 
@@ -643,7 +953,7 @@ void	FillColourBars (IDeckLinkVideoFrame* theFrame, bool reversed)
 
 	for (uint32_t y = 0; y < height; y++)
 	{
-	    for (uint32_t x = 0; x < width; x+=2)
+		for (uint32_t x = 0; x < width; x+=2)
 		{
 			int pos = x * numBars / width;
 			

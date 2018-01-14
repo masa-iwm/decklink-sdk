@@ -21,7 +21,7 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			8OuQri2KUz/B4sY0KRvsabqeNTw=
+			1E5Fi6ZVEcqqmZObgXtr4l4BDrA=
 			</data>
 			<key>optional</key>
 			<true/>
@@ -30,14 +30,25 @@
 	<key>files2</key>
 	<dict>
 		<key>Resources/DeckLinkKeyer Default Image.psd</key>
-		<data>
-		xrCANmoA1mj20aeydEp6Imv5fOA=
-		</data>
+		<dict>
+			<key>hash</key>
+			<data>
+			xrCANmoA1mj20aeydEp6Imv5fOA=
+			</data>
+			<key>hash2</key>
+			<data>
+			ClCIuyZM8VC/utBul+z8vl5XkX0It2Q0gHs0BVdwvLI=
+			</data>
+		</dict>
 		<key>Resources/English.lproj/InfoPlist.strings</key>
 		<dict>
 			<key>hash</key>
 			<data>
 			R7WNRst2q21w7PGERUZG4m2Y+TM=
+			</data>
+			<key>hash2</key>
+			<data>
+			RzsyqpJh2jAmezSt7uYmnttkHYCahpaAx7r3kMTKSUc=
 			</data>
 			<key>optional</key>
 			<true/>
@@ -46,7 +57,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			8OuQri2KUz/B4sY0KRvsabqeNTw=
+			1E5Fi6ZVEcqqmZObgXtr4l4BDrA=
+			</data>
+			<key>hash2</key>
+			<data>
+			X9gLGyClwoOoUEc+nY4AzRrYh4K+3TIpklaD8XKFRVc=
 			</data>
 			<key>optional</key>
 			<true/>

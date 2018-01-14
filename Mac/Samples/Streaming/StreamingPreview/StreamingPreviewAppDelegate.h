@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2011 Blackmagic Design
+** Copyright (c) 2017 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -30,14 +30,13 @@
 #import "BMDStreamingDeviceInputNotifier.h"
 #import "BMDStreamingDeviceNotifier.h"
 #import "OpenGLPreview.h"
-#import "QTDecodeSession.h"
+#import "VTDecodeSession.h"
 
 #import <Cocoa/Cocoa.h>
 
-class H264StreamingDelegate;
+class DecodeSessionDelegate;
 
 @interface StreamingPreviewAppDelegate : NSObject <NSApplicationDelegate,
-												   DecodeSessionDelegate,
 												   BMDStreamingDeviceDelegate,
 												   BMDStreamingDeviceInputDelegate,
 												   BMDStreamingDeckControlDelegate>
@@ -51,6 +50,7 @@ class H264StreamingDelegate;
 
 	IBOutlet OpenGLPreview*				mPreview;
 
+	DecodeSessionDelegate*				mDecodeDelegate;
 	BMDStreamingDeviceNotifier*			mDeviceNotifier;
 	BMDStreamingDeviceInputNotifier*	mDeviceInputNotifier;
 	BMDStreamingDeckControlNotifier*	mDeckControlNotifier;
@@ -65,11 +65,13 @@ class H264StreamingDelegate;
 	BMDVideoConnection					mInputConnector;
 	BMDDisplayMode						mInputMode;
 	AudioStreamDecoder*					mAudioStreamDecoder;
-	QTDecodeSession*					mDecodeSession;
+	VTDecodeSession*					mDecodeSession;
 	NSLock*								mDecodeSessionLock;
 }
 
 @property (assign) IBOutlet NSWindow* window;
+
+- (void)haveVideoFrame:(CVPixelBufferRef)pixBuf fromNAL:(IBMDStreamingH264NALPacket*)nal;
 
 - (void)updateUIForNewDevice;
 - (void)updateUIForNoDevice;

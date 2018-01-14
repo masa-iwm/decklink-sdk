@@ -30,6 +30,51 @@
 
 using namespace std;
 
+
+@implementation TimecodeStruct
+@synthesize timecode;
+@synthesize userBits;
+
+- (void)dealloc;
+{
+	[timecode release];
+	[userBits release];
+	
+	[super dealloc];
+}
+
+-(id) copyWithZone: (NSZone *) zone
+{
+	TimecodeStruct *timecodeCopy = [[[self class] allocWithZone: zone] init];
+	
+	timecodeCopy.timecode = [NSString stringWithString:self.timecode];
+	timecodeCopy.userBits = [NSString stringWithString:self.userBits];
+
+	return timecodeCopy;
+}
+
+@end
+
+@implementation AncillaryDataStruct
+
+@synthesize vitcF1;
+@synthesize vitcF2;
+@synthesize rp188vitc1;
+@synthesize rp188vitc2;
+@synthesize rp188ltc;
+
+- (void)dealloc
+{
+	[vitcF1 dealloc];
+	[vitcF2 dealloc];
+	[rp188vitc1 dealloc];
+	[rp188vitc2 dealloc];
+	[rp188ltc dealloc];
+	
+	[super dealloc];
+}
+@end
+
 @implementation CapturePreviewAppDelegate
 
 @synthesize window;
@@ -48,7 +93,7 @@ using namespace std;
 							@"RP188 VITC1 Timecode", 
 							@"RP188 VITC1 User bits",
 							@"RP188 LTC Timecode", 
-						    @"RP188 LTC User bits",
+							@"RP188 LTC User bits",
 							@"RP188 VITC2 Timecode", 
 							@"RP188 VITC2 User bits",
 							nil] retain];
@@ -80,7 +125,7 @@ using namespace std;
 	else
 	{
 		[self showErrorMessage:@"This application requires the Desktop Video drivers installed." title:@"Please install the Blackmagic Desktop Video drivers to use the features of this application."];
-    }
+	}
 }
 
 - (void)addDevice:(IDeckLink*)deckLink
@@ -172,7 +217,7 @@ using namespace std;
 {
 	NSMutableArray*		modeNames;
 	int					modeIndex = 0;
-   
+	
 	// Clear the menu
 	[modeListPopup removeAllItems];
 	
@@ -279,21 +324,21 @@ using namespace std;
 	[modeListPopup selectItemAtIndex:newVideoModeIndex];
 }
 
-- (void)setAncillaryData:(AncillaryDataStruct*) latestAncillaryDataValues
+- (void)setAncillaryData:(AncillaryDataStruct *)latestAncillaryDataValues
 {
 	// VITC
-	[ancillaryDataValues replaceObjectAtIndex:0 withObject:latestAncillaryDataValues->vitcF1Timecode];
-	[ancillaryDataValues replaceObjectAtIndex:1 withObject:latestAncillaryDataValues->vitcF1UserBits];
-	[ancillaryDataValues replaceObjectAtIndex:2 withObject:latestAncillaryDataValues->vitcF2Timecode];
-	[ancillaryDataValues replaceObjectAtIndex:3 withObject:latestAncillaryDataValues->vitcF2UserBits];
+	[ancillaryDataValues replaceObjectAtIndex:0 withObject:latestAncillaryDataValues.vitcF1.timecode];
+	[ancillaryDataValues replaceObjectAtIndex:1 withObject:latestAncillaryDataValues.vitcF1.userBits];
+	[ancillaryDataValues replaceObjectAtIndex:2 withObject:latestAncillaryDataValues.vitcF2.timecode];
+	[ancillaryDataValues replaceObjectAtIndex:3 withObject:latestAncillaryDataValues.vitcF2.userBits];
 	
 	// RP188
-	[ancillaryDataValues replaceObjectAtIndex:4 withObject:latestAncillaryDataValues->rp188vitc1Timecode];
-	[ancillaryDataValues replaceObjectAtIndex:5 withObject:latestAncillaryDataValues->rp188vitc1UserBits];
-	[ancillaryDataValues replaceObjectAtIndex:6 withObject:latestAncillaryDataValues->rp188ltcTimecode];
-	[ancillaryDataValues replaceObjectAtIndex:7 withObject:latestAncillaryDataValues->rp188ltcUserBits];
-	[ancillaryDataValues replaceObjectAtIndex:8 withObject:latestAncillaryDataValues->rp188vitc2Timecode];
-	[ancillaryDataValues replaceObjectAtIndex:9 withObject:latestAncillaryDataValues->rp188vitc2UserBits];
+	[ancillaryDataValues replaceObjectAtIndex:4 withObject:latestAncillaryDataValues.rp188vitc1.timecode];
+	[ancillaryDataValues replaceObjectAtIndex:5 withObject:latestAncillaryDataValues.rp188vitc1.userBits];
+	[ancillaryDataValues replaceObjectAtIndex:6 withObject:latestAncillaryDataValues.rp188ltc.timecode];
+	[ancillaryDataValues replaceObjectAtIndex:7 withObject:latestAncillaryDataValues.rp188ltc.userBits];
+	[ancillaryDataValues replaceObjectAtIndex:8 withObject:latestAncillaryDataValues.rp188vitc2.timecode];
+	[ancillaryDataValues replaceObjectAtIndex:9 withObject:latestAncillaryDataValues.rp188vitc2.userBits];
 }
 
 - (void)reloadAncillaryTable;
@@ -335,7 +380,7 @@ using namespace std;
 	[self stopCapture];
 
 	// Disable DeckLink device discovery
-    deckLinkDiscovery->Disable();
+	deckLinkDiscovery->Disable();
 
 	// Release all DeckLinkDevice instances
 	while([deviceListPopup numberOfItems] > 0)
@@ -346,19 +391,18 @@ using namespace std;
 	}
 	
 	// Release DeckLink discovery & screen preview instances
-    if (deckLinkDiscovery != NULL)
-    {
-        deckLinkDiscovery->Release();
-        deckLinkDiscovery = NULL;
-    }
-    
-    if (screenPreviewCallback)
-    {
-        screenPreviewCallback->Release();
-        screenPreviewCallback = NULL;
-    }
-
+	if (deckLinkDiscovery != NULL)
+	{
+		deckLinkDiscovery->Release();
+		deckLinkDiscovery = NULL;
+	}
 	
+	if (screenPreviewCallback)
+	{
+		screenPreviewCallback->Release();
+		screenPreviewCallback = NULL;
+	}
+
 	[ancillaryDataValues release];
 	[ancillaryDataTypes release];
 }

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2011 Blackmagic Design
+** Copyright (c) 2017 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -26,8 +26,12 @@
 */
 
 #import "OpenGLPreview.h"
+#include <OpenGL/gl.h>
 
 #import <sys/time.h>
+#import <OpenGL/gl.h>
+#import <OpenGL/gl3.h>
+#import <OpenGL/glext.h>
 
 // Buffer some frames before starting playback to allow for delays in the
 // pipeline.  These occur as a result of the hugely variable compressed frame

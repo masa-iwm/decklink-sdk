@@ -60,7 +60,7 @@ static FourCCNameMapping kDisplayModeMappings[] =
 
 	{ bmdMode2k2398,		"2K 23.98p" },
 	{ bmdMode2k24,			"2K 24p" },
-	{ bmdMode2k2398,		"2K 25p" },
+	{ bmdMode2k25,			"2K 25p" },
 
 	{ bmdMode2kDCI2398,		"2K DCI 23.98p" },
 	{ bmdMode2kDCI24,		"2K DCI 24p" },

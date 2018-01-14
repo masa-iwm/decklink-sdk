@@ -37,6 +37,10 @@
     #endif
 #endif
 
+#ifndef BMD_PUBLIC
+	#define BMD_PUBLIC
+#endif
+
 // Type Declarations
 
 
@@ -159,7 +163,7 @@ class IDeckLinkDisplayMode;
 
 /* Interface IDeckLinkDisplayModeIterator - enumerates over supported input/output display modes. */
 
-class IDeckLinkDisplayModeIterator : public IUnknown
+class BMD_PUBLIC IDeckLinkDisplayModeIterator : public IUnknown
 {
 public:
     virtual HRESULT Next (/* out */ IDeckLinkDisplayMode **deckLinkDisplayMode) = 0;
@@ -170,7 +174,7 @@ protected:
 
 /* Interface IDeckLinkDisplayMode - represents a display mode */
 
-class IDeckLinkDisplayMode : public IUnknown
+class BMD_PUBLIC IDeckLinkDisplayMode : public IUnknown
 {
 public:
     virtual HRESULT GetName (/* out */ const char **name) = 0;

@@ -41,7 +41,7 @@ class IDeckLinkConfiguration_v10_9;
 
 /* Interface IDeckLinkConfiguration_v10_9 - DeckLink Configuration interface */
 
-class IDeckLinkConfiguration_v10_9 : public IUnknown
+class BMD_PUBLIC IDeckLinkConfiguration_v10_9 : public IUnknown
 {
 public:
     virtual HRESULT SetFlag (/* in */ BMDDeckLinkConfigurationID cfgID, /* in */ bool value) = 0;

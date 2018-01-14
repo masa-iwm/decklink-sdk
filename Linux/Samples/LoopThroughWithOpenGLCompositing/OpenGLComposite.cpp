@@ -1,5 +1,5 @@
 /* -LICENSE-START-
- ** Copyright (c) 2012 Blackmagic Design
+ ** Copyright (c) 2017 Blackmagic Design
  **
  ** Permission is hereby granted, free of charge, to any person or organization
  ** obtaining a copy of the software and accompanying documentation covered by
@@ -36,8 +36,9 @@ OpenGLComposite::OpenGLComposite(QWidget *parent) :
 	mCaptureAllocator(NULL), mPlayoutAllocator(NULL),
 	mFrameWidth(0), mFrameHeight(0),
 	mHasNoInputSource(true),
-	mPinnedMemoryExtensionAvailable(false),
-	mTexture(0),
+	mFastTransferExtensionAvailable(false),
+	mCaptureTexture(0),
+	mFBOTexture(0),
 	mRotateAngle(0.0f),
 	mRotateAngleRate(0.0f)
 {
@@ -51,29 +52,47 @@ OpenGLComposite::OpenGLComposite(QWidget *parent) :
 
 OpenGLComposite::~OpenGLComposite()
 {
+	// Cleanup for Capture
 	if (mDLInput != NULL)
 	{
-		// Cleanup for Capture
 		mDLInput->SetCallback(NULL);
 
 		mDLInput->Release();
 		mDLInput = NULL;
 	}
 
-	delete mCaptureDelegate;
-	delete mCaptureAllocator;
+	if (mCaptureDelegate != NULL)
+	{
+		mCaptureDelegate->Release();
+		mCaptureDelegate = NULL;
+	}
 
+	if (mCaptureAllocator != NULL)
+	{
+		mCaptureAllocator->Release();
+		mCaptureAllocator = NULL;
+	}
+
+	// Cleanup for Playout
 	if (mDLOutput != NULL)
 	{
-		// Cleanup for Playout
 		mDLOutput->SetScheduledFrameCompletionCallback(NULL);
 
 		mDLOutput->Release();
 		mDLOutput = NULL;
 	}
 
-	delete mPlayoutDelegate;
-	delete mPlayoutAllocator;
+	if (mPlayoutDelegate != NULL)
+	{
+		mPlayoutDelegate->Release();
+		mPlayoutDelegate = NULL;
+	}
+
+	if (mPlayoutAllocator != NULL)
+	{
+		mPlayoutAllocator->Release();
+		mPlayoutAllocator = NULL;
+	}
 }
 
 bool OpenGLComposite::InitDeckLink()
@@ -81,10 +100,12 @@ bool OpenGLComposite::InitDeckLink()
 	bool							bSuccess = false;
 	IDeckLinkIterator*				pDLIterator = NULL;
 	IDeckLink*						pDL = NULL;
+	IDeckLinkAttributes*			deckLinkAttributes = NULL;
 	IDeckLinkDisplayModeIterator*	pDLDisplayModeIterator = NULL;
 	IDeckLinkDisplayMode*			pDLDisplayMode = NULL;
-	BMDDisplayMode					displayMode = bmdModeNTSC;		// mode to use for capture and playout
+	BMDDisplayMode					displayMode = bmdModeHD1080i5994;		// mode to use for capture and playout
 	float							fps;
+	HRESULT							result;
 
 	pDLIterator = CreateDeckLinkIteratorInstance();
 	if (pDLIterator == NULL)
@@ -95,22 +116,44 @@ bool OpenGLComposite::InitDeckLink()
 
 	while (pDLIterator->Next(&pDL) == S_OK)
 	{
-		// Use first board found as playout device, second board will be capture device
-		if (! mDLOutput)
+		bool supportsFullDuplex = false;
+
+		if ((result = pDL->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes)) != S_OK)
+		{
+			printf("Could not obtain the IDeckLinkAttributes interface - result %08x\n", result);
+			pDL->Release();
+			pDL = NULL;
+			continue;
+		}
+
+		if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsFullDuplex, &supportsFullDuplex) != S_OK)
+			supportsFullDuplex = false;
+
+		deckLinkAttributes->Release();
+		deckLinkAttributes = NULL;
+
+		// Use a full duplex device as capture and playback, or half-duplex device
+		// as capture or playback.
+		bool inputUsed = false;
+		if (!mDLInput && pDL->QueryInterface(IID_IDeckLinkInput, (void**)&mDLInput) == S_OK)
+			inputUsed = true;
+
+		if (!mDLOutput && (!inputUsed || supportsFullDuplex))
 		{
 			if (pDL->QueryInterface(IID_IDeckLinkOutput, (void**)&mDLOutput) != S_OK)
-				goto error;
+				mDLOutput = NULL;
 		}
-		else if (! mDLInput)
-		{
-			if (pDL->QueryInterface(IID_IDeckLinkInput, (void**)&mDLInput) != S_OK)
-				goto error;
-		}
+
+		pDL->Release();
+		pDL = NULL;
+
+		if (mDLOutput && mDLInput)
+			break;
 	}
 
 	if (! mDLOutput || ! mDLInput)
 	{
-		QMessageBox::critical(NULL, "Expected both Input and Output DeckLink devices", "This application requires two DeckLink devices.");
+		QMessageBox::critical(NULL, "Expected both Input and Output DeckLink devices", "This application requires one full-duplex or two half-duplex DeckLink devices.");
 		goto error;
 	}
 
@@ -129,6 +172,7 @@ bool OpenGLComposite::InitDeckLink()
 		pDLDisplayMode = NULL;
 	}
 	pDLDisplayModeIterator->Release();
+	pDLDisplayModeIterator = NULL;
 
 	if (pDLDisplayMode == NULL)
 	{
@@ -154,9 +198,19 @@ bool OpenGLComposite::InitDeckLink()
 	if (! InitOpenGLState())
 		goto error;
 
+	if (mFastTransferExtensionAvailable)
+	{
+		// Initialize fast video frame transfers
+		if (! VideoFrameTransfer::initialize(mFrameWidth, mFrameHeight, mCaptureTexture, mFBOTexture))
+		{
+			QMessageBox::critical(NULL, "VideoFrameTransfer error.", "Cannot initialize video transfers.");
+			goto error;
+		}
+	}
+
 	// Capture will use a user-supplied frame memory allocator
 	// For large frames use a reduced allocator frame cache size to avoid out-of-memory
-	mCaptureAllocator = new PinnedMemoryAllocator(this, "Capture", mFrameWidth < 1920 ? 2 : 1);
+	mCaptureAllocator = new PinnedMemoryAllocator(this, VideoFrameTransfer::CPUtoGPU, mFrameWidth < 1920 ? 2 : 1);
 
 	if (mDLInput->SetVideoInputFrameMemoryAllocator(mCaptureAllocator) != S_OK)
 		goto error;
@@ -169,7 +223,7 @@ bool OpenGLComposite::InitDeckLink()
 		goto error;
 
 	// Playout will use a user-supplied frame memory allocator
-	mPlayoutAllocator = new PinnedMemoryAllocator(this, "Playout", 1);
+	mPlayoutAllocator = new PinnedMemoryAllocator(this, VideoFrameTransfer::GPUtoCPU, 1);
 
 	if (mDLOutput->SetVideoOutputFrameMemoryAllocator(mPlayoutAllocator) != S_OK)
 		goto error;
@@ -177,9 +231,9 @@ bool OpenGLComposite::InitDeckLink()
 	if (mDLOutput->EnableVideoOutput(displayMode, bmdVideoOutputFlagDefault) != S_OK)
 		goto error;
 
-	// Create a queue of 35 IDeckLinkMutableVideoFrame objects to use for scheduling output video frames.
+	// Create a queue of 10 IDeckLinkMutableVideoFrame objects to use for scheduling output video frames.
 	// The ScheduledFrameCompleted() callback will immediately schedule a new frame using the next video frame from this queue.
-	for (int i = 0; i < 35; i++)
+	for (int i = 0; i < 10; i++)
 	{
 		// The frame read back from the GPU frame buffer and used for the playout video frame is in BGRA format.
 		// The BGRA frame will be converted on playout to YCbCr either in hardware on most DeckLink cards or in software
@@ -227,6 +281,12 @@ error:
 	{
 		pDL->Release();
 		pDL = NULL;
+	}
+
+	if (pDLDisplayMode != NULL)
+	{
+		pDLDisplayMode->Release();
+		pDLDisplayMode = NULL;
 	}
 
 	if (pDLIterator != NULL)
@@ -290,15 +350,15 @@ bool OpenGLComposite::InitOpenGLState()
 	glDepthFunc( GL_LEQUAL );					// Type of depth test to do
 	glHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
 
-	if (! mPinnedMemoryExtensionAvailable)
+	if (! mFastTransferExtensionAvailable)
 	{
 		glGenBuffers(1, &mUnpinnedTextureBuffer);
 	}
 
 	// Setup the texture which will hold the captured video frame pixels
 	glEnable(GL_TEXTURE_2D);
-	glGenTextures(1, &mTexture);
-	glBindTexture(GL_TEXTURE_2D, mTexture);
+	glGenTextures(1, &mCaptureTexture);
+	glBindTexture(GL_TEXTURE_2D, mCaptureTexture);
 
 	// Parameters to control how texels are sampled from the texture
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -322,13 +382,21 @@ bool OpenGLComposite::InitOpenGLState()
 
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, mIdFrameBuf);
 
-	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, mIdColorBuf);
-	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA8, mFrameWidth, mFrameHeight);
+	// Texture for FBO
+	glGenTextures(1, &mFBOTexture);
+	glBindTexture(GL_TEXTURE_2D, mFBOTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mFrameWidth, mFrameHeight, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+
+	// Attach a depth buffer
 	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, mIdDepthBuf);
 	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT, mFrameWidth, mFrameHeight);
 
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, mIdColorBuf);
 	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, mIdDepthBuf);
+
+	// Attach the texture which stores the playback image
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, mFBOTexture, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 
 	GLenum glStatus = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 	if (glStatus != GL_FRAMEBUFFER_COMPLETE_EXT)
@@ -345,9 +413,14 @@ bool OpenGLComposite::InitOpenGLState()
 //
 void OpenGLComposite::VideoFrameArrived(IDeckLinkVideoInputFrame* inputFrame, bool hasNoInputSource)
 {
-	mMutex.lock();
-
 	mHasNoInputSource = hasNoInputSource;
+	if (mHasNoInputSource)
+	{
+		inputFrame->Release();
+		return;
+	}
+
+	mMutex.lock();
 
 	long textureSize = inputFrame->GetRowBytes() * inputFrame->GetHeight();
 	void* videoPixels;
@@ -355,37 +428,30 @@ void OpenGLComposite::VideoFrameArrived(IDeckLinkVideoInputFrame* inputFrame, bo
 
 	makeCurrent();
 
-	glEnable(GL_TEXTURE_2D);
-
-	if (! mPinnedMemoryExtensionAvailable)
+	if (mFastTransferExtensionAvailable)
 	{
-		// Use a normal texture buffer
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, mUnpinnedTextureBuffer);
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, textureSize, videoPixels, GL_DYNAMIC_DRAW);
+		if (! mCaptureAllocator->transferFrame(videoPixels, mCaptureTexture))
+			fprintf(stderr, "Capture: transferFrame() failed\n");
 	}
 	else
 	{
-		// Use a pinned buffer for the GL_PIXEL_UNPACK_BUFFER target
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, mCaptureAllocator->bufferObjectForPinnedAddress(textureSize, videoPixels));
+		glEnable(GL_TEXTURE_2D);
+
+		// Use a straightforward texture buffer
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, mUnpinnedTextureBuffer);
+		glBufferData(GL_PIXEL_UNPACK_BUFFER, textureSize, videoPixels, GL_DYNAMIC_DRAW);
+		glBindTexture(GL_TEXTURE_2D, mCaptureTexture);
+
+		// NULL for last arg indicates use current GL_PIXEL_UNPACK_BUFFER target as texture data
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mFrameWidth/2, mFrameHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+		glDisable(GL_TEXTURE_2D);
 	}
-	glBindTexture(GL_TEXTURE_2D, mTexture);
-
-	// NULL for last arg indicates use current GL_PIXEL_UNPACK_BUFFER target as texture data
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mFrameWidth/2, mFrameHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-	if (mPinnedMemoryExtensionAvailable)
-	{
-		// Ensure pinned texture has been transferred to GPU before we draw with it
-		GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-		glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 40 * 1000 * 1000);	// timeout in nanosec
-		glDeleteSync(fence);
-	}
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-	glDisable(GL_TEXTURE_2D);
 
 	mMutex.unlock();
+
 	inputFrame->Release();
 }
 
@@ -402,10 +468,6 @@ void OpenGLComposite::PlayoutNextFrame(IDeckLinkVideoFrame* completedFrame, BMDO
 
 	void*	pFrame;
 	outputVideoFrame->GetBytes(&pFrame);
-
-	long rowbytes = outputVideoFrame->GetRowBytes();
-	long height = outputVideoFrame->GetHeight();
-	long memSize = rowbytes * height;
 
 	// make GL context current
 	makeCurrent();
@@ -469,9 +531,15 @@ void OpenGLComposite::PlayoutNextFrame(IDeckLinkVideoFrame* completedFrame, BMDO
 	}
 	else
 	{
+		if (mFastTransferExtensionAvailable)
+		{
+			// Signal that we're about to draw using mCaptureTexture onto mFBOTexture
+			mCaptureAllocator->beginTextureInUse();
+		}
+
 		// Pass texture unit 0 to the fragment shader as a uniform variable
 		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, mTexture);
+		glBindTexture(GL_TEXTURE_2D, mCaptureTexture);
 		glUseProgram(mProgram);
 		GLint locUYVYtex = glGetUniformLocation(mProgram, "UYVYtex");
 		glUniform1i(locUYVYtex, 0);		// Bind texture unit 0
@@ -510,23 +578,26 @@ void OpenGLComposite::PlayoutNextFrame(IDeckLinkVideoFrame* completedFrame, BMDO
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	if (! mPinnedMemoryExtensionAvailable)
+	if (mFastTransferExtensionAvailable)
 	{
-		glReadPixels(0, 0, mFrameWidth, mFrameHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pFrame);
+		// Finished with mCaptureTexture
+		mCaptureAllocator->endTextureInUse();
+
+		if (! mPlayoutAllocator->transferFrame(pFrame, mFBOTexture))
+			fprintf(stderr, "Playback: transferFrame() failed\n");
+
+		paintGL();
+
+		// Wait for transfer to system memory to complete
+		mPlayoutAllocator->waitForTransferComplete(pFrame);
 	}
 	else
 	{
-		// Use a PIXEL PACK BUFFER to read back pixels
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, mPlayoutAllocator->bufferObjectForPinnedAddress(memSize, pFrame));
-		glReadPixels(0, 0, mFrameWidth, mFrameHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-		// Ensure GPU has processed all commands in the pipeline up to this point, before pFrame is read by the CPU
-		GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-		glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 40 * 1000 * 1000);	// timeout in nanosec
-		glDeleteSync(fence);
+		glReadPixels(0, 0, mFrameWidth, mFrameHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pFrame);
+		paintGL();
 	}
 
-	// If the last completed frame was late or dropped, bump the scheduled time further into the future by one frame
+	// If the last completed frame was late or dropped, bump the scheduled time further into the future
 	if (completionResult == bmdOutputFrameDisplayedLate || completionResult == bmdOutputFrameDropped)
 		mTotalPlayoutFrames += 2;
 
@@ -545,7 +616,7 @@ bool OpenGLComposite::Start()
 	mTotalPlayoutFrames = 0;
 
 	// Preroll frames
-	for (unsigned i = 0; i < mDLOutputVideoFrameQueue.size(); i++)
+	for (unsigned i = 0; i < 5; i++)
 	{
 		// Take each video frame from the front of the queue and move it to the back
 		IDeckLinkMutableVideoFrame* outputVideoFrame = mDLOutputVideoFrameQueue.front();
@@ -564,7 +635,7 @@ bool OpenGLComposite::Start()
 	}
 
 	mDLInput->StartStreams();
-	mDLOutput->StartScheduledPlayback(0, 100, 1.0);
+	mDLOutput->StartScheduledPlayback(0, mFrameTimescale, 1.0);
 
 	return true;
 }
@@ -698,7 +769,7 @@ bool OpenGLComposite::compileFragmentShader(int errorMessageSize, char* errorMes
 bool OpenGLComposite::CheckOpenGLExtensions()
 {
 	const GLubyte* strExt;
-	GLboolean hasFBO, hasPinned;
+	GLboolean hasFBO;
 
 	if (! isValid())
 	{
@@ -709,9 +780,8 @@ bool OpenGLComposite::CheckOpenGLExtensions()
 	makeCurrent();
 	strExt = glGetString (GL_EXTENSIONS);
 	hasFBO = gluCheckExtension ((const GLubyte*)"GL_EXT_framebuffer_object", strExt);
-	hasPinned = gluCheckExtension ((const GLubyte*)"GL_AMD_pinned_memory", strExt);
 
-	mPinnedMemoryExtensionAvailable = hasPinned;
+	mFastTransferExtensionAvailable = VideoFrameTransfer::checkFastMemoryTransferAvailable();
 
 	if (!hasFBO)
 	{
@@ -719,8 +789,8 @@ bool OpenGLComposite::CheckOpenGLExtensions()
 		return false;
 	}
 
-	if (!mPinnedMemoryExtensionAvailable)
-		fprintf(stderr, "GL_AMD_pinned_memory extension not available, using regular texture buffer fallback instead\n");
+	if (!mFastTransferExtensionAvailable)
+		fprintf(stderr, "Fast memory transfer extension not available, using regular OpenGL transfer fallback instead\n");
 
 	return true;
 }
@@ -740,10 +810,10 @@ bool OpenGLComposite::CheckOpenGLExtensions()
 // The frame cache delays the releasing of buffers until the cache fills up, thereby avoiding an
 // allocate plus pin operation for every frame, followed by an unpin and deallocate on every frame.
 
-PinnedMemoryAllocator::PinnedMemoryAllocator(QGLWidget* context, const char *name, unsigned cacheSize) :
+PinnedMemoryAllocator::PinnedMemoryAllocator(QGLWidget* context, VideoFrameTransfer::Direction direction, unsigned cacheSize) :
 	mContext(context),
 	mRefCount(1),
-	mName(name),
+	mDirection(direction),
 	mFrameCacheSize(cacheSize)	// large cache size will keep more GPU memory pinned and may result in out of memory errors
 {
 }
@@ -752,48 +822,50 @@ PinnedMemoryAllocator::~PinnedMemoryAllocator()
 {
 }
 
-GLuint PinnedMemoryAllocator::bufferObjectForPinnedAddress(int bufferSize, const void* address)
+bool PinnedMemoryAllocator::transferFrame(void* address, GLuint)
 {
-	// Store all input memory buffers in a map to lookup corresponding pinned buffer handle
-	if (mBufferHandleForPinnedAddress.count(address) == 0)
+	// Catch attempt to pin and transfer memory we didn't allocate
+	if (mAllocatedSize.count(address) == 0)
+		return false;
+
+	std::map<void*, VideoFrameTransfer*>::iterator it = mFrameTransfer.find(address);
+	if (it == mFrameTransfer.end())
 	{
-		// This method assumes the OpenGL context is current
-
-		// Create a handle to use for pinned memory
-		GLuint bufferHandle;
-		glGenBuffers(1, &bufferHandle);
-
-		// Pin memory by binding buffer to special AMD target.
-		glBindBuffer(GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, bufferHandle);
-
-		// glBufferData() sets up the address so any OpenGL operation on this buffer will use client memory directly
-		// (assumes address is aligned to 4k boundary).
-		glBufferData(GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, bufferSize, address, GL_STREAM_DRAW);
-		GLenum result = glGetError();
-		if (result != GL_NO_ERROR)
-		{
-			fprintf(stderr, "%s allocator: Error pinning memory with glBufferData(GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, size=%d ...) error=%s\n", mName, bufferSize, gluErrorString(result));
-			exit(1);
-		}
-		glBindBuffer(GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, 0);		// Unbind buffer to target
-
-		mBufferHandleForPinnedAddress[address] = bufferHandle;
+		// VideoFrameTransfer prepares and pins address
+		it = mFrameTransfer.insert(std::make_pair(address, new VideoFrameTransfer(mAllocatedSize[address], address, mDirection))).first;
 	}
 
-	return mBufferHandleForPinnedAddress[address];
+	return it->second->performFrameTransfer();
 }
 
-void PinnedMemoryAllocator::unPinAddress(const void* address)
+void PinnedMemoryAllocator::waitForTransferComplete(void* address)
 {
-	// un-pin address only if it has been pinned
-	if (mBufferHandleForPinnedAddress.count(address) > 0)
+	if (mAllocatedSize.count(address) && mFrameTransfer.count(address))
+		mFrameTransfer[address]->waitForTransferComplete();
+}
+
+void PinnedMemoryAllocator::beginTextureInUse()
+{
+	VideoFrameTransfer::beginTextureInUse(mDirection);
+}
+
+void PinnedMemoryAllocator::endTextureInUse()
+{
+	VideoFrameTransfer::endTextureInUse(mDirection);
+}
+
+void PinnedMemoryAllocator::unPinAddress(void* address)
+{
+	// un-pin address only if it has been pinned for transfer
+	std::map<void*, VideoFrameTransfer*>::iterator it = mFrameTransfer.find(address);
+	if (it != mFrameTransfer.end())
 	{
 		mContext->makeCurrent();
 
-		// The buffer is un-pinned by the GPU when the buffer is deleted
-		GLuint bufferHandle = mBufferHandleForPinnedAddress[address];
-		glDeleteBuffers(1, &bufferHandle);
-		mBufferHandleForPinnedAddress.erase(address);
+		delete it->second;
+		mFrameTransfer.erase(it);
+
+		mContext->makeCurrent();
 	}
 }
 
@@ -826,6 +898,8 @@ HRESULT STDMETHODCALLTYPE	PinnedMemoryAllocator::AllocateBuffer (uint32_t buffer
 		// alignment to 4K required when pinning memory
 		if (posix_memalign(allocatedBuffer, 4096, bufferSize) != 0)
 			return E_OUTOFMEMORY;
+
+		mAllocatedSize[*allocatedBuffer] = bufferSize;
 	}
 	else
 	{
@@ -847,6 +921,8 @@ HRESULT STDMETHODCALLTYPE	PinnedMemoryAllocator::ReleaseBuffer (void* buffer)
 		// No room left in cache, so un-pin (if it was pinned) and free this buffer
 		unPinAddress(buffer);
 		free(buffer);
+
+		mAllocatedSize.erase(buffer);
 	}
 	return S_OK;
 }
@@ -871,6 +947,31 @@ HRESULT STDMETHODCALLTYPE	PinnedMemoryAllocator::Decommit ()
 ////////////////////////////////////////////
 // DeckLink Capture Delegate Class
 ////////////////////////////////////////////
+CaptureDelegate::CaptureDelegate() :
+	mRefCount(1)
+{
+}
+
+HRESULT STDMETHODCALLTYPE	CaptureDelegate::QueryInterface(REFIID /*iid*/, LPVOID* /*ppv*/)
+{
+	return E_NOTIMPL;
+}
+
+ULONG STDMETHODCALLTYPE		CaptureDelegate::AddRef(void)
+{
+	int oldValue = mRefCount.fetchAndAddAcquire(1);
+	return (ULONG)(oldValue + 1);
+}
+
+ULONG STDMETHODCALLTYPE		CaptureDelegate::Release(void)
+{
+	int oldValue = mRefCount.fetchAndAddAcquire(-1);
+	if (oldValue == 1)		// i.e. current value will be 0
+		delete this;
+
+	return (ULONG)(oldValue - 1);
+}
+
 HRESULT	CaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* inputFrame, IDeckLinkAudioInputPacket* /*audioPacket*/)
 {
 	if (! inputFrame)
@@ -879,7 +980,7 @@ HRESULT	CaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* inputF
 		return S_OK;
 	}
 
-	bool hasNoInputSource = inputFrame->GetFlags() & bmdFrameHasNoInputSource;
+	bool hasNoInputSource = (inputFrame->GetFlags() & bmdFrameHasNoInputSource) == bmdFrameHasNoInputSource;
 
 	// emit just adds a message to Qt's event queue since we're in a different thread, so add a reference
 	// to the input frame to prevent it getting released before the connected slot can process the frame.
@@ -897,22 +998,47 @@ HRESULT	CaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvent
 ////////////////////////////////////////////
 // DeckLink Playout Delegate Class
 ////////////////////////////////////////////
+PlayoutDelegate::PlayoutDelegate() :
+	mRefCount(1)
+{
+}
+
+HRESULT STDMETHODCALLTYPE	PlayoutDelegate::QueryInterface(REFIID /*iid*/, LPVOID* /*ppv*/)
+{
+	return E_NOTIMPL;
+}
+
+ULONG STDMETHODCALLTYPE		PlayoutDelegate::AddRef(void)
+{
+	int oldValue = mRefCount.fetchAndAddAcquire(1);
+	return (ULONG)(oldValue + 1);
+}
+
+ULONG STDMETHODCALLTYPE		PlayoutDelegate::Release(void)
+{
+	int oldValue = mRefCount.fetchAndAddAcquire(-1);
+	if (oldValue == 1)		// i.e. current value will be 0
+		delete this;
+
+	return (ULONG)(oldValue - 1);
+}
+
 HRESULT	PlayoutDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {
-	// Don't log bmdOutputFrameFlushed result since it is expected when Stop() is called
-	if (result != bmdOutputFrameCompleted && result != bmdOutputFrameFlushed)
+	switch (result)
 	{
-		const char* message = "Unknown error";
-		switch (result)
-		{
-			case bmdOutputFrameDisplayedLate:
-				message = "Frame Displayed Late";
-				break;
-			case bmdOutputFrameDropped:
-				message = "Frame Dropped";
-				break;
-		}
-		fprintf(stderr, "ScheduledFrameCompleted() frame did not complete: %s\n", message);
+		case bmdOutputFrameDisplayedLate:
+			fprintf(stderr, "ScheduledFrameCompleted() frame did not complete: Frame Displayed Late\n");
+			break;
+		case bmdOutputFrameDropped:
+			fprintf(stderr, "ScheduledFrameCompleted() frame did not complete: Frame Dropped\n");
+			break;
+		case bmdOutputFrameCompleted:
+		case bmdOutputFrameFlushed:
+			// Don't log bmdOutputFrameFlushed result since it is expected when Stop() is called
+			break;
+		default:
+			fprintf(stderr, "ScheduledFrameCompleted() frame did not complete: Unknown error\n");
 	}
 
 	emit playoutFrameCompleted(completedFrame, result);

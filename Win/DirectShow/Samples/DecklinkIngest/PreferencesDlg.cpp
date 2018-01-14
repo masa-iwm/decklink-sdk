@@ -239,12 +239,15 @@ static void FormatDisplayModeString(char *buffer, size_t bufferLen, VIDEOINFOHEA
 		StringCbPrintfA(buffer, bufferLen, "720p%s %s", frameRateBuffer, pixelFormat);
 	else if ((width == 720) && (height == 576))
 	{
-		StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.0f", frameRate * 2);
-		StringCbPrintfA(buffer, bufferLen, "625i%s PAL %s", frameRateBuffer, pixelFormat);
+		const bool progressive = (frameRate >= 50.0);
+		const char* p = progressive ? "p" : "i";
+		if (!progressive)
+			StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.0f", frameRate * 2);
+		StringCbPrintfA(buffer, bufferLen, "625%s%s PAL %s", p, frameRateBuffer, pixelFormat);
 	}
 	else if ((width == 720) && (height == 486))
 	{
-		bool progressive = (417083 == pvih->AvgTimePerFrame);
+		const bool progressive = (417083 == pvih->AvgTimePerFrame) || (frameRate >= 50.0);
 		const char* p = progressive ? "p" : "i";
 		if (!progressive)
 			StringCbPrintfA(frameRateBuffer, sizeof(frameRateBuffer), "%2.2f", frameRate * 2);

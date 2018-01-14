@@ -40,7 +40,7 @@
 // See SignalGenerator.cpp for the implementation of this class
 //
 
-class CSignalGeneratorApp : public CWinApp
+class CSignalGeneratorApp : public CWinAppEx
 {
 public:
 	CSignalGeneratorApp();

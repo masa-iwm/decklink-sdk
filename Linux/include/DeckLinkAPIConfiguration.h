@@ -37,6 +37,10 @@
     #endif
 #endif
 
+#ifndef BMD_PUBLIC
+	#define BMD_PUBLIC
+#endif
+
 // Type Declarations
 
 
@@ -210,7 +214,7 @@ class IDeckLinkEncoderConfiguration;
 
 /* Interface IDeckLinkConfiguration - DeckLink Configuration interface */
 
-class IDeckLinkConfiguration : public IUnknown
+class BMD_PUBLIC IDeckLinkConfiguration : public IUnknown
 {
 public:
     virtual HRESULT SetFlag (/* in */ BMDDeckLinkConfigurationID cfgID, /* in */ bool value) = 0;
@@ -229,7 +233,7 @@ protected:
 
 /* Interface IDeckLinkEncoderConfiguration - DeckLink Encoder Configuration interface. Obtained from IDeckLinkEncoderInput */
 
-class IDeckLinkEncoderConfiguration : public IUnknown
+class BMD_PUBLIC IDeckLinkEncoderConfiguration : public IUnknown
 {
 public:
     virtual HRESULT SetFlag (/* in */ BMDDeckLinkEncoderConfigurationID cfgID, /* in */ bool value) = 0;

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
- ** Copyright (c) 2012 Blackmagic Design
+ ** Copyright (c) 2017 Blackmagic Design
  **
  ** Permission is hereby granted, free of charge, to any person or organization
  ** obtaining a copy of the software and accompanying documentation covered by
@@ -29,12 +29,15 @@
 #define __OPENGL_COMPOSITE_H__
 
 #include "DeckLinkAPI.h"
+#include "VideoFrameTransfer.h"
 #include <QGLWidget>
 #include <QMutex>
 #include <QAtomicInt>
 #include <map>
 #include <vector>
 #include <deque>
+
+#undef Bool
 
 class PlayoutDelegate;
 class CaptureDelegate;
@@ -84,8 +87,9 @@ private:
 	bool									mHasNoInputSource;
 
 	// OpenGL data
-	bool									mPinnedMemoryExtensionAvailable;
-	GLuint									mTexture;
+	bool									mFastTransferExtensionAvailable;
+	GLuint									mCaptureTexture;
+	GLuint									mFBOTexture;
 	GLuint									mUnpinnedTextureBuffer;
 	GLuint									mIdFrameBuf;
 	GLuint									mIdColorBuf;
@@ -107,11 +111,14 @@ private:
 class PinnedMemoryAllocator : public IDeckLinkMemoryAllocator
 {
 public:
-	PinnedMemoryAllocator(QGLWidget* context, const char* name, unsigned cacheSize);
+	PinnedMemoryAllocator(QGLWidget* context, VideoFrameTransfer::Direction direction, unsigned cacheSize);
 	virtual ~PinnedMemoryAllocator();
 
-	GLuint bufferObjectForPinnedAddress(int bufferSize, const void* address);
-	void unPinAddress(const void* address);
+	bool transferFrame(void* address, GLuint gpuTexture);
+	void waitForTransferComplete(void* address);
+	void beginTextureInUse();
+	void endTextureInUse();
+	void unPinAddress(void* address);
 
 	// IUnknown methods
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface(REFIID iid, LPVOID *ppv);
@@ -125,12 +132,13 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE	Decommit ();
 
 private:
-	QGLWidget*							mContext;
-	QAtomicInt							mRefCount;
-	std::map<const void*, GLuint>		mBufferHandleForPinnedAddress;
-	std::vector<void*>					mFrameCache;
-	const char*							mName;
-	unsigned							mFrameCacheSize;
+	QGLWidget*								mContext;
+	QAtomicInt								mRefCount;
+	VideoFrameTransfer::Direction			mDirection;
+	std::map<void*, VideoFrameTransfer*>	mFrameTransfer;
+	std::map<void*, unsigned long>			mAllocatedSize;
+	std::vector<void*>						mFrameCache;
+	unsigned								mFrameCacheSize;
 };
 
 ////////////////////////////////////////////
@@ -142,18 +150,20 @@ class CaptureDelegate : public QObject, public IDeckLinkInputCallback
 	Q_OBJECT
 
 public:
-	CaptureDelegate () { }
+	CaptureDelegate ();
 
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID /*iid*/, LPVOID* /*ppv*/)	{return E_NOINTERFACE;}
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ()											{return 1;}
-	virtual ULONG	STDMETHODCALLTYPE	Release ()											{return 1;}
+	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID /*iid*/, LPVOID* /*ppv*/);
+	virtual ULONG	STDMETHODCALLTYPE	AddRef ();
+	virtual ULONG	STDMETHODCALLTYPE	Release ();
 
 	virtual HRESULT STDMETHODCALLTYPE	VideoInputFrameArrived(IDeckLinkVideoInputFrame *videoFrame, IDeckLinkAudioInputPacket *audioPacket);
 	virtual HRESULT	STDMETHODCALLTYPE	VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags);
 
 signals:
 	void captureFrameArrived(IDeckLinkVideoInputFrame *videoFrame, bool hasNoInputSource);
+
+private:
+	QAtomicInt                              mRefCount;
 };
 
 ////////////////////////////////////////////
@@ -165,18 +175,20 @@ class PlayoutDelegate : public QObject, public IDeckLinkVideoOutputCallback
 	Q_OBJECT
 
 public:
-	PlayoutDelegate () { }
+	PlayoutDelegate ();
 
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID /*iid*/, LPVOID* /*ppv*/)	{return E_NOINTERFACE;}
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ()											{return 1;}
-	virtual ULONG	STDMETHODCALLTYPE	Release ()											{return 1;}
+	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID /*iid*/, LPVOID* /*ppv*/);
+	virtual ULONG	STDMETHODCALLTYPE	AddRef ();
+	virtual ULONG	STDMETHODCALLTYPE	Release ();
 
 	virtual HRESULT	STDMETHODCALLTYPE	ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 	virtual HRESULT	STDMETHODCALLTYPE	ScheduledPlaybackHasStopped ();
 
 signals:
 	void playoutFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
+
+private:
+	QAtomicInt                              mRefCount;
 };
 
 #endif	// __OPENGL_COMPOSITE_H__

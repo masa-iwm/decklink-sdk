@@ -62,7 +62,8 @@ public:
     
 private:
     
-    void                                    getAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format, NSString** timecodeString, NSString** userBitsString);
+    TimecodeStruct*                         getAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format);
+    
     
     CapturePreviewAppDelegate*              uiDelegate;
     std::vector<IDeckLinkDisplayMode*>      modeList;

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2011 Blackmagic Design
+** Copyright (c) 2017 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -26,6 +26,24 @@
 */
 
 #import "StreamingPreviewAppDelegate.h"
+
+class DecodeSessionDelegate : public VTDecodeDelegate
+{
+public:
+	DecodeSessionDelegate(StreamingPreviewAppDelegate* delegate)
+	: mDelegate(delegate)
+	{}
+
+	virtual void haveVideoFrame(CVPixelBufferRef pixBuf, IBMDStreamingH264NALPacket* fromNAL)
+	{
+		[mDelegate haveVideoFrame:pixBuf fromNAL:fromNAL];
+	}
+
+	virtual ~DecodeSessionDelegate() {}
+
+private:
+	StreamingPreviewAppDelegate* mDelegate;
+};
 
 const char* BMDDeckControlVTRControlStateString(BMDDeckControlVTRControlState state)
 {
@@ -137,6 +155,8 @@ const char* BMDDeckControlErrorString(BMDDeckControlError error)
 	mDecodeSessionLock = [[NSLock alloc] init];
 	BAIL_IF(!mDecodeSessionLock, "Failed to allocate Decode Session Lock\n");
 
+	mDecodeDelegate = new DecodeSessionDelegate(self);
+
 	mDeviceNotifier = new BMDStreamingDeviceNotifier(self);
 	err = mDeviceNotifier ? 0 : ENOMEM;
 	BAIL_IF(err, "Failed to create a BMDStreamingDeviceNotifier instance\n");
@@ -191,6 +211,12 @@ bail:
 	{
 		mDeviceInputNotifier->Release();
 		mDeviceInputNotifier = NULL;
+	}
+
+	if (mDecodeDelegate)
+	{
+		delete mDecodeDelegate;
+		mDecodeDelegate = NULL;
 	}
 
 	if (mDeviceNotifier)
@@ -464,8 +490,8 @@ bail:
 
 	mDeviceInput->SetVideoEncodingMode(encodingMode);
 
-	mDecodeSession = [[QTDecodeSession alloc] initWithMovieWidth:encodingMode->GetDestWidth() andHeight:encodingMode->GetDestHeight()];
-	[mDecodeSession setDelegate:self];
+	mDecodeSession = new VTDecodeSession();
+	mDecodeSession->setDelegate(mDecodeDelegate);
 
 	[mPreview startPlayback];
 
@@ -491,8 +517,8 @@ bail:
 		mDeviceInput->StopCapture();
 
 	[mDecodeSessionLock lock];
-	[mDecodeSession setDelegate:NULL];
-	[mDecodeSession release];
+	mDecodeSession->setDelegate(NULL);
+	delete mDecodeSession;
 	mDecodeSession = NULL;
 	[mDecodeSessionLock unlock];
 
@@ -638,7 +664,7 @@ bail:
 
 	[mDecodeSessionLock lock];
 	if (mDecodeSession)
-		[mDecodeSession handleH264NAL:packet];
+		mDecodeSession->handleH264NAL(packet);
 	[mDecodeSessionLock unlock];
 }
 

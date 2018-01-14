@@ -29,10 +29,11 @@ using System.Windows.Forms;
 
 using System.Runtime.InteropServices;
 using DeckLinkAPI;
+using System.Collections.Generic;
 
 namespace SignalGenCSharp
 {
-    public partial class SignalGenerator : Form, IDeckLinkVideoOutputCallback, IDeckLinkAudioOutputCallback
+    public partial class SignalGenerator : Form
     {
         enum OutputSignal
         {
@@ -40,10 +41,12 @@ namespace SignalGenCSharp
             kOutputSignalDrop = 1
         };
         const uint kAudioWaterlevel = 48000;
+        private IReadOnlyList<int> kAudioChannels = new List<int> {2, 8, 16};
 
         private bool m_running;
-        private IDeckLink m_deckLink;
-        private IDeckLinkOutput m_deckLinkOutput;
+
+        private DeckLinkDeviceDiscovery m_deckLinkDiscovery;
+        private DeckLinkOutputDevice m_selectedDevice;
         //
         private int m_frameWidth;
         private int m_frameHeight;
@@ -61,6 +64,7 @@ namespace SignalGenCSharp
         private uint m_audioChannelCount;
         private _BMDAudioSampleRate m_audioSampleRate;
         private _BMDAudioSampleType m_audioSampleDepth;
+        private _BMDPixelFormat m_pixelFormat;
 
         public SignalGenerator()
         {
@@ -68,64 +72,24 @@ namespace SignalGenCSharp
 
             m_running = false;
 
-            // Create the COM instance
-            IDeckLinkIterator deckLinkIterator = new CDeckLinkIterator();
-            if (deckLinkIterator == null)
-            {
-                MessageBox.Show("This application requires the DeckLink drivers installed.\nPlease install the Blackmagic DeckLink drivers to use the features of this application", "Error");
-                Environment.Exit(1);
-            }
+            m_deckLinkDiscovery = new DeckLinkDeviceDiscovery();
 
-            // Get the first DeckLink card
-            deckLinkIterator.Next(out m_deckLink);
-            if (m_deckLink == null)
-            {
-                MessageBox.Show("This application requires a DeckLink PCI card.\nYou will not be able to use the features of this application until a DeckLink PCI card is installed.", "Error");
-                Environment.Exit(1);
-            }
+            m_deckLinkDiscovery.DeviceArrived += new DeckLinkDiscoveryHandler((d) => this.Invoke((Action)(() => AddDevice(d))));
+            m_deckLinkDiscovery.DeviceRemoved += new DeckLinkDiscoveryHandler((d) => this.Invoke((Action)(() => RemoveDevice(d))));
 
-            // Get the IDeckLinkOutput interface
-            m_deckLinkOutput = (IDeckLinkOutput)m_deckLink;
+            InitDialog();
 
-            // Provide this class as a delegate to the audio and video output interfaces
-            m_deckLinkOutput.SetScheduledFrameCompletionCallback(this);
-            m_deckLinkOutput.SetAudioCallback(this);
-	
-	        // Populate the display mode combo with a list of display modes supported by the installed DeckLink card
-	        IDeckLinkDisplayModeIterator		displayModeIterator;
+            m_pixelFormat = ((StringObjectPair<_BMDPixelFormat>)comboBoxPixelFormat.SelectedItem).value;
+        }
 
-        	comboBoxVideoFormat.BeginUpdate();
-            comboBoxVideoFormat.Items.Clear();
-
-            m_deckLinkOutput.GetDisplayModeIterator(out displayModeIterator);
-
-            while (true)
-            {
-                IDeckLinkDisplayMode deckLinkDisplayMode;
-
-                displayModeIterator.Next(out deckLinkDisplayMode);
-                if (deckLinkDisplayMode == null)
-                    break;
-
-                comboBoxVideoFormat.Items.Add(new DisplayModeEntry(deckLinkDisplayMode));
-            }
-
-            comboBoxVideoFormat.EndUpdate();
-
+        private void InitDialog()
+        {
             // Output signal combo box
             comboBoxOutputSignal.BeginUpdate();
             comboBoxOutputSignal.Items.Clear();
             comboBoxOutputSignal.Items.Add(new StringObjectPair<OutputSignal>("Pip", OutputSignal.kOutputSignalPip));
             comboBoxOutputSignal.Items.Add(new StringObjectPair<OutputSignal>("Drop", OutputSignal.kOutputSignalDrop));
             comboBoxOutputSignal.EndUpdate();
-
-            // Audio channels combo box
-            comboBoxAudioChannels.BeginUpdate();
-            comboBoxAudioChannels.Items.Clear();
-            comboBoxAudioChannels.Items.Add("2");
-            comboBoxAudioChannels.Items.Add("8");
-            comboBoxAudioChannels.Items.Add("16");
-            comboBoxAudioChannels.EndUpdate();
 
             // Audio depth combo box
             comboBoxAudioDepth.BeginUpdate();
@@ -134,10 +98,79 @@ namespace SignalGenCSharp
             comboBoxAudioDepth.Items.Add(new StringObjectPair<_BMDAudioSampleType>("32 Bit", _BMDAudioSampleType.bmdAudioSampleType32bitInteger));
             comboBoxAudioDepth.EndUpdate();
 
-            comboBoxVideoFormat.SelectedIndex = 0;
+            // Pixel format combo box
+            comboBoxPixelFormat.BeginUpdate();
+            comboBoxPixelFormat.Items.Clear();
+            comboBoxPixelFormat.Items.Add(new StringObjectPair<_BMDPixelFormat>("8 Bit YUV", _BMDPixelFormat.bmdFormat8BitYUV));
+            comboBoxPixelFormat.Items.Add(new StringObjectPair<_BMDPixelFormat>("10 Bit YUV", _BMDPixelFormat.bmdFormat10BitYUV));
+            comboBoxPixelFormat.Items.Add(new StringObjectPair<_BMDPixelFormat>("8 Bit ARGB", _BMDPixelFormat.bmdFormat8BitARGB));
+            comboBoxPixelFormat.Items.Add(new StringObjectPair<_BMDPixelFormat>("10 Bit RGB", _BMDPixelFormat.bmdFormat10BitRGB));
+            comboBoxPixelFormat.EndUpdate();
+
             comboBoxOutputSignal.SelectedIndex = 0;
-            comboBoxAudioChannels.SelectedIndex = 0;
             comboBoxAudioDepth.SelectedIndex = 0;
+            comboBoxPixelFormat.SelectedIndex = 0;
+        }
+
+        void AddDevice(IDeckLink decklinkDevice)
+        {
+            DeckLinkOutputDevice deckLink = new DeckLinkOutputDevice(decklinkDevice);
+
+            if (deckLink.deckLinkOutput != null)
+            {
+                comboBoxOutputDevice.BeginUpdate();
+                comboBoxOutputDevice.Items.Add(new StringObjectPair<DeckLinkOutputDevice>(deckLink.deviceName, deckLink));
+                comboBoxOutputDevice.EndUpdate();
+
+                if (comboBoxOutputDevice.Items.Count == 1)
+                {
+                    comboBoxOutputDevice.SelectedIndex = 0;
+
+                    EnableInterface(true);
+                }
+            }
+        }
+
+        void RemoveDevice(IDeckLink decklinkDevice)
+        {
+            // Stop capture if the selected device was removed
+            if (m_selectedDevice != null && m_selectedDevice.deckLink == decklinkDevice && m_running)
+            {
+                // Stop running and disable output, we will not receive ScheduledPlaybackHasStopped callback
+                StopRunning();
+                DisableOutput();
+            }
+
+            // Remove the device from the dropdown
+            comboBoxOutputDevice.BeginUpdate();
+            foreach (StringObjectPair<DeckLinkOutputDevice> item in comboBoxOutputDevice.Items)
+            {
+                if (item.value.deckLink == decklinkDevice)
+                {
+                    comboBoxOutputDevice.Items.Remove(item);
+                    break;
+                }
+            }
+            comboBoxOutputDevice.EndUpdate();
+
+            if (comboBoxOutputDevice.Items.Count == 0)
+            {
+                EnableInterface(false);
+                m_selectedDevice = null;
+            }
+            else if (m_selectedDevice.deckLink == decklinkDevice)
+            {
+                comboBoxOutputDevice.SelectedIndex = 0;
+                buttonStartStop.Enabled = true;
+            }
+        }
+
+
+        private void SignalGenerator_Load(object sender, EventArgs e)
+        {
+            EnableInterface(false);
+
+            m_deckLinkDiscovery.Enable();
         }
 
         private void buttonStartStop_Click(object sender, EventArgs e)
@@ -150,8 +183,12 @@ namespace SignalGenCSharp
 
         private void StartRunning()
         {
+            m_selectedDevice.VideoFrameCompleted += new DeckLinkVideoOutputHandler((b) => this.BeginInvoke((Action)(() => { ScheduleNextFrame(b); })));
+            m_selectedDevice.AudioOutputRequested += new DeckLinkAudioOutputHandler(() => this.BeginInvoke((Action)(() => { WriteNextAudioSamples(); })));
+            m_selectedDevice.PlaybackStopped += new DeckLinkPlaybackStoppedHandler(() => this.BeginInvoke((Action)(() => { DisableOutput(); })));
+
             m_outputSignal = ((StringObjectPair<OutputSignal>)comboBoxOutputSignal.SelectedItem).value;
-            m_audioChannelCount = uint.Parse((string)comboBoxAudioChannels.SelectedItem);
+            m_audioChannelCount = (uint)((int)comboBoxAudioChannels.SelectedItem);
             m_audioSampleDepth = ((StringObjectPair<_BMDAudioSampleType>)comboBoxAudioDepth.SelectedItem).value;
             m_audioSampleRate = _BMDAudioSampleRate.bmdAudioSampleRate48kHz;
             //
@@ -165,10 +202,10 @@ namespace SignalGenCSharp
             m_framesPerSecond = (uint)((m_frameTimescale + (m_frameDuration-1))  /  m_frameDuration);
 
             // Set the video output mode
-            m_deckLinkOutput.EnableVideoOutput(videoDisplayMode.GetDisplayMode(), _BMDVideoOutputFlags.bmdVideoOutputFlagDefault);
+            m_selectedDevice.deckLinkOutput.EnableVideoOutput(videoDisplayMode.GetDisplayMode(), _BMDVideoOutputFlags.bmdVideoOutputFlagDefault);
 
             // Set the audio output mode
-            m_deckLinkOutput.EnableAudioOutput(m_audioSampleRate, m_audioSampleDepth, m_audioChannelCount, _BMDAudioOutputStreamType.bmdAudioOutputStreamContinuous);
+            m_selectedDevice.deckLinkOutput.EnableAudioOutput(m_audioSampleRate, m_audioSampleDepth, m_audioChannelCount, _BMDAudioOutputStreamType.bmdAudioOutputStreamContinuous);
 
             // Generate one second of audio
             m_audioBufferSampleLength = (uint)((m_framesPerSecond * (uint)m_audioSampleRate * m_frameDuration) / m_frameTimescale);
@@ -185,12 +222,10 @@ namespace SignalGenCSharp
                 FillSine(new IntPtr(m_audioBuffer.ToInt64() + (audioSamplesPerFrame * m_audioChannelCount * (uint)m_audioSampleDepth / 8)), (m_audioBufferSampleLength - audioSamplesPerFrame), m_audioChannelCount, m_audioSampleDepth);
 
             // Generate a frame of black
-            m_deckLinkOutput.CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth * 2, _BMDPixelFormat.bmdFormat8BitYUV, _BMDFrameFlags.bmdFrameFlagDefault, out m_videoFrameBlack);
-            FillBlack(m_videoFrameBlack);
+            m_videoFrameBlack = CreateOutputVideoFrame(FillBlack);
 
             // Generate a frame of colour bars
-            m_deckLinkOutput.CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth * 2, _BMDPixelFormat.bmdFormat8BitYUV, _BMDFrameFlags.bmdFrameFlagDefault, out m_videoFrameBars);
-            FillColourBars(m_videoFrameBars);
+            m_videoFrameBars = CreateOutputVideoFrame(FillColourBars);
 
             // Begin video preroll by scheduling a second of frames in hardware
             m_totalFramesScheduled = 0;
@@ -199,23 +234,52 @@ namespace SignalGenCSharp
 
             // Begin audio preroll.  This will begin calling our audio callback, which will start the DeckLink output stream.
             m_audioBufferOffset = 0;
-            m_deckLinkOutput.BeginAudioPreroll();
+            m_selectedDevice.deckLinkOutput.BeginAudioPreroll();
 
             m_running = true;
             buttonStartStop.Text = "Stop";
         }
 
+        private IDeckLinkMutableVideoFrame CreateOutputVideoFrame(Action<IDeckLinkVideoFrame> fillFrame)
+        {
+            IDeckLinkMutableVideoFrame  referenceFrame = null;
+            IDeckLinkMutableVideoFrame  scheduleFrame = null;
+            IDeckLinkVideoConversion    frameConverter = new CDeckLinkVideoConversion();
+
+            m_selectedDevice.deckLinkOutput.CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth * bytesPerPixel, m_pixelFormat, _BMDFrameFlags.bmdFrameFlagDefault, out scheduleFrame);
+            if (m_pixelFormat == _BMDPixelFormat.bmdFormat8BitYUV)
+            {
+                // Fill 8-bit YUV directly without conversion
+                fillFrame(scheduleFrame);
+            }
+            else
+            {
+                // Pixel formats are different, first generate 8-bit YUV bars frame and convert to required format
+                m_selectedDevice.deckLinkOutput.CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth * 2, _BMDPixelFormat.bmdFormat8BitYUV, _BMDFrameFlags.bmdFrameFlagDefault, out referenceFrame);
+                fillFrame(referenceFrame);
+                frameConverter.ConvertFrame(referenceFrame, scheduleFrame);
+            }
+
+            return scheduleFrame;
+        }
+
         private void StopRunning()
         {
             long unused;
-            m_deckLinkOutput.StopScheduledPlayback(0, out unused, 100);
-            m_deckLinkOutput.DisableAudioOutput();
-            m_deckLinkOutput.DisableVideoOutput();
+            
+            m_selectedDevice.deckLinkOutput.StopScheduledPlayback(0, out unused, 100);
+            m_running = false;
+        }
+
+        private void DisableOutput()
+        {
+            m_selectedDevice.deckLinkOutput.DisableAudioOutput();
+            m_selectedDevice.deckLinkOutput.DisableVideoOutput();
+            m_selectedDevice.RemoveAllListeners();
 
             // free audio buffer
             Marshal.FreeCoTaskMem(m_audioBuffer);
 
-            m_running = false;
             buttonStartStop.Text = "Start";
         }
 
@@ -233,12 +297,12 @@ namespace SignalGenCSharp
                 if ((m_totalFramesScheduled % m_framesPerSecond) == 0)
                 {
                     // On each second, schedule a frame of bars
-                    m_deckLinkOutput.ScheduleVideoFrame(m_videoFrameBars, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
+                    m_selectedDevice.deckLinkOutput.ScheduleVideoFrame(m_videoFrameBars, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
                 }
                 else
                 {
                     // Schedue frames of black
-                    m_deckLinkOutput.ScheduleVideoFrame(m_videoFrameBlack, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
+                    m_selectedDevice.deckLinkOutput.ScheduleVideoFrame(m_videoFrameBlack, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
                 }
             }
             else
@@ -246,12 +310,12 @@ namespace SignalGenCSharp
                 if ((m_totalFramesScheduled % m_framesPerSecond) == 0)
                 {
                     // On each second, schedule a frame of black
-                    m_deckLinkOutput.ScheduleVideoFrame(m_videoFrameBlack, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
+                    m_selectedDevice.deckLinkOutput.ScheduleVideoFrame(m_videoFrameBlack, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
                 }
                 else
                 {
                     // Schedue frames of color bars
-                    m_deckLinkOutput.ScheduleVideoFrame(m_videoFrameBars, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
+                    m_selectedDevice.deckLinkOutput.ScheduleVideoFrame(m_videoFrameBars, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
                 }
             }
 
@@ -262,9 +326,13 @@ namespace SignalGenCSharp
         {
             // Write one second of audio to the DeckLink API.
             uint bufferedSamples;
-	
+
+            // Make sure that playback is still active
+            if (m_running == false)
+                return;
+
 	        // Try to maintain the number of audio samples buffered in the API at a specified waterlevel
-            m_deckLinkOutput.GetBufferedAudioSampleFrameCount(out bufferedSamples);
+            m_selectedDevice.deckLinkOutput.GetBufferedAudioSampleFrameCount(out bufferedSamples);
             if (bufferedSamples < kAudioWaterlevel)
             {
                 uint samplesToEndOfBuffer;
@@ -276,39 +344,120 @@ namespace SignalGenCSharp
                 if (samplesToWrite > samplesToEndOfBuffer)
                     samplesToWrite = samplesToEndOfBuffer;
 
-                m_deckLinkOutput.ScheduleAudioSamples(new IntPtr(m_audioBuffer.ToInt64() + (m_audioBufferOffset * m_audioChannelCount * (uint)m_audioSampleDepth / 8)),
+                m_selectedDevice.deckLinkOutput.ScheduleAudioSamples(new IntPtr(m_audioBuffer.ToInt64() + (m_audioBufferOffset * m_audioChannelCount * (uint)m_audioSampleDepth / 8)),
                     samplesToWrite, 0, 0, out samplesWritten);
                 m_audioBufferOffset = ((m_audioBufferOffset + samplesWritten) % m_audioBufferSampleLength);
             }
         }
 
-        #region callbacks
-        // Explicit implementation of IDeckLinkVideoOutputCallback and IDeckLinkAudioOutputCallback
-        void IDeckLinkVideoOutputCallback.ScheduledFrameCompleted(IDeckLinkVideoFrame completedFrame, _BMDOutputFrameCompletionResult result)
+        private void DisplayModeChanged(IDeckLinkDisplayMode newDisplayMode)
         {
-            // Note: if you throw an exception, it will be ignored by the caller.
-
-            // When a frame has been completed
-            ScheduleNextFrame(false);
-        }
-
-        void IDeckLinkVideoOutputCallback.ScheduledPlaybackHasStopped()
-        {
-        }
-
-        void IDeckLinkAudioOutputCallback.RenderAudioSamples(int preroll)
-        {
-            // Note: if you throw an exception, it will be ignored by the caller.
-
-            // Provide further audio samples to the DeckLink API until our preferred buffer waterlevel is reached
-            WriteNextAudioSamples();
-
-            if (preroll != 0)
+            foreach (DisplayModeEntry item in comboBoxVideoFormat.Items)
             {
-                m_deckLinkOutput.StartScheduledPlayback(0, 100, 1.0);
+                if (item.displayMode.GetDisplayMode() == newDisplayMode.GetDisplayMode())
+                    comboBoxVideoFormat.SelectedItem = item;
             }
         }
-        #endregion
+
+        private void comboBoxOutputDevice_SelectedValueChanged(object sender, EventArgs e)
+        {
+            m_selectedDevice = null;
+
+            if (comboBoxOutputDevice.SelectedIndex < 0)
+                return;
+
+            m_selectedDevice = ((StringObjectPair<DeckLinkOutputDevice>)comboBoxOutputDevice.SelectedItem).value;
+
+            // Update the video mode popup menu
+            RefreshVideoModeList();
+
+            // Update the audio channels popup menu
+            RefreshAudioChannelList();
+
+            // Enable the interface
+            EnableInterface(true);
+        }
+
+        private void comboBoxPixelFormat_SelectedValueChanged(object sender, EventArgs e)
+        {
+            if (comboBoxPixelFormat.SelectedIndex < 0)
+                return;
+
+            m_pixelFormat = ((StringObjectPair<_BMDPixelFormat>)comboBoxPixelFormat.SelectedItem).value;
+            
+            // Update the video mode popup menu
+            RefreshVideoModeList();
+        }
+
+        private void EnableInterface(bool enabled)
+        {
+            comboBoxOutputDevice.Enabled = enabled;
+            comboBoxVideoFormat.Enabled = enabled;
+            buttonStartStop.Enabled = enabled;
+       }
+
+        private void RefreshVideoModeList()
+        {
+            if (m_selectedDevice != null)
+            {
+                comboBoxVideoFormat.BeginUpdate();
+                comboBoxVideoFormat.Items.Clear();
+
+                foreach (IDeckLinkDisplayMode displayMode in m_selectedDevice)
+                    comboBoxVideoFormat.Items.Add(new DisplayModeEntry(displayMode));
+
+                comboBoxVideoFormat.SelectedIndex = 0;
+                comboBoxVideoFormat.EndUpdate();
+            }
+        }
+
+        private void RefreshAudioChannelList()
+        {
+            if (m_selectedDevice != null)
+            {
+                long maxAudioChannels;
+
+                var deckLinkAttributes = (IDeckLinkAttributes)m_selectedDevice.deckLink;
+                deckLinkAttributes.GetInt(_BMDDeckLinkAttributeID.BMDDeckLinkMaximumAudioChannels, out maxAudioChannels);
+
+                comboBoxAudioChannels.BeginUpdate();
+                comboBoxAudioChannels.Items.Clear();
+
+                foreach (int channels in kAudioChannels)
+                {
+                    if (channels <= maxAudioChannels)
+                    {
+                        comboBoxAudioChannels.Items.Add(channels);
+                    }
+                }
+
+                comboBoxAudioChannels.SelectedIndex = comboBoxAudioChannels.Items.Count - 1;
+                comboBoxAudioChannels.EndUpdate();
+            
+            }
+        }
+
+        private int bytesPerPixel
+        {
+            get
+            {
+                int bytesPerPixel = 2;
+
+                switch (m_pixelFormat)
+                {
+                    case _BMDPixelFormat.bmdFormat8BitYUV:
+                        bytesPerPixel = 2;
+                        break;
+                    case _BMDPixelFormat.bmdFormat8BitARGB:
+                    case _BMDPixelFormat.bmdFormat10BitYUV:
+                    case _BMDPixelFormat.bmdFormat10BitRGB:
+                        bytesPerPixel = 4;
+                        break;
+                }
+                return bytesPerPixel;
+            }
+        }
+
 
         #region buffer filling
         /*****************************************/

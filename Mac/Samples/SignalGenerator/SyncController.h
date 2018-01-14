@@ -29,9 +29,11 @@
 //  Signal Generator
 //
 
-#import <Cocoa/Cocoa.h>
-#import "DeckLinkAPI.h"
-#import "SignalGenerator3DVideoFrame.h"
+#include <vector>
+#include <Cocoa/Cocoa.h>
+#include "DeckLinkAPI.h"
+#include "SignalGenerator3DVideoFrame.h"
+
 
 enum OutputSignal
 {
@@ -39,9 +41,13 @@ enum OutputSignal
 	kOutputSignalDrop		= 1
 };
 
+// Forward declarations
+class DeckLinkDeviceDiscovery;
 class PlaybackDelegate;
 
 @interface SyncController : NSObject {
+	NSWindow*					window;
+
 	IBOutlet NSButton*			startButton;
 
 	IBOutlet NSPopUpButton*		outputSignalPopup;
@@ -49,10 +55,12 @@ class PlaybackDelegate;
 	IBOutlet NSPopUpButton*		audioSampleDepthPopup;
 	IBOutlet NSPopUpButton*		videoFormatPopup;
 	IBOutlet NSPopUpButton*		pixelFormatPopup;
+	IBOutlet NSPopUpButton*		deviceListPopup;
 
 	IBOutlet NSView*			previewView;
 	
-	PlaybackDelegate*			playerDelegate;
+	DeckLinkDeviceDiscovery*	deckLinkDiscovery;
+	PlaybackDelegate*			selectedDevice;
 	
 	BOOL						running;
 	IDeckLink*					deckLink;
@@ -77,7 +85,17 @@ class PlaybackDelegate;
 	uint32_t					totalAudioSecondsScheduled;
 }
 
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification;
+- (void)applicationWillTerminate:(NSNotification *)notification;
+
+- (void)addDevice:(IDeckLink*)deckLink;
+- (void)removeDevice:(IDeckLink*)deckLink;
+
+- (void) refreshDisplayModeMenu;
+- (void)refreshAudioChannelMenu;
+
 - (IBAction)toggleStart:(id)sender;
+- (IBAction)newDeviceSelected:(id)sender;
 - (void)enableInterface:(BOOL)enable;
 
 - (void)startRunning;
@@ -85,17 +103,24 @@ class PlaybackDelegate;
 - (void)scheduleNextFrame:(BOOL)prerolling;
 - (void)writeNextAudioSamples;
 
+@property (assign) IBOutlet NSWindow *window;
+
 @end
 
 class PlaybackDelegate : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
 {
 private:
 	int32_t						m_refCount;
-	SyncController*				mController;
-	IDeckLinkOutput*			mDeckLinkOutput;
-	
+	SyncController*				m_controller;
+	IDeckLinkOutput*			m_deckLinkOutput;
+	IDeckLink*					m_deckLink;
+	CFStringRef					m_deviceName;
+
 public:
-	PlaybackDelegate (SyncController* owner, IDeckLinkOutput* deckLinkOutput);
+	PlaybackDelegate (SyncController* owner, IDeckLink* deckLink);
+	virtual ~PlaybackDelegate();
+	
+	bool				init();
 	
 	// IUnknown
 	virtual HRESULT		QueryInterface (REFIID iid, LPVOID *ppv);
@@ -108,6 +133,37 @@ public:
 	
 	// IDeckLinkAudioOutputCallback
 	virtual HRESULT		RenderAudioSamples (bool preroll);
+
+	NSString*			getDeviceName() { return (NSString*)m_deviceName; };
+
+	IDeckLinkOutput*	getDeviceOutput() { return m_deckLinkOutput; };
+
+	IDeckLink*			getDeckLinkDevice() { return m_deckLink; };
+
+};
+
+class DeckLinkDeviceDiscovery : public IDeckLinkDeviceNotificationCallback
+{
+private:
+	IDeckLinkDiscovery*		m_deckLinkDiscovery;
+	SyncController*			m_uiDelegate;
+	int32_t					m_refCount;
+
+public:
+	DeckLinkDeviceDiscovery(SyncController* uiDelegate);
+	virtual ~DeckLinkDeviceDiscovery();
+
+	bool				enable();
+	void				disable();
+
+	// IDeckLinkDeviceArrivalNotificationCallback interface
+	virtual HRESULT		DeckLinkDeviceArrived (/* in */ IDeckLink* deckLinkDevice);
+	virtual HRESULT		DeckLinkDeviceRemoved (/* in */ IDeckLink* deckLinkDevice);
+
+	// IUnknown needs only a dummy implementation
+	virtual HRESULT		QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG		AddRef ();
+	virtual ULONG		Release ();
 };
 
 void	FillSine (void* audioBuffer, uint32_t samplesToWrite, uint32_t channels, uint32_t sampleDepth);

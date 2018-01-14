@@ -17,7 +17,7 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			yvgA4se6vetvgIm9yBkExBLZiGo=
+			+WowKhIub1IHkxJv6akH0tTwGjA=
 			</data>
 			<key>optional</key>
 			<true/>
@@ -31,6 +31,10 @@
 			<data>
 			MiLKDDnrUKr4EmuvhS5VQwxHGK8=
 			</data>
+			<key>hash2</key>
+			<data>
+			Oc8u4Ht7Mz58F50L9NeYpbcq9qTlhPUeZCcDu/pPyCg=
+			</data>
 			<key>optional</key>
 			<true/>
 		</dict>
@@ -38,7 +42,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			yvgA4se6vetvgIm9yBkExBLZiGo=
+			+WowKhIub1IHkxJv6akH0tTwGjA=
+			</data>
+			<key>hash2</key>
+			<data>
+			irUWrZeg0pbsLOQGmRB28zpwoF4zTEPl8LMs57ZpBIw=
 			</data>
 			<key>optional</key>
 			<true/>

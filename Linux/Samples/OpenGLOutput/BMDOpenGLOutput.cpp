@@ -134,7 +134,7 @@ bool BMDOpenGLOutput::InitDeckLink()
 	if (pDLOutput->SetScheduledFrameCompletionCallback(pRenderDelegate) != S_OK)
 		goto error;
 	
-	bSuccess = TRUE;
+	bSuccess = true;
 
 error:
 	

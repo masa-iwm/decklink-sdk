@@ -33,29 +33,41 @@
 class DeckLinkDeviceDiscovery;
 class DeckLinkDevice;
 
-typedef struct {
+@interface TimecodeStruct : NSObject
+{
+	NSString* timecode;
+	NSString* userBits;
+}
+@property (copy) NSString *timecode;
+@property (copy) NSString *userBits;
+@end
+
+@interface AncillaryDataStruct : NSObject
+{
 	// VITC timecodes and user bits for field 1 & 2
-	NSString*	vitcF1Timecode;
-	NSString*	vitcF1UserBits;
-	NSString*	vitcF2Timecode;
-	NSString*	vitcF2UserBits;
+	TimecodeStruct*	vitcF1;
+	TimecodeStruct*	vitcF2;
 	
 	// RP188 timecodes and user bits (VITC1, VITC2 and LTC)
-	NSString*	rp188vitc1Timecode;
-	NSString*	rp188vitc1UserBits;
-	NSString*	rp188vitc2Timecode;
-	NSString*	rp188vitc2UserBits;
-	NSString*	rp188ltcTimecode;
-	NSString*	rp188ltcUserBits;
-} AncillaryDataStruct;
+	TimecodeStruct*	rp188vitc1;
+	TimecodeStruct*	rp188vitc2;
+	TimecodeStruct*	rp188ltc;
+}
+@property (nonatomic,copy) TimecodeStruct *vitcF1;
+@property (nonatomic,copy) TimecodeStruct *vitcF2;
+@property (nonatomic,copy) TimecodeStruct *rp188vitc1;
+@property (nonatomic,copy) TimecodeStruct *rp188vitc2;
+@property (nonatomic,copy) TimecodeStruct *rp188ltc;
+@end
+
 
 @interface CapturePreviewAppDelegate : NSObject <NSApplicationDelegate> {
-    NSWindow*						window;
-    
+	NSWindow*						window;
+	
 	DeckLinkDeviceDiscovery*		deckLinkDiscovery;
-    IDeckLinkScreenPreviewCallback*	screenPreviewCallback;
-    DeckLinkDevice*                 selectedDevice;
-    
+	IDeckLinkScreenPreviewCallback*	screenPreviewCallback;
+	DeckLinkDevice*					selectedDevice;
+	
 	// The following members store values & labels for the 8 pieces of ancillary data (VITC & RP188 F1/F2 timecodes & user bits) 
 	NSMutableArray*					ancillaryDataValues;
 	NSArray*						ancillaryDataTypes; 
@@ -93,6 +105,7 @@ typedef struct {
 - (void)setAncillaryData:(AncillaryDataStruct*) latestAncillaryDataValues;
 - (void)reloadAncillaryTable;
 
+
 - (BOOL)shouldRestartCaptureWithNewVideoMode;
 
 // NSTableView delegate
@@ -101,6 +114,7 @@ typedef struct {
 
 
 @property (assign) IBOutlet NSWindow *window;
+@property (nonatomic, retain) NSMutableArray* ancillaryDataValues;
 
 @end
 

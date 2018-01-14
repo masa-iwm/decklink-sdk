@@ -28,8 +28,15 @@
 //
 
 #pragma once
+
+#include "Resource.h"
 #include "DeckLinkAPI_h.h"
 #include "SignalGenerator3DVideoFrame.h"
+
+// Custom Messages
+#define WM_ADD_DEVICE_MESSAGE					(WM_APP + 1)
+#define WM_REMOVE_DEVICE_MESSAGE				(WM_APP + 2)
+
 
 enum OutputSignal
 {
@@ -37,13 +44,17 @@ enum OutputSignal
 	kOutputSignalDrop		= 1
 };
 
+// Forward declarations
+class DeckLinkDeviceDiscovery;
+class DeckLinkOutputDevice;
 
 // CSignalGeneratorDlg dialog
-class CSignalGeneratorDlg : public CDialog, public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
+class CSignalGeneratorDlg : public CDialog
 {
 // Construction
 public:
 	explicit CSignalGeneratorDlg(CWnd* pParent = NULL);	// standard constructor
+	virtual ~CSignalGeneratorDlg() {};
 
 	// Dialog Data
 	enum { IDD = IDD_SIGNALGENERATOR_DIALOG };
@@ -51,13 +62,12 @@ public:
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 
-
 // Implementation
 private:
-	int32_t						m_refCount;
 	HICON						m_hIcon;
 	//
 	CButton						m_startButton;
+	CComboBox					m_deviceListCombo;
 	CComboBox					m_outputSignalCombo;
 	CComboBox					m_audioChannelCombo;
 	CComboBox					m_audioSampleDepthCombo;
@@ -65,8 +75,6 @@ private:
 	CComboBox					m_pixelFormatCombo;
 	
 	bool						m_running;
-	IDeckLink*					m_deckLink;
-	IDeckLinkOutput*			m_deckLinkOutput;
 	
 	unsigned long				m_frameWidth;
 	unsigned long				m_frameHeight;
@@ -85,8 +93,9 @@ private:
 	BMDAudioSampleRate			m_audioSampleRate;
 	BMDAudioSampleType			m_audioSampleDepth;
 	unsigned long				m_totalAudioSecondsScheduled;
-	
-	~CSignalGeneratorDlg();
+
+	DeckLinkOutputDevice* 		m_selectedDevice;
+	DeckLinkDeviceDiscovery*	m_deckLinkDiscovery;
 
 	// Generated message map functions
 	virtual BOOL	OnInitDialog();
@@ -99,24 +108,22 @@ private:
 	// Signal Generator Implementation
 	void			StartRunning ();
 	void			StopRunning ();
-	void			ScheduleNextFrame (bool prerolling);
-	void			WriteNextAudioSamples ();
 
 	void			RefreshDisplayModeMenu(void);
+	void			RefreshAudioChannelMenu(void);
+	void			AddDevice(IDeckLink* deckLink);
+	void			RemoveDevice(IDeckLink* deckLink);
+
 
 public:
+	void			ScheduleNextFrame(bool prerolling);
+	void			WriteNextAudioSamples();
+
 	afx_msg void OnBnClickedOk();
-	
-	// *** DeckLink API implementation of IDeckLinkVideoOutputCallback IDeckLinkAudioOutputCallback *** //
-	// IUnknown
-	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);
-	virtual ULONG STDMETHODCALLTYPE		AddRef ();
-	virtual ULONG STDMETHODCALLTYPE		Release ();
-	
-	virtual HRESULT STDMETHODCALLTYPE	ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
-	virtual HRESULT STDMETHODCALLTYPE	ScheduledPlaybackHasStopped (void);
-	
-	virtual HRESULT STDMETHODCALLTYPE	RenderAudioSamples (BOOL preroll);
+	afx_msg void OnNewDeviceSelected();
+
+	afx_msg LRESULT	OnAddDevice(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT	OnRemoveDevice(WPARAM wParam, LPARAM lParam);
 
 private:
 	SignalGenerator3DVideoFrame* CreateBlackFrame(void);

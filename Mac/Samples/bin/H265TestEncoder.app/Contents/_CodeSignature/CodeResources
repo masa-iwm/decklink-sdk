@@ -19,56 +19,56 @@
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>Frameworks/QtCore</key>
+		<key>Frameworks/libQt5Core.5.dylib</key>
 		<dict>
 			<key>cdhash</key>
 			<data>
-			BbYVbwYeWt3zg5nqmX9Z5yBVlUg=
+			C/hMgJ+K+ZAsT/BI6yU3zVUhzSY=
 			</data>
 			<key>requirement</key>
-			<string>identifier QtCore and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
+			<string>identifier "libQt5Core.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
 		</dict>
-		<key>Frameworks/QtGui</key>
+		<key>Frameworks/libQt5DBus.5.dylib</key>
 		<dict>
 			<key>cdhash</key>
 			<data>
-			qTcYJVnip7JqGkSmhF13T/3xlSU=
+			82TcTF6W42AlT+QW51OxJtmc1Hk=
 			</data>
 			<key>requirement</key>
-			<string>identifier QtGui and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
+			<string>identifier "libQt5DBus.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
 		</dict>
-		<key>Frameworks/QtPrintSupport</key>
+		<key>Frameworks/libQt5Gui.5.dylib</key>
 		<dict>
 			<key>cdhash</key>
 			<data>
-			voQVRnDU1ZBJP8QKNhTGLLltTis=
+			S3ZdGG2BgxdRGWbkVljWb2i6lVQ=
 			</data>
 			<key>requirement</key>
-			<string>identifier QtPrintSupport and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
+			<string>identifier "libQt5Gui.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
 		</dict>
-		<key>Frameworks/QtWidgets</key>
+		<key>Frameworks/libQt5PrintSupport.5.dylib</key>
 		<dict>
 			<key>cdhash</key>
 			<data>
-			fFA/OY2dlMZCGPQ76XC0jMDFZ9c=
+			NY7Uw6fmur57GRt3utp0dqfctqU=
 			</data>
 			<key>requirement</key>
-			<string>identifier QtWidgets and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
+			<string>identifier "libQt5PrintSupport.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
 		</dict>
-		<key>PlugIns/accessible/libqtaccessiblewidgets.dylib</key>
+		<key>Frameworks/libQt5Widgets.5.dylib</key>
 		<dict>
 			<key>cdhash</key>
 			<data>
-			dyaHQn0WdLmCl+tU760pfw9HSN4=
+			4vinCSyIXH8aJxKB1dUlo6CU3fY=
 			</data>
 			<key>requirement</key>
-			<string>identifier libqtaccessiblewidgets and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
+			<string>identifier "libQt5Widgets.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
 		</dict>
 		<key>PlugIns/platforms/libqcocoa.dylib</key>
 		<dict>
 			<key>cdhash</key>
 			<data>
-			PGgiHSMlEiLhxkaRHRsDrdWRn1A=
+			zvfAUOFqcVFcBXFhx8EL/QWXHD4=
 			</data>
 			<key>requirement</key>
 			<string>identifier libqcocoa and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
@@ -77,23 +77,44 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			K0Jv7YHUxTSCH0GlMhylchQUk3w=
+			MqbDX4igOTbyT2pDyhknib3rgrs=
 			</data>
 			<key>requirement</key>
 			<string>identifier libcocoaprintersupport and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
 		</dict>
 		<key>Resources/Encoder_icon.icns</key>
-		<data>
-		jYW0fluj59yliPbTXettHajJnBk=
-		</data>
+		<dict>
+			<key>hash</key>
+			<data>
+			jYW0fluj59yliPbTXettHajJnBk=
+			</data>
+			<key>hash2</key>
+			<data>
+			/GUGOURfqTIboBapaQyeWWyIxLAWPB9tjTs1TvVWg0c=
+			</data>
+		</dict>
 		<key>Resources/empty.lproj</key>
-		<data>
-		2jmj7l5rSw0yVb/vlWAYkK/YBwk=
-		</data>
+		<dict>
+			<key>hash</key>
+			<data>
+			2jmj7l5rSw0yVb/vlWAYkK/YBwk=
+			</data>
+			<key>hash2</key>
+			<data>
+			47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=
+			</data>
+		</dict>
 		<key>Resources/qt.conf</key>
-		<data>
-		LswuYFiWXG1hYUiBu/afzXjtQqs=
-		</data>
+		<dict>
+			<key>hash</key>
+			<data>
+			LswuYFiWXG1hYUiBu/afzXjtQqs=
+			</data>
+			<key>hash2</key>
+			<data>
+			kmXT59fp+U3Dd6nWhqulH+XWx7v8H+z2+syJoORFnRk=
+			</data>
+		</dict>
 	</dict>
 	<key>rules</key>
 	<dict>

@@ -38,8 +38,27 @@
 #include <QWidget>
 #include <QGLWidget>
 #include <QMutex>
+#include <QEvent>
 
 #include "ui_SignalGenerator.h"
+
+// Define custom event type 
+const QEvent::Type ADD_DEVICE_EVENT 	= static_cast<QEvent::Type>(QEvent::User + 1);
+const QEvent::Type REMOVE_DEVICE_EVENT	= static_cast<QEvent::Type>(QEvent::User + 2);
+
+class SignalGeneratorEvent : public QEvent
+{
+private:
+	IDeckLink* 		m_deckLink;
+	
+public:
+	SignalGeneratorEvent( QEvent::Type type, IDeckLink* deckLinkDevice ) 
+		: QEvent( type ), m_deckLink( deckLinkDevice ) { m_deckLink->AddRef(); };
+	~SignalGeneratorEvent() { m_deckLink->Release(); };
+
+	IDeckLink* deckLink() const { return m_deckLink; };
+};
+
 
 class Timecode
 {
@@ -95,9 +114,10 @@ enum OutputSignal
 	kOutputSignalDrop		= 1
 };
 
-
+// Forward declarations
 class CDeckLinkGLWidget;
-class PlaybackDelegate;
+class DeckLinkOutputDevice;
+class DeckLinkDeviceDiscovery;
 
 class SignalGenerator : public QDialog
 {
@@ -108,11 +128,10 @@ public:
 	Ui::SignalGeneratorDialog *ui;
 	CDeckLinkGLWidget *previewView;
 	
-	PlaybackDelegate*			playerDelegate;
-	
 	bool						running;
-	IDeckLink*					deckLink;
-	IDeckLinkOutput*			deckLinkOutput;
+	DeckLinkOutputDevice* 		selectedDevice;
+	DeckLinkDeviceDiscovery*	deckLinkDiscovery;
+	BMDPixelFormat				pixelFormat;
 	
 	uint32_t					frameWidth;
 	uint32_t					frameHeight;
@@ -134,6 +153,7 @@ public:
 	
 	BMDTimecodeFormat			timeCodeFormat;
 
+	void customEvent(QEvent* event);
 	void closeEvent(QCloseEvent *event);
 
 	void setup();
@@ -144,31 +164,20 @@ public:
 
 	void startRunning();
 	void stopRunning();
-public slots:
 	
+	void refreshDisplayModeMenu(void);
+	void refreshAudioChannelMenu(void);
+	void addDevice(IDeckLink* deckLink);
+	void removeDevice(IDeckLink* deckLink);
+	
+public slots:
+	void outputDeviceChanged(int selectedDeviceIndex);
+	void pixelFormatChanged(int selectedDeviceIndex);
 	void toggleStart();
+	
 private:
 	QGridLayout *layout;
 	Timecode *timeCode;
-};
-
-class PlaybackDelegate : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
-{
-	QAtomicInt					mRefCount;
-	SignalGenerator*			mController;
-	IDeckLinkOutput*			mDeckLinkOutput;
-	
-public:
-	PlaybackDelegate (SignalGenerator* owner, IDeckLinkOutput* deckLinkOutput);
-	
-	// IUnknown
-	virtual HRESULT		QueryInterface (REFIID, LPVOID *);
-	virtual ULONG		AddRef ();
-	virtual ULONG		Release ();
-	
-	virtual HRESULT		ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
-	virtual HRESULT		ScheduledPlaybackHasStopped ();
-	virtual HRESULT		RenderAudioSamples (bool preroll);
 };
 
 void	FillSine (void* audioBuffer, uint32_t samplesToWrite, uint32_t channels, uint32_t sampleDepth);
