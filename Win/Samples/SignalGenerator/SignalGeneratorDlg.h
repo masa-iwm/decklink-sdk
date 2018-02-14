@@ -47,6 +47,7 @@ enum OutputSignal
 // Forward declarations
 class DeckLinkDeviceDiscovery;
 class DeckLinkOutputDevice;
+class PreviewWindow;
 
 // CSignalGeneratorDlg dialog
 class CSignalGeneratorDlg : public CDialog
@@ -74,6 +75,9 @@ private:
 	CComboBox					m_videoFormatCombo;
 	CComboBox					m_pixelFormatCombo;
 	
+	CStatic						m_previewBox;
+	PreviewWindow*				m_previewWindow;
+
 	bool						m_running;
 	
 	unsigned long				m_frameWidth;

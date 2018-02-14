@@ -79,6 +79,8 @@ namespace SignalGenCSharp
 
             InitDialog();
 
+            previewWindow.InitD3D();
+
             m_pixelFormat = ((StringObjectPair<_BMDPixelFormat>)comboBoxPixelFormat.SelectedItem).value;
         }
 
@@ -207,6 +209,9 @@ namespace SignalGenCSharp
             // Set the audio output mode
             m_selectedDevice.deckLinkOutput.EnableAudioOutput(m_audioSampleRate, m_audioSampleDepth, m_audioChannelCount, _BMDAudioOutputStreamType.bmdAudioOutputStreamContinuous);
 
+            // Set screen preview callback
+            m_selectedDevice.deckLinkOutput.SetScreenPreviewCallback(previewWindow);
+
             // Generate one second of audio
             m_audioBufferSampleLength = (uint)((m_framesPerSecond * (uint)m_audioSampleRate * m_frameDuration) / m_frameTimescale);
             m_audioBuffer = Marshal.AllocCoTaskMem((int)(m_audioBufferSampleLength * m_audioChannelCount * ((uint)m_audioSampleDepth / 8)));
@@ -268,6 +273,8 @@ namespace SignalGenCSharp
             long unused;
             
             m_selectedDevice.deckLinkOutput.StopScheduledPlayback(0, out unused, 100);
+            m_selectedDevice.deckLinkOutput.SetScreenPreviewCallback(null);
+
             m_running = false;
         }
 

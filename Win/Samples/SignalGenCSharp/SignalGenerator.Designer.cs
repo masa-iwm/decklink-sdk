@@ -42,7 +42,10 @@
             this.comboBoxOutputSignal = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
             this.buttonStartStop = new System.Windows.Forms.Button();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.previewWindow = new SignalGenCSharp.PreviewWindow();
             this.groupBox1.SuspendLayout();
+            this.groupBox2.SuspendLayout();
             this.SuspendLayout();
             // 
             // groupBox1
@@ -61,7 +64,7 @@
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(260, 197);
+            this.groupBox1.Size = new System.Drawing.Size(260, 207);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Properties";
@@ -184,7 +187,7 @@
             // 
             // buttonStartStop
             // 
-            this.buttonStartStop.Location = new System.Drawing.Point(95, 215);
+            this.buttonStartStop.Location = new System.Drawing.Point(105, 225);
             this.buttonStartStop.Name = "buttonStartStop";
             this.buttonStartStop.Size = new System.Drawing.Size(75, 23);
             this.buttonStartStop.TabIndex = 1;
@@ -192,11 +195,30 @@
             this.buttonStartStop.UseVisualStyleBackColor = true;
             this.buttonStartStop.Click += new System.EventHandler(this.buttonStartStop_Click);
             // 
+            // groupBox2
+            // 
+            this.groupBox2.Controls.Add(this.previewWindow);
+            this.groupBox2.Location = new System.Drawing.Point(278, 12);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(333, 207);
+            this.groupBox2.TabIndex = 2;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Output";
+            // 
+            // previewWindow
+            // 
+            this.previewWindow.Location = new System.Drawing.Point(6, 19);
+            this.previewWindow.Name = "previewWindow";
+            this.previewWindow.Size = new System.Drawing.Size(319, 179);
+            this.previewWindow.TabIndex = 0;
+            this.previewWindow.Text = "previewWindow";
+            // 
             // SignalGenerator
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(284, 247);
+            this.ClientSize = new System.Drawing.Size(617, 257);
+            this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.buttonStartStop);
             this.Controls.Add(this.groupBox1);
             this.Name = "SignalGenerator";
@@ -204,6 +226,7 @@
             this.Load += new System.EventHandler(this.SignalGenerator_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -224,5 +247,7 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.ComboBox comboBoxPixelFormat;
         private System.Windows.Forms.ComboBox comboBoxOutputDevice;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private PreviewWindow previewWindow;
     }
 }

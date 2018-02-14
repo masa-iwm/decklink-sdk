@@ -30,6 +30,7 @@
 #include "stdafx.h"
 #include "SignalGenerator.h"
 #include "SignalGeneratorDlg.h"
+#include "PreviewWindow.h"
 #include "DeckLinkOutputDevice.h"
 #include "DeckLinkDeviceDiscovery.h"
 #define _USE_MATH_DEFINES
@@ -81,6 +82,7 @@ void CSignalGeneratorDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO_AUDIO_DEPTH, m_audioSampleDepthCombo);
 	DDX_Control(pDX, IDC_COMBO_VIDEO_FORMAT, m_videoFormatCombo);
 	DDX_Control(pDX, IDC_COMBO_PIXEL_FORMAT, m_pixelFormatCombo);
+	DDX_Control(pDX, IDC_PREVIEW_BOX, m_previewBox);
 }
 
 BEGIN_MESSAGE_MAP(CSignalGeneratorDlg, CDialog)
@@ -234,9 +236,17 @@ BOOL CSignalGeneratorDlg::OnInitDialog()
 		if (!m_deckLinkDiscovery->enable())
 		{
 			MessageBox(_T("This application requires the DeckLink drivers installed.\nPlease install the Blackmagic DeckLink drivers to use the features of this application."), _T("Error"));
+			goto bail;
 		}
 	}
 
+	m_previewWindow = new PreviewWindow();
+	if (m_previewWindow->init(&m_previewBox) == false)
+	{
+		MessageBox(_T("This application was unable to initialise the preview window"), _T("Error"));
+	}
+
+bail: 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -538,9 +548,10 @@ void	CSignalGeneratorDlg::StartRunning ()
 	if (deckLinkOutput->EnableAudioOutput(bmdAudioSampleRate48kHz, m_audioSampleDepth, m_audioChannelCount, bmdAudioOutputStreamTimestamped) != S_OK)
 		goto bail;
 	
-	// Set Video and audio callbacks with DeckLinkOutputDevice delegate
+	// Set Video, audio and screen preview callbacks with DeckLinkOutputDevice delegate
 	deckLinkOutput->SetScheduledFrameCompletionCallback(m_selectedDevice);
 	deckLinkOutput->SetAudioCallback(m_selectedDevice);
+	deckLinkOutput->SetScreenPreviewCallback(m_previewWindow);
 
 	// Generate one second of audio tone
 	m_audioSamplesPerFrame = (unsigned long)((m_audioSampleRate * m_frameDuration) / m_frameTimescale);
@@ -594,11 +605,12 @@ void	CSignalGeneratorDlg::StopRunning ()
 	// Dereference DeckLinkOutputDevice delegate from callbacks
 	deckLinkOutput->SetScheduledFrameCompletionCallback(NULL);
 	deckLinkOutput->SetAudioCallback(NULL);
+	deckLinkOutput->SetScreenPreviewCallback(NULL);
 
 	// Disable video and audio outputs
 	deckLinkOutput->DisableAudioOutput();
 	deckLinkOutput->DisableVideoOutput();
-	
+
 	if (m_videoFrameBlack != NULL)
 		m_videoFrameBlack->Release();
 	m_videoFrameBlack = NULL;
@@ -753,6 +765,13 @@ void CSignalGeneratorDlg::OnClose()
 		m_videoFormatCombo.DeleteString(0);
 	}
 
+	// Release PreviewWindow instance
+	if (m_previewWindow != NULL)
+	{
+		m_previewWindow->Release();
+	}
+
+	// Release DeckLinkDeviceDiscovery instance
 	if (m_deckLinkDiscovery != NULL)
 	{
 		m_deckLinkDiscovery->Release();
