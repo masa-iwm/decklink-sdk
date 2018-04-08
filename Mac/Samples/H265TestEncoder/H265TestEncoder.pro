@@ -26,7 +26,7 @@
 
 QT += core gui
 
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
+QMAKE_MAC_SDK = macosx
 
 CONFIG += c++11
 

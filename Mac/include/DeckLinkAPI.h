@@ -350,10 +350,14 @@ enum _BMDDeckLinkFrameMetadataID {
     bmdDeckLinkFrameMetadataCintelFilmGauge                      = 'cfga',	// Current film gauge
     bmdDeckLinkFrameMetadataCintelOffsetDetectedHorizontal       = 'odfh',	// Horizontal offset (pixels) detected in image
     bmdDeckLinkFrameMetadataCintelOffsetDetectedVertical         = 'odfv',	// Vertical offset (pixels) detected in image
-    bmdDeckLinkFrameMetadataCintelOffsetAppliedHorizontal        = 'odah',	// Horizontal offset (pixels) applied to image
-    bmdDeckLinkFrameMetadataCintelOffsetAppliedVertical          = 'odav',	// Vertical offset (pixels) applied to image
     bmdDeckLinkFrameMetadataCintelKeykodeLow                     = 'ckkl',	// Raw keykode value - low 64 bits
     bmdDeckLinkFrameMetadataCintelKeykodeHigh                    = 'ckkh',	// Raw keykode value - high 64 bits
+    bmdDeckLinkFrameMetadataCintelTile1Size                      = 'ct1s',	// Size in bytes of compressed raw tile 1
+    bmdDeckLinkFrameMetadataCintelTile2Size                      = 'ct2s',	// Size in bytes of compressed raw tile 2
+    bmdDeckLinkFrameMetadataCintelTile3Size                      = 'ct3s',	// Size in bytes of compressed raw tile 3
+    bmdDeckLinkFrameMetadataCintelTile4Size                      = 'ct4s',	// Size in bytes of compressed raw tile 4
+    bmdDeckLinkFrameMetadataCintelImageWidth                     = 'IWPx',	// Width in pixels of image
+    bmdDeckLinkFrameMetadataCintelImageHeight                    = 'IHPx',	// Height in pixels of image
     bmdDeckLinkFrameMetadataCintelLinearMaskingRedInRed          = 'mrir',	// Red in red linear masking parameter
     bmdDeckLinkFrameMetadataCintelLinearMaskingGreenInRed        = 'mgir',	// Green in red linear masking parameter
     bmdDeckLinkFrameMetadataCintelLinearMaskingBlueInRed         = 'mbir',	// Blue in red linear masking parameter
@@ -372,6 +376,7 @@ enum _BMDDeckLinkFrameMetadataID {
     bmdDeckLinkFrameMetadataCintelLogMaskingRedInBlue            = 'mlrb',	// Red in blue log masking parameter
     bmdDeckLinkFrameMetadataCintelLogMaskingGreenInBlue          = 'mlgb',	// Green in blue log masking parameter
     bmdDeckLinkFrameMetadataCintelLogMaskingBlueInBlue           = 'mlbb',	// Blue in blue log masking parameter
+    bmdDeckLinkFrameMetadataCintelFilmFrameRate                  = 'cffr',	// Film frame rate
     bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX              = 'hdrx',	// Red display primaries in range 0.0 - 1.0
     bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY              = 'hdry',	// Red display primaries in range 0.0 - 1.0
     bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX            = 'hdgx',	// Green display primaries in range 0.0 - 1.0
@@ -384,11 +389,14 @@ enum _BMDDeckLinkFrameMetadataID {
     bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance      = 'hmil',	// Min display mastering luminance in range 0.0001 cd/m2 - 6.5535 cd/m2
     bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel          = 'mcll',	// Maximum Content Light Level in range 1 cd/m2 - 65535 cd/m2
     bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel     = 'fall',	// Maximum Frame Average Light Level in range 1 cd/m2 - 65535 cd/m2
-    bmdDeckLinkFrameMetadataCintel16mmCropRequired               = 'c16c',	// The image should be cropped to 16mm size
-    bmdDeckLinkFrameMetadataCintelInversionRequired              = 'cinv',	// The image should be colour inverted
-    bmdDeckLinkFrameMetadataCintelFlipRequired                   = 'cflr',	// The image should be flipped horizontally
-    bmdDeckLinkFrameMetadataCintelFocusAssistEnabled             = 'cfae',	// Focus Assist is currently enabled
-    bmdDeckLinkFrameMetadataCintelKeykodeIsInterpolated          = 'kkii'	// The keykode for this frame is interpolated from nearby keykodes
+    bmdDeckLinkFrameMetadataCintelOffsetToApplyHorizontal        = 'otah',	// Horizontal offset (pixels) to be applied to image
+    bmdDeckLinkFrameMetadataCintelOffsetToApplyVertical          = 'otav',	// Vertical offset (pixels) to be applied to image
+    bmdDeckLinkFrameMetadataCintelGainRed                        = 'LfRd',	// Red gain parameter to apply after log
+    bmdDeckLinkFrameMetadataCintelGainGreen                      = 'LfGr',	// Green gain parameter to apply after log
+    bmdDeckLinkFrameMetadataCintelGainBlue                       = 'LfBl',	// Blue gain parameter to apply after log
+    bmdDeckLinkFrameMetadataCintelLiftRed                        = 'GnRd',	// Red lift parameter to apply after log and gain
+    bmdDeckLinkFrameMetadataCintelLiftGreen                      = 'GnGr',	// Green lift parameter to apply after log and gain
+    bmdDeckLinkFrameMetadataCintelLiftBlue                       = 'GnBl'	// Blue lift parameter to apply after log and gain
 };
 
 /* Enum BMDDuplexMode - Duplex for configurable ports */
