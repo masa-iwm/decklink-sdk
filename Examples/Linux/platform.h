@@ -40,7 +40,9 @@
 
 #define	INT8_UNSIGNED			uint8_t
 #define	INT32_UNSIGNED			uint32_t
+#define	INT32_SIGNED			int32_t
 #define INT64_UNSIGNED          uint64_t
+#define INT32_SIGNED			int32_t
 #define INT64_SIGNED            int64_t
 
 #define BOOL                    bool
@@ -69,3 +71,7 @@ void MutexDestroy(MUTEX* mutex);
 void        StringFromCharArray(STRINGOBJ* newStr, const char* charPtr);
 void        StringToCharArray(STRINGOBJ bmdStr, char* charArray, unsigned int arrayLength);
 void        StringToStdString(STRINGOBJ bmdStr, std::string& stdStr);
+
+// atomic operators
+INT32_SIGNED AtomicIncrement(volatile INT32_SIGNED* value);
+INT32_SIGNED AtomicDecrement(volatile INT32_SIGNED* value);

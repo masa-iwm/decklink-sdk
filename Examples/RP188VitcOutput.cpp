@@ -141,15 +141,10 @@ bail:
 class OutputCallback: public IDeckLinkVideoOutputCallback
 {
 public:
-	OutputCallback(IDeckLinkOutput* deckLinkOutput)
+	OutputCallback(IDeckLinkOutput* deckLinkOutput) : m_refCount(1)
 	{
 		m_deckLinkOutput = deckLinkOutput;
 		m_deckLinkOutput->AddRef();
-	}
-
-	virtual ~OutputCallback(void)
-	{
-		m_deckLinkOutput->Release();
 	}
 
 	virtual HRESULT	STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult completionResult)
@@ -170,12 +165,17 @@ public:
 
 	virtual ULONG STDMETHODCALLTYPE AddRef()
 	{
-		return 1;
+		return AtomicIncrement(&m_refCount);
 	}
 
 	virtual ULONG STDMETHODCALLTYPE Release()
 	{
-		return 1;
+		INT32_UNSIGNED newRefValue = AtomicDecrement(&m_refCount);
+
+		if (newRefValue == 0)
+			delete this;
+
+		return newRefValue;
 	}
 
 	virtual HRESULT scheduleNextFrame(IDeckLinkVideoFrame* videoFrame)
@@ -213,6 +213,12 @@ public:
 
 private:
 	IDeckLinkOutput*  m_deckLinkOutput;
+	INT32_SIGNED m_refCount;
+	
+	virtual ~OutputCallback(void)
+	{
+		m_deckLinkOutput->Release();
+	}
 };
 
 static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
@@ -386,8 +392,8 @@ bail:
 		videoFrameBlue->Release();
 
 	// Release the outputCallback callback object
-	if (outputCallback)
-		delete outputCallback;
+	if (outputCallback != NULL)
+		outputCallback->Release();
 
 	return (result == S_OK) ? 0 : 1;
 }

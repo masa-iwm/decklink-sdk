@@ -41,10 +41,10 @@ LoopThroughWithOpenGLCompositing::LoopThroughWithOpenGLCompositing() : QDialog()
 
 	ui->verticalLayout->addWidget(pOpenGLComposite);
 
+	show();
+
 	if (!pOpenGLComposite->InitDeckLink())
 		exit(0);
-
-	show();
 }
 
 LoopThroughWithOpenGLCompositing::~LoopThroughWithOpenGLCompositing()

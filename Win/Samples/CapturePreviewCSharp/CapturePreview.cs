@@ -52,16 +52,19 @@ namespace CapturePreviewCSharp
         {
             DeckLinkDevice deckLink = new DeckLinkDevice(decklinkDevice);
 
-            comboBoxInputDevice.BeginUpdate();
-            comboBoxInputDevice.Items.Add(new StringObjectPair<DeckLinkDevice>(deckLink.deviceName, deckLink));
-            comboBoxInputDevice.EndUpdate();
-
-            if (comboBoxInputDevice.Items.Count == 1)
+            if (deckLink.deckLinkInput != null)
             {
-                comboBoxInputDevice.SelectedIndex = 0;
+                comboBoxInputDevice.BeginUpdate();
+                comboBoxInputDevice.Items.Add(new StringObjectPair<DeckLinkDevice>(deckLink.deviceName, deckLink));
+                comboBoxInputDevice.EndUpdate();
 
-                EnableInterface(true);
-                buttonStartStop.Enabled = true;
+                if (comboBoxInputDevice.Items.Count == 1)
+                {
+                    comboBoxInputDevice.SelectedIndex = 0;
+
+                    EnableInterface(true);
+                    buttonStartStop.Enabled = true;
+                }
             }
         }
 

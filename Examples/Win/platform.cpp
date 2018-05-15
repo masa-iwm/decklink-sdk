@@ -110,3 +110,14 @@ void StringToStdString(STRINGOBJ bmdStr, std::string& stdStr)
 	_bstr_t     myBStr(bmdStr); // copies bmdStr, does not take ownership as myBStr autoreleases
 	stdStr = myBStr;    
 }
+
+INT32_SIGNED AtomicIncrement(volatile INT32_SIGNED* value)
+{
+	return InterlockedIncrement((LONG*)value);
+}
+
+INT32_SIGNED AtomicDecrement(volatile INT32_SIGNED* value)
+{
+	return InterlockedDecrement((LONG*)value);
+}
+

@@ -46,135 +46,13 @@ const uint32_t kRowBytes = ((kFrameWidth + 47) / 48) * 128;
 
 // 10-bit YUV colour pixels
 const uint32_t kBlueData[] = { 0x40aa298, 0x2a8a62a8, 0x298aa040, 0x2a8102a8 };
-const uint32_t kBlackData[] = { 0x20010200, 0x04080040 };
 
-// Data Identifier 
+// IDs for CEA-708 captions from ITU-R BT.1364-3
 const uint8_t kCaptionDistributionPacketDID = 0x61;
-
-// Secondary Data Identifier
 const uint8_t kCaptionDistributionPacketSDID = 0x1;
-
-// Define VANC line for CEA-708 captions
-const uint32_t kCaptionDistributionPacketLine = 15;
 
 // Keep track of the number of scheduled frames
 uint32_t gTotalFramesScheduled = 0;
-
-//  This function translates a byte into a 10-bit sample
-//   x x x x x x x x x x x x
-//       -------------------
-//   | | |  0-7 raw data   |
-//   | |
-//   | even parity bit
-//   inverse of bit 8
-static inline uint32_t EncodeByte(uint32_t byte)
-{
-	uint32_t temp = byte;
-	// Calculate the even parity bit of bits 0-7 by XOR every individual bits
-	temp ^= temp >> 4;
-	temp ^= temp >> 2;
-	temp ^= temp >> 1;
-	// Use lsb as parity bit
-	temp &= 1;
-	// Put even parity bit on bit 8
-	byte |= temp << 8;
-	// Bit 9 is inverse of bit 8
-	byte |= ((~temp) & 1) << 9;
-	return byte;
-}
-
-// This function writes 10bit ancillary data to 10bit luma value in YUV 10bit structure
-static void WriteAncDataToLuma(uint32_t*& sdiStreamPosition, uint32_t value, uint32_t dataPosition)
-{
-	switch (dataPosition % 3)
-	{
-		case 0:
-			*sdiStreamPosition++  = (value) << 10;
-			break;
-		case 1:
-			*sdiStreamPosition = (value);
-			break;
-		case 2:
-			*sdiStreamPosition++ |= (value) << 20;
-			break;
-		default:
-			break;
-	}
-}
-
-static void WriteAncillaryDataPacket(uint32_t* line, const uint8_t did, const uint8_t sdid, const uint8_t* data, uint32_t length)
-{
-	// Sanity check
-	if (length == 0 || length > 255)
-		return;
-	
-	const uint32_t encodedDID  = EncodeByte(did);
-	const uint32_t encodedSDID = EncodeByte(sdid);
-	const uint32_t encodedDC   = EncodeByte(length);
-	
-	// Start sequence
-	*line++ = 0;
-	*line++ = 0x3ff003ff;
-	
-	// DID
-	*line++ = encodedDID << 10;
-	
-	// SDID and DC
-	*line++ = encodedSDID | (encodedDC << 20);
-	
-	// Checksum does not include the start sequence
-	uint32_t sum = encodedDID + encodedSDID + encodedDC;
-	// Write the payload
-	for (uint32_t i = 0; i < length; ++i)
-	{
-		const uint32_t encoded = EncodeByte(data[i]);
-		WriteAncDataToLuma(line, encoded, i);
-		sum += encoded & 0x1ff;
-	}
-	
-	// Checksum % 512 then copy inverse of bit 8 to bit 9
-	sum &= 0x1ff;
-	sum |= ((~(sum << 1)) & 0x200);
-	WriteAncDataToLuma(line, sum, length);
-}
-
-static void SetVancData(IDeckLinkVideoFrameAncillary* ancillary, const uint8_t* data, uint32_t length)
-{
-	HRESULT   result;
-	uint32_t* buffer;
-	
-	result = ancillary->GetBufferForVerticalBlankingLine(kCaptionDistributionPacketLine, (void **)&buffer);
-	if (result != S_OK)
-	{
-		fprintf(stderr, "Could not get buffer for Vertical blanking line - result = %08x\n", result);
-		return;
-	}
-	// Write caption data to buffer
-	WriteAncillaryDataPacket(buffer, kCaptionDistributionPacketDID, kCaptionDistributionPacketSDID, data, length);
-}
-
-static void ClearVancData(IDeckLinkVideoFrameAncillary* ancillary)
-{
-	HRESULT   result;
-	uint32_t* nextWord;
-	uint32_t  wordsRemaining;
-	
-	result = ancillary->GetBufferForVerticalBlankingLine(kCaptionDistributionPacketLine, (void **)&nextWord);
-	if (result != S_OK)
-	{
-		fprintf(stderr, "Could not get buffer for Vertical blanking line - result = %08x\n", result);
-		return;
-	}
-	
-	wordsRemaining = kRowBytes / 4;
-	
-	while (wordsRemaining > 0)
-	{
-		*(nextWord++) = kBlackData[0];
-		*(nextWord++) = kBlackData[1];
-		wordsRemaining = wordsRemaining - 2;
-	}
-}
 
 static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
 {
@@ -193,6 +71,86 @@ static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
 		wordsRemaining = wordsRemaining - 4;
 	}
 }
+
+class CaptionAncillaryPacket: public IDeckLinkAncillaryPacket
+{
+public:
+	CaptionAncillaryPacket(const CEA708::EncodedCaptionDistributionPacket& userData)
+	{
+		m_refCount = 1;
+		m_userData = userData;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	HRESULT STDMETHODCALLTYPE GetBytes(BMDAncillaryPacketFormat format, const void** data, uint32_t* size)
+	{
+		if (format != bmdAncillaryPacketFormatUInt8)
+		{
+			// In this example we only implement our packets with 8-bit data. This is fine because DeckLink accepts
+			// whatever format we can supply and, if required, converts it.
+			return E_NOTIMPL;
+		}
+		if (size) // Optional
+			*size = (uint32_t)m_userData.size();
+		if (data) // Optional
+			*data = m_userData.data();
+		return S_OK;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	uint8_t STDMETHODCALLTYPE GetDID(void)
+	{
+		return kCaptionDistributionPacketDID;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	uint8_t STDMETHODCALLTYPE GetSDID(void)
+	{
+		return kCaptionDistributionPacketSDID;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	uint32_t STDMETHODCALLTYPE GetLineNumber(void)
+	{
+		// Returning zero here tells DeckLink to attempt to assume the line for known DIDs/SDIDs, or otherwise place the
+		// packet on the initial VANC lines of a frame
+		return 0;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	uint8_t STDMETHODCALLTYPE GetDataStreamIndex(void)
+	{
+		return 0;
+	}
+	
+	// IUnknown
+	HRESULT	STDMETHODCALLTYPE QueryInterface (REFIID iid, LPVOID *ppv)
+	{
+		*ppv = NULL;
+		return E_NOINTERFACE;
+	}
+	
+	// IUnknown
+	ULONG STDMETHODCALLTYPE AddRef()
+	{
+		return InterlockedIncrement((LONG*)&m_refCount);
+	}
+	
+	// IUnknown
+	ULONG STDMETHODCALLTYPE Release()
+	{
+		int32_t newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+		
+		if (newRefValue == 0)
+			delete this;
+		
+		return newRefValue;
+	}
+
+private:
+	int32_t m_refCount;
+	CEA708::EncodedCaptionDistributionPacket m_userData;
+};
 
 class OutputCallback: public IDeckLinkVideoOutputCallback
 {
@@ -214,7 +172,8 @@ public:
 	HRESULT ScheduleNextFrame(IDeckLinkVideoFrame* videoFrame)
 	{
 		HRESULT										result = S_OK;
-		IDeckLinkVideoFrameAncillary*				ancillaryData = NULL;
+		IDeckLinkVideoFrameAncillaryPackets*		frameAncillaryPackets = NULL;
+		IDeckLinkAncillaryPacket*					ancillaryPacket = NULL;
 		CEA708::EncodedCaptionDistributionPacket	packet;
 		
 		// Resend the given caption data every second.
@@ -247,18 +206,33 @@ public:
 			m_CC708Encoder.flush();
 		}
 		
-		result = videoFrame->GetAncillaryData(&ancillaryData);
-		if (result != S_OK)
-		{
-			fprintf(stderr, "Could not get ancillary data = %08x\n", result);
-			goto bail;
-		}
-
-		ClearVancData(ancillaryData);
-		
 		if (m_CC708Encoder.pop(&packet))
 		{
-			SetVancData(ancillaryData, packet.data(), static_cast<uint32_t>(packet.size()));
+		
+			result = videoFrame->QueryInterface(IID_IDeckLinkVideoFrameAncillaryPackets, (void**)&frameAncillaryPackets);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Could not get ancillary packet store = %08x\n", result);
+				goto bail;
+			}
+
+			// DeckLink won't remove any pre-existing packets from a frame or replace those with a similar DID/SDID
+			// We're recycling our frames via ScheduledFrameCompleted(), so ensure the last captions we added are removed
+			result = frameAncillaryPackets->GetFirstPacketByID(kCaptionDistributionPacketDID, kCaptionDistributionPacketSDID, &ancillaryPacket);
+			if (result == S_OK)
+			{
+				frameAncillaryPackets->DetachPacket(ancillaryPacket);
+				ancillaryPacket->Release();
+				ancillaryPacket = NULL;
+			}
+			
+			result = frameAncillaryPackets->AttachPacket(new CaptionAncillaryPacket(packet));
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Could not attach packet = %08x\n", result);
+				goto bail;
+			}
+
 		}
 
 		// When a video frame completes,reschedule another frame
@@ -273,10 +247,10 @@ public:
 		
 	bail:
 		
-		if (ancillaryData != NULL)
+		if (frameAncillaryPackets != NULL)
 		{
-			ancillaryData->Release();
-			ancillaryData = NULL;
+			frameAncillaryPackets->Release();
+			frameAncillaryPackets = NULL;
 		}
 		
 		return result;
@@ -327,7 +301,6 @@ static IDeckLinkMutableVideoFrame* CreateFrame(IDeckLinkOutput* deckLinkOutput)
 {
 	HRESULT                         result;
 	IDeckLinkMutableVideoFrame*     frame = NULL;
-	IDeckLinkVideoFrameAncillary*	ancillaryData = NULL;
 	
 	result = deckLinkOutput->CreateVideoFrame(kFrameWidth, kFrameHeight, kRowBytes, kPixelFormat, bmdFrameFlagDefault, &frame);
 	if (result != S_OK)
@@ -338,25 +311,7 @@ static IDeckLinkMutableVideoFrame* CreateFrame(IDeckLinkOutput* deckLinkOutput)
 	
 	FillBlue(frame);
 	
-	result = deckLinkOutput->CreateAncillaryData(kPixelFormat, &ancillaryData);
-	if (result != S_OK)
-	{
-		fprintf(stderr, "Could not create Ancillary data - result = %08x\n", result);
-		goto bail;
-	}
-
-	// Ancillary data filled in callback
-	result = frame->SetAncillaryData(ancillaryData);
-	if (result != S_OK)
-	{
-		fprintf(stderr, "Fail to set ancillary data to the frame - result = %08x\n", result);
-		goto bail;
-	}
-	
 bail:
-	// Release the Ancillary object
-	if (ancillaryData != NULL)
-		ancillaryData->Release();
 	
 	return frame;
 }

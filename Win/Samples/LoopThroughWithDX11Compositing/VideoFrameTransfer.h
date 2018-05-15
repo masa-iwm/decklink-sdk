@@ -54,6 +54,7 @@ public:
 
 	static bool checkFastMemoryTransferAvailable();
 	static bool initialize(ID3D11Device* pD3DDevice, unsigned width, unsigned height, void *captureTexture, void *playbackTexture);
+	static bool destroy(ID3D11Device* pD3DDevice);
 	static void waitAPI(Direction direction);
 	static void endAPI(Direction direction);
 

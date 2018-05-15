@@ -44,7 +44,9 @@
 
 #define	INT8_UNSIGNED			unsigned char
 #define	INT32_UNSIGNED			unsigned int
+#define INT32_SIGNED			int
 #define INT64_UNSIGNED			ULONGLONG
+#define INT32_SIGNED			int
 #define INT64_SIGNED			LONGLONG
 
 #define STRINGOBJ               BSTR
@@ -69,3 +71,7 @@ void MutexDestroy(MUTEX* mutex);
 void        StringFromCharArray(STRINGOBJ* newStr, const char* charPtr);
 void        StringToCharArray(STRINGOBJ bmdStr, char* charArray, unsigned int arrayLength);
 void        StringToStdString(STRINGOBJ bmdStr, std::string& stdStr);
+
+// atomic operators
+INT32_SIGNED AtomicIncrement(volatile INT32_SIGNED* value);
+INT32_SIGNED AtomicDecrement(volatile INT32_SIGNED* value);

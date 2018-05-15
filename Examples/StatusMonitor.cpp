@@ -1,4 +1,4 @@
-/* -LICENSE-START-
+ /* -LICENSE-START-
  ** Copyright (c) 2016 Blackmagic Design
  **
  ** Permission is hereby granted, free of charge, to any person or organization
@@ -156,6 +156,7 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 		case bmdDeckLinkStatusReferenceSignalMode:
 		case bmdDeckLinkStatusDuplexMode:
 		case bmdDeckLinkStatusBusy:
+		case bmdDeckLinkStatusDeviceTemperature:
 			result = deckLinkStatus->GetInt(statusId, &intVal);
 			break;
 
@@ -196,6 +197,10 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 
 	switch (statusId)
 	{
+		case bmdDeckLinkStatusDeviceTemperature:
+			printf("%-40s %d\n", "Device Temperature is:", (BMDDisplayMode)intVal);
+			break;
+
 		case bmdDeckLinkStatusDetectedVideoInputMode:
 			if (result == S_FALSE)
 				break;
@@ -295,15 +300,10 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 class NotificationCallback : public IDeckLinkNotificationCallback
 {
 public:
-	NotificationCallback(IDeckLinkStatus* deckLinkStatus)
+	NotificationCallback(IDeckLinkStatus* deckLinkStatus) : m_refCount(1)
 	{
 		m_deckLinkStatus = deckLinkStatus;
 		m_deckLinkStatus->AddRef();
-	}
-
-	virtual ~NotificationCallback()
-	{
-		m_deckLinkStatus->Release();
 	}
 
 	// Implement the IDeckLinkNotificationCallback interface
@@ -328,15 +328,27 @@ public:
 	
 	ULONG STDMETHODCALLTYPE AddRef()
 	{
-		return 1;
+		return AtomicIncrement(&m_refCount);
 	}
 	
 	ULONG STDMETHODCALLTYPE Release()
 	{
-		return 1;
+		INT32_UNSIGNED newRefValue = AtomicDecrement(&m_refCount);
+
+		if (newRefValue == 0)
+			delete this;
+
+		return newRefValue;
 	}
+
 private:
 	IDeckLinkStatus*    m_deckLinkStatus;
+	INT32_SIGNED		m_refCount;
+
+	virtual ~NotificationCallback()
+	{
+		m_deckLinkStatus->Release();
+	}
 };
 
 int main(int argc, const char * argv[])
@@ -379,6 +391,7 @@ int main(int argc, const char * argv[])
 	printStatus(deckLinkStatus, bmdDeckLinkStatusDuplexMode);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusPCIExpressLinkWidth);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusPCIExpressLinkSpeed);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusDeviceTemperature);
 
 	// Print video input status values
 	printStatus(deckLinkStatus, bmdDeckLinkStatusVideoInputSignalLocked);

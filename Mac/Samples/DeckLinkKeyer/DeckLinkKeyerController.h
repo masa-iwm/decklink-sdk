@@ -1,5 +1,5 @@
 /* -LICENSE-START-
- ** Copyright (c) 2009 Blackmagic Design
+ ** Copyright (c) 2018 Blackmagic Design
  **
  ** Permission is hereby granted, free of charge, to any person or organization
  ** obtaining a copy of the software and accompanying documentation covered by
@@ -67,7 +67,7 @@
 - (void)awakeFromNib;
 - (void)disableControls;
 - (void)enableControls;
-- (BOOL)setMovieFile:(NSString*)filename;
+- (BOOL)setMovieFile:(NSURL*)fileURL;
 - (void)outputCurrentFrame;
 - (void)videoOutputOff;
 - (void)videoOutputOn;

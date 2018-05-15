@@ -96,8 +96,6 @@ DX11Composite::DX11Composite(HWND hWnd, HDC hDC) :
 
 DX11Composite::~DX11Composite()
 {
-	CleanupD3D();
-
 	// Cleanup for Capture
 	if (mDLInput != NULL)
 		mDLInput->SetCallback(NULL);
@@ -110,9 +108,17 @@ DX11Composite::~DX11Composite()
 	if (mDLOutput != NULL)
 		mDLOutput->SetScheduledFrameCompletionCallback(NULL);
 
+	while (!mDLOutputVideoFrameQueue.empty())
+	{
+		SAFE_RELEASE(mDLOutputVideoFrameQueue.front());
+		mDLOutputVideoFrameQueue.pop_front();
+	}
+
 	SAFE_RELEASE(mDLOutput);
 	SAFE_RELEASE(mPlayoutDelegate);
 	SAFE_RELEASE(mPlayoutAllocator);
+
+	CleanupD3D();
 
 	DeleteCriticalSection(&pMutex);
 }
@@ -929,6 +935,8 @@ void DX11Composite::CleanupD3D()
 {
 	if (mpImmediateContext) mpImmediateContext->ClearState();
 
+	(void)VideoFrameTransfer::destroy(mpD3DDevice);
+
 	SAFE_RELEASE(mpBlendStateNoBlend);
 	SAFE_RELEASE(mpBlendStateAlphaBlend);
 	SAFE_RELEASE(mpCaptureTexture);
@@ -936,6 +944,7 @@ void DX11Composite::CleanupD3D()
 	SAFE_RELEASE(mpPlayoutTextureRTV);
 	SAFE_RELEASE(mpCBPerspectiveProjection);
 	SAFE_RELEASE(mpCBChangesEveryFrame);
+	SAFE_RELEASE(mpCBViewCube);
 	SAFE_RELEASE(mpCubeVertexBuffer);
 	SAFE_RELEASE(mpCubeIndexBuffer);
 	SAFE_RELEASE(mpFrameVertexBuffer);
@@ -1089,25 +1098,8 @@ bool DX11Composite::createCubeVertexShader()
 
 	// Create the vertex shader
 	hr = mpD3DDevice->CreateVertexShader(g_cube_VS, sizeof(g_cube_VS), NULL, &mpCubeVertexShader);
-	if (FAILED(hr))
-		return false;
 
-	// Define the input layout
-	D3D11_INPUT_ELEMENT_DESC layout[] =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-	UINT numElements = ARRAYSIZE(layout);
-
-	// Create the input layout
-	hr = mpD3DDevice->CreateInputLayout(layout, numElements, g_cube_VS,
-		sizeof(g_cube_VS), &mpVertexLayout);
-	if (FAILED(hr))
-		return false;
-
-	return true;
+	return SUCCEEDED(hr);
 }
 
 // Setup fragment shader to take YCbCr 4:2:2 video texture in UYVY macropixel format
@@ -1118,24 +1110,8 @@ bool DX11Composite::createCubeFragmentShader()
 
 	// Create the pixel shader
 	hr = mpD3DDevice->CreatePixelShader(g_cube_PS, sizeof(g_cube_PS), NULL, &mpCubeFragmentShader);
-	if (FAILED(hr))
-		return false;
 
-	// Create pixel shader sampler 
-	D3D11_SAMPLER_DESC samplerDesc;
-	ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = 0;
-	hr = mpD3DDevice->CreateSamplerState(&samplerDesc, &mpSamplerLinear);
-	if (FAILED(hr))
-		return false;
-
-	return true;
+	return SUCCEEDED(hr);
 }
 
 bool DX11Composite::createFrameVertexShader()
@@ -1228,6 +1204,11 @@ PinnedMemoryAllocator::PinnedMemoryAllocator(ID3D11Device* pD3DDevice, VideoFram
 
 PinnedMemoryAllocator::~PinnedMemoryAllocator()
 {
+	for (auto iter = mFrameTransfer.begin(); iter != mFrameTransfer.end(); ++iter)
+	{
+		delete iter->second;
+	}
+	mFrameTransfer.clear();
 }
 
 bool PinnedMemoryAllocator::transferFrame(void* address, void* gpuTexture)
@@ -1272,7 +1253,12 @@ void PinnedMemoryAllocator::unPinAddress(void* address)
 	// un-pin address only if it has been pinned for transfer
 	if (mFrameTransfer.count(address) > 0)
 	{
-		mFrameTransfer.erase(address);
+		auto iter = mFrameTransfer.find(address);
+		if (iter != mFrameTransfer.end())
+		{
+			delete iter->second;
+			mFrameTransfer.erase(iter);
+		}
 	}
 }
 

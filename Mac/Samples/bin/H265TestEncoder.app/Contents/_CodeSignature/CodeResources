@@ -23,7 +23,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			NIrrf9WTC13vAuoavJrvPlAHkAQ=
+			bH433z3tpEtkOK1rbLJao7wKZuU=
 			</data>
 			<key>requirement</key>
 			<string>identifier "libQt5Core.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
@@ -32,7 +32,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			MVdGiXfHc5gK13Z/tBGJC8R0WN4=
+			HdQ8C2rZe5dTbqX5HqKWU2iky60=
 			</data>
 			<key>requirement</key>
 			<string>identifier "libQt5DBus.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
@@ -41,7 +41,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			7rSEkGF1WJzvcd6WxBdjavljSWU=
+			+BkNjBWlmw0gmXrNPJcWMEPWLS0=
 			</data>
 			<key>requirement</key>
 			<string>identifier "libQt5Gui.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
@@ -50,7 +50,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			nTq6RNX/zPPzPq8OsM0nkcBwZW4=
+			C47PsfFYZ8W/39xKF7stZA8RjFI=
 			</data>
 			<key>requirement</key>
 			<string>identifier "libQt5PrintSupport.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
@@ -59,7 +59,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			EPuyoJjb3sBZpxPOVbsuX2GEZug=
+			85kRWxszD8Ll4wgS+CZLnVyvAuA=
 			</data>
 			<key>requirement</key>
 			<string>identifier "libQt5Widgets.5" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
@@ -68,7 +68,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			3o6RXJLWPwmHASNulHmQMlEy6bo=
+			XbS92RY095qoLAQYbHrzjkB2W84=
 			</data>
 			<key>requirement</key>
 			<string>identifier libqcocoa and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>
@@ -77,7 +77,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			xBFOgGNvh8GHGjKtCWFTpThmstM=
+			UUBYhVYGuIN6RdtWrm+yb/dl8o0=
 			</data>
 			<key>requirement</key>
 			<string>identifier libcocoaprintersupport and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = "9ZGFBWLSYP"</string>

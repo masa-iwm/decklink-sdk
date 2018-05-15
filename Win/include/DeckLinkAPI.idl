@@ -99,6 +99,7 @@ typedef [v1_enum] enum	_BMDPacketType {
 
     /* Flags that are applicable only to instances of IDeckLinkVideoInputFrame */
 
+    bmdFrameCapturedAsPsF                                        = 1 << 30,
     bmdFrameHasNoInputSource                                     = 1 << 31
 };
 
@@ -184,6 +185,14 @@ typedef [v1_enum] enum	_BMDDisplayModeSupport {
     bmdDisplayModeSupported,                                    
     bmdDisplayModeSupportedWithConversion                       
 } BMDDisplayModeSupport;
+
+/* Enum BMDAncillaryPacketFormat - Ancillary packet format */
+
+typedef [v1_enum] enum	_BMDAncillaryPacketFormat {
+    bmdAncillaryPacketFormatUInt8                                = /* 'ui08' */ 0x75693038,
+    bmdAncillaryPacketFormatUInt16                               = /* 'ui16' */ 0x75693136,
+    bmdAncillaryPacketFormatYCbCr10                              = /* 'v210' */ 0x76323130
+} BMDAncillaryPacketFormat;
 
 /* Enum BMDTimecodeFormat - Timecode formats for frame metadata */
 
@@ -452,6 +461,7 @@ typedef [v1_enum] enum	_BMDDeckLinkStatusID {
     bmdDeckLinkStatusDuplexMode                                  = /* 'dupx' */ 0x64757078,
     bmdDeckLinkStatusBusy                                        = /* 'busy' */ 0x62757379,
     bmdDeckLinkStatusInterchangeablePanelType                    = /* 'icpt' */ 0x69637074,
+    bmdDeckLinkStatusDeviceTemperature                           = /* 'dtmp' */ 0x64746D70,
 
     /* Flags */
 
@@ -532,6 +542,9 @@ interface IDeckLinkMutableVideoFrame;
 interface IDeckLinkVideoFrame3DExtensions;
 interface IDeckLinkVideoFrameMetadataExtensions;
 interface IDeckLinkVideoInputFrame;
+interface IDeckLinkAncillaryPacket;
+interface IDeckLinkAncillaryPacketIterator;
+interface IDeckLinkVideoFrameAncillaryPackets;
 interface IDeckLinkVideoFrameAncillary;
 interface IDeckLinkEncoderPacket;
 interface IDeckLinkEncoderVideoPacket;
@@ -661,7 +674,7 @@ interface IDeckLinkDiscovery;
 
     HRESULT SetVideoOutputFrameMemoryAllocator([in] IDeckLinkMemoryAllocator *theAllocator);
     HRESULT CreateVideoFrame([in] int width, [in] int height, [in] int rowBytes, [in] BMDPixelFormat pixelFormat, [in] BMDFrameFlags flags, [out] IDeckLinkMutableVideoFrame **outFrame);
-    HRESULT CreateAncillaryData([in] BMDPixelFormat pixelFormat, [out] IDeckLinkVideoFrameAncillary **outBuffer);
+    HRESULT CreateAncillaryData([in] BMDPixelFormat pixelFormat, [out] IDeckLinkVideoFrameAncillary **outBuffer); // Use of IDeckLinkVideoFrameAncillaryPackets is preferred
 
     HRESULT DisplayVideoFrameSync([in] IDeckLinkVideoFrame *theFrame);
     HRESULT ScheduleVideoFrame([in] IDeckLinkVideoFrame *theFrame, [in] BMDTimeValue displayTime, [in] BMDTimeValue displayDuration, [in] BMDTimeScale timeScale);
@@ -791,7 +804,7 @@ interface IDeckLinkDiscovery;
     HRESULT GetBytes([out] void **buffer);
 
     HRESULT GetTimecode([in] BMDTimecodeFormat format, [out] IDeckLinkTimecode **timecode);
-    HRESULT GetAncillaryData([out] IDeckLinkVideoFrameAncillary **ancillary);
+    HRESULT GetAncillaryData([out] IDeckLinkVideoFrameAncillary **ancillary); // Use of IDeckLinkVideoFrameAncillaryPackets is preferred
 };
 
 /* Interface IDeckLinkMutableVideoFrame - Created by IDeckLinkOutput::CreateVideoFrame. */
@@ -852,17 +865,61 @@ interface IDeckLinkDiscovery;
     HRESULT GetHardwareReferenceTimestamp([in] BMDTimeScale timeScale, [out] BMDTimeValue *frameTime, [out] BMDTimeValue *frameDuration);
 };
 
-/* Interface IDeckLinkVideoFrameAncillary - Obtained through QueryInterface() on an IDeckLinkVideoFrame object. */
+/* Interface IDeckLinkAncillaryPacket - On output, user needs to implement this interface */
+
+[
+    object,
+    uuid(CC5BBF7E-029C-4D3B-9158-6000EF5E3670),
+    helpstring("On output, user needs to implement this interface")
+] interface IDeckLinkAncillaryPacket : IUnknown
+{
+
+    HRESULT GetBytes([in] BMDAncillaryPacketFormat format /* For output, only one format need be offered */, [out] const void **data /* Optional */, [out] unsigned int *size /* Optional */);
+    unsigned char GetDID(void);
+    unsigned char GetSDID(void);
+    unsigned int GetLineNumber(void); // On output, zero is auto
+    unsigned char GetDataStreamIndex(void); // Usually zero. Can only be 1 if non-SD and the first data stream is completely full
+};
+
+/* Interface IDeckLinkAncillaryPacketIterator - Enumerates ancillary packets */
+
+[
+    object,
+    uuid(3FC8994B-88FB-4C17-968F-9AAB69D964A7),
+    helpstring("Enumerates ancillary packets")
+] interface IDeckLinkAncillaryPacketIterator : IUnknown
+{
+    HRESULT Next([out] IDeckLinkAncillaryPacket **packet);
+};
+
+/* Interface IDeckLinkVideoFrameAncillaryPackets - Obtained through QueryInterface() on an IDeckLinkVideoFrame object. */
+
+[
+    object,
+    uuid(6C186C0F-459E-41D8-AEE2-4812D81AEE68),
+    local, 
+    helpstring("Obtained through QueryInterface() on an IDeckLinkVideoFrame object.")
+] interface IDeckLinkVideoFrameAncillaryPackets : IUnknown
+{
+
+    HRESULT GetPacketIterator([out] IDeckLinkAncillaryPacketIterator **iterator);
+    HRESULT GetFirstPacketByID([in] unsigned char DID, [in] unsigned char SDID, [out] IDeckLinkAncillaryPacket **packet);
+    HRESULT AttachPacket([in] IDeckLinkAncillaryPacket *packet); // Implement IDeckLinkAncillaryPacket to output your own
+    HRESULT DetachPacket([in] IDeckLinkAncillaryPacket *packet);
+    HRESULT DetachAllPackets(void);
+};
+
+/* Interface IDeckLinkVideoFrameAncillary - Use of IDeckLinkVideoFrameAncillaryPackets is preferred. Obtained through QueryInterface() on an IDeckLinkVideoFrame object. */
 
 [
     object,
     uuid(732E723C-D1A4-4E29-9E8E-4A88797A0004),
     local, 
-    helpstring("Obtained through QueryInterface() on an IDeckLinkVideoFrame object.")
+    helpstring("Use of IDeckLinkVideoFrameAncillaryPackets is preferred. Obtained through QueryInterface() on an IDeckLinkVideoFrame object.")
 ] interface IDeckLinkVideoFrameAncillary : IUnknown
 {
 
-    HRESULT GetBufferForVerticalBlankingLine([in] unsigned int lineNumber, [out] void **buffer);
+    HRESULT GetBufferForVerticalBlankingLine([in] unsigned int lineNumber, [out] void **buffer); // Pixels/rowbytes is same as display mode, except for above HD where it's 1920 pixels for UHD modes and 2048 pixels for DCI modes
     BMDPixelFormat GetPixelFormat(void);
     BMDDisplayMode GetDisplayMode(void);
 };
@@ -1140,6 +1197,14 @@ importlib("stdole2.tlb");
 ] coclass CDeckLinkDiscovery
 {
     [default] interface IDeckLinkDiscovery;
+};
+
+[
+    uuid(F891AD29-D0C2-46E9-A926-4E2D0DD8CFAD),
+    helpstring("CDeckLinkVideoFrameAncillaryPackets Class")
+] coclass CDeckLinkVideoFrameAncillaryPackets
+{
+    [default] interface IDeckLinkVideoFrameAncillaryPackets;
 };
 
 

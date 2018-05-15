@@ -119,6 +119,7 @@ int	_tmain (int argc, _TCHAR* argv[])
 		deckLink->Release();
 	}
 	
+	deckLinkIterator->Release();
 	
 	// If no DeckLink cards were found in the system, inform the user
 	if (numDevices == 0)
@@ -281,6 +282,9 @@ void	print_attributes (IDeckLink* deckLink)
 
 bail:
 	printf("\n");
+
+	if (deckLinkAttributes)
+		deckLinkAttributes->Release();
 }
 
 void	print_output_modes (IDeckLink* deckLink)

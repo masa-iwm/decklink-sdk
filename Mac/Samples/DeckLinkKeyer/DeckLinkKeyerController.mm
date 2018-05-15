@@ -1,5 +1,5 @@
 /* -LICENSE-START-
- ** Copyright (c) 2009 Blackmagic Design
+ ** Copyright (c) 2018 Blackmagic Design
  **
  ** Permission is hereby granted, free of charge, to any person or organization
  ** obtaining a copy of the software and accompanying documentation covered by
@@ -42,19 +42,28 @@
 	bool								supportExternalKeying;
 	bool								supportInternalKeying;
 	
+	[outputModeMenu removeAllItems];
 	
 	// **** Find a DeckLink instance and obtain video output interface ****
 	deckLinkIterator = CreateDeckLinkIteratorInstance();
 	if (deckLinkIterator == NULL)
 	{
-		NSRunAlertPanel(@"This application requires the DeckLink drivers installed.", @"Please install the Blackmagic DeckLink drivers to use the features of this application.", @"OK", nil, nil);
+		NSAlert* alert = [[NSAlert alloc] init];
+		alert.messageText = @"This application requires the DeckLink drivers installed.";
+		alert.informativeText = @"Please install the Blackmagic DeckLink drivers to use the features of this application.";
+		[alert runModal];
+		[alert release];
 		goto bail;
 	}
 	
 	// Connect to the first DeckLink instance
 	if (deckLinkIterator->Next(&deckLink) != S_OK)
 	{
-		NSRunAlertPanel(@"This application requires a DeckLink PCI card.", @"You will not be able to use the features of this application until a DeckLink PCI card is installed.", @"OK", nil, nil);
+		NSAlert* alert = [[NSAlert alloc] init];
+		alert.messageText = @"This application requires a DeckLink PCI card.";
+		alert.informativeText = @"You will not be able to use the features of this application until a DeckLink PCI card is installed.";
+		[alert runModal];
+		[alert release];
 		goto bail;
 	}
 	
@@ -65,14 +74,30 @@
 	// obtain the DeckLink Attribute interface (IDeckLinkAttributes)
 	if (deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes) != S_OK)
 		goto bail;
-	
+
+	// Is keying supported ?
+	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsExternalKeying, &supportExternalKeying) != S_OK)
+		goto bail;
+
+	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &supportInternalKeying) != S_OK)
+		goto bail;
+
+	if (!supportExternalKeying && !supportInternalKeying)
+	{
+		NSAlert* alert = [[NSAlert alloc] init];
+		alert.messageText = @"Your DeckLink card is not supported.";
+		alert.informativeText = @"You need to have a DeckLink card that supports keying to use the features of this application.";
+		[alert runModal];
+		[alert release];
+		goto bail;
+	}
+
 	// Is keying is supported in HD modes ?
 	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHDKeying, &supportHDKeying) != S_OK)
 		goto bail;
 	
 	
 	// **** Setup the display mode menu ****	
-	[outputModeMenu removeAllItems];
 	if (deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
 		goto bail;
 
@@ -86,11 +111,10 @@
 			if ((deckLinkDisplayMode->GetWidth() > 720) && !supportHDKeying)
 				continue;
 
-			
 			// Add this item to the video format poup menu
 			[outputModeMenu addItemWithTitle:(NSString*)modeName];
 			// Save the IDeckLinkDisplayMode in the menu item's tag
-			[[outputModeMenu itemAtIndex:[outputModeMenu numberOfItems]-1]  setTag:(NSInteger)deckLinkDisplayMode];
+			[[outputModeMenu lastItem] setTag:(NSInteger)deckLinkDisplayMode];
 			CFRelease(modeName);
 		}
 	}
@@ -106,14 +130,8 @@
 	// **** Enable/Disable internal/external keying buttons ****
 	[self disableControls];
 	
-	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsExternalKeying, &supportExternalKeying) != S_OK)
-		goto bail;
-	
 	if (!supportExternalKeying)
 		[externalKeyRadio setEnabled:NO];
-	
-	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &supportInternalKeying) != S_OK)
-		goto bail;
 	
 	if (!supportInternalKeying)
 		[internalKeyRadio setEnabled:NO];
@@ -123,10 +141,10 @@
 	userDefaults = [NSUserDefaults standardUserDefaults];
 	
 	// Initial key image
-	NSString *image;	
+	NSString* image;
 	image = [userDefaults stringForKey:@"InitialKeyImage"];
-	if ((image == nil) || ([self setMovieFile:image] == NO))
-		if ([self setMovieFile:[[NSBundle mainBundle] pathForResource:@"DeckLinkKeyer Default Image" ofType:@"psd"]] == NO)
+	if ((image == nil) || ([self setMovieFile:[NSURL URLWithString:image]] == NO))
+		if ([self setMovieFile:[[NSBundle mainBundle] URLForResource:@"DeckLinkKeyer Default Image" withExtension:@"psd"]] == NO)
 			goto bail;
 	
 	// Display mode
@@ -141,8 +159,8 @@
 	}
 	
 	// Alpha
-	[alphaText setIntValue:[userDefaults integerForKey:@"AlphaValue"]];
-	[alphaSlider setIntValue:[userDefaults integerForKey:@"AlphaValue"]];
+	[alphaText setIntValue:(int)[userDefaults integerForKey:@"AlphaValue"]];
+	[alphaSlider setIntValue:(int)[userDefaults integerForKey:@"AlphaValue"]];
 	
 	// Keying (off, internal, external)
 	if ([userDefaults boolForKey:@"KeyingEnabled"] == YES)
@@ -180,7 +198,7 @@ bail:
 		IDeckLinkDisplayMode *mode;
 		for(index = 0; index < [outputModeMenu numberOfItems]; index++)
 		{
-			mode = (IDeckLinkDisplayMode*)[[outputModeMenu selectedItem] tag];
+			mode = (IDeckLinkDisplayMode*)[[outputModeMenu itemAtIndex:index] tag];
 			mode->Release();
 		}
 		
@@ -269,12 +287,12 @@ bail:
 	return buffer;
 }
 
-- (BOOL)setMovieFile:(NSString*)filename
+- (BOOL)setMovieFile:(NSURL*)fileURL
 {
-	if ([movieView setMovieFile:filename forMode:(IDeckLinkDisplayMode*)[[outputModeMenu selectedItem] tag]] == NO ) 
+	if ([movieView setMovieFile:fileURL forMode:(IDeckLinkDisplayMode*)[[outputModeMenu selectedItem] tag]] == NO )
 		return NO;
 
-	[userDefaults setObject:filename forKey:@"InitialKeyImage"];
+	[userDefaults setObject:[fileURL absoluteString] forKey:@"InitialKeyImage"];
 	[self outputCurrentFrame];
 	
 	return YES;
@@ -288,7 +306,7 @@ bail:
 
 - (void)videoOutputOn
 {
-	IDeckLinkDisplayMode *mode = (IDeckLinkDisplayMode*)[[outputModeMenu selectedItem] tag];
+	IDeckLinkDisplayMode* mode = (IDeckLinkDisplayMode*)[[outputModeMenu selectedItem] tag];
 	if ((!videoOutputOn) || (currentDisplayMode != mode))
 	{
 		[self videoOutputOff];
@@ -316,11 +334,15 @@ bail:
 	
 	openPanel = [NSOpenPanel openPanel];
 	[openPanel setDelegate:self];
-	if ([openPanel runModalForTypes:nil] == NSOKButton)
+	if ([openPanel runModal] == NSModalResponseOK)
 	{
-		if ([self setMovieFile:[openPanel filename]] == NO)
+		if ([self setMovieFile:[[openPanel URLs] objectAtIndex:0]] == NO)
 		{
-			NSRunAlertPanel(@"The selected file could not be opened.", @"DeckLink Keyer could not opened the selected file.  It may not be an image format that QuickTime understands.", @"OK", nil, nil);
+			NSAlert* alert = [[NSAlert alloc] init];
+			alert.messageText = @"The selected file could not be opened.";
+			alert.informativeText = @"DeckLink Keyer could not opened the selected file.  It may not be an image format that QuickTime understands.";
+			[alert runModal];
+			[alert release];
 		}
 	}
 }
@@ -398,9 +420,11 @@ bail:
 	IDeckLinkDisplayMode *mode;
 	for(index = 0; index < [outputModeMenu numberOfItems]; index++)
 	{
-		mode = (IDeckLinkDisplayMode*)[[outputModeMenu selectedItem] tag];
+		mode = (IDeckLinkDisplayMode*)[[outputModeMenu itemAtIndex:index] tag];
 		mode->Release();
 	}
+	
+	[outputModeMenu removeAllItems];
 	
 	// Release keyer interface
 	if (deckLinkKeyer !=NULL)

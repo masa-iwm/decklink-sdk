@@ -62,15 +62,12 @@ INT32_UNSIGNED gTotalFramesScheduled = 0;
 class OutputCallback: public IDeckLinkVideoOutputCallback
 {
 public:
-	OutputCallback(IDeckLinkOutput* deckLinkOutput)
+	OutputCallback(IDeckLinkOutput* deckLinkOutput) : m_refCount(1)
 	{
 		m_deckLinkOutput = deckLinkOutput;
 		m_deckLinkOutput->AddRef();
 	}
-	virtual ~OutputCallback(void)
-	{
-		m_deckLinkOutput->Release();
-	}
+
 	HRESULT	STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 	{
 		// When a video frame completes,reschedule another frame
@@ -91,108 +88,120 @@ public:
 	
 	ULONG STDMETHODCALLTYPE AddRef()
 	{
-		return 1;
+		return AtomicIncrement(&m_refCount);
 	}
 	
 	ULONG STDMETHODCALLTYPE Release()
 	{
-		return 1;
+		INT32_UNSIGNED newRefValue = AtomicDecrement(&m_refCount);
+
+		if (newRefValue == 0)
+			delete this;
+
+		return newRefValue;
 	}
+
 private:
 	IDeckLinkOutput*  m_deckLinkOutput;
+	INT32_SIGNED m_refCount;
+
+	virtual ~OutputCallback(void)
+	{
+		m_deckLinkOutput->Release();
+	}
 };
 
-//  This function translates a byte into a 10-bit sample
-//   x x x x x x x x x x x x
-//       -------------------
-//   | | |  0-7 raw data   |
-//   | |
-//   | even parity bit
-//   inverse of bit 8
-static inline INT32_UNSIGNED EncodeByte(INT32_UNSIGNED byte)
+class RemoteControlAncillaryPacket: public IDeckLinkAncillaryPacket
 {
-	INT32_UNSIGNED temp = byte;
-	// Calculate the even parity bit of bits 0-7 by XOR every individual bits
-	temp ^= temp >> 4;
-	temp ^= temp >> 2;
-	temp ^= temp >> 1;
-	// Use lsb as parity bit
-	temp &= 1;
-	// Put even parity bit on bit 8
-	byte |= temp << 8;
-	// Bit 9 is inverse of bit 8
-	byte |= ((~temp) & 1) << 9;
-	return byte;
-}
-// This function writes 10bit ancillary data to 10bit luma value in YUV 10bit structure
-static void WriteAncDataToLuma(INT32_UNSIGNED*& sdiStreamPosition, INT32_UNSIGNED value, INT32_UNSIGNED dataPosition)
-{
-	switch(dataPosition % 3)
+public:
+	RemoteControlAncillaryPacket()
 	{
-		case 0:
-			*sdiStreamPosition++  = (value) << 10;
-			break;
-		case 1:
-			*sdiStreamPosition = (value);
-			break;
-		case 2:
-			*sdiStreamPosition++ |= (value) << 20;
-			break;
-		default:
-			break;
-	}
-}
-
-static void WriteAncillaryDataPacket(INT32_UNSIGNED* line, const INT8_UNSIGNED did, const INT8_UNSIGNED sdid, const INT8_UNSIGNED* data, INT32_UNSIGNED length)
-{
-	// Sanity check
-	if (length == 0 || length > 255)
-		return;
-	
-	const INT32_UNSIGNED encodedDID  = EncodeByte(did);
-	const INT32_UNSIGNED encodedSDID = EncodeByte(sdid);
-	const INT32_UNSIGNED encodedDC   = EncodeByte(length);
-	
-	// Start sequence
-	*line++ = 0;
-	*line++ = 0x3ff003ff;
-	
-	// DID
-	*line++ = encodedDID << 10;
-	
-	// SDID and DC
-	*line++ = encodedSDID | (encodedDC << 20);
-	
-	// Checksum does not include the start sequence
-	INT32_UNSIGNED sum = encodedDID + encodedSDID + encodedDC;
-	// Write the payload
-	for(INT32_UNSIGNED i = 0; i < length; ++i)
-	{
-		const INT32_UNSIGNED encoded = EncodeByte(data[i]);
-		WriteAncDataToLuma(line, encoded, i);
-		sum += encoded & 0x1ff;
+		MutexInit(&m_mutex);
+		m_refCount = 1;
 	}
 	
-	// Checksum % 512 then copy inverse of bit 8 to bit 9
-	sum &= 0x1ff;
-	sum |= ((~(sum << 1)) & 0x200);
-	WriteAncDataToLuma(line, sum, length);
-}
-
-static void SetVancData(IDeckLinkVideoFrameAncillary* ancillary)
-{
-	HRESULT   result;
-	INT32_UNSIGNED* buffer;
-	
-	result = ancillary->GetBufferForVerticalBlankingLine(kSDIRemoteControlLine, (void **)&buffer);
-	if (result != S_OK)
+	~RemoteControlAncillaryPacket()
 	{
-		fprintf(stderr, "Could not get buffer for Vertical blanking line - result = %08x\n", result);
-		return;
+		MutexDestroy(&m_mutex);
 	}
-	// Write camera control data to buffer
-	WriteAncillaryDataPacket(buffer, kSDIRemoteControlDID, kSDIRemoteControlSDID, kSDIRemoteControlData, sizeof(kSDIRemoteControlData)/sizeof(kSDIRemoteControlData[0]));
-}
+	
+	// IDeckLinkAncillaryPacket
+	HRESULT STDMETHODCALLTYPE GetBytes(BMDAncillaryPacketFormat format, const void** data, INT32_UNSIGNED* size)
+	{
+		if (format != bmdAncillaryPacketFormatUInt8)
+		{
+			// In this example we only implement our packets with 8-bit data. This is fine because DeckLink accepts
+			// whatever format we can supply and, if required, converts it.
+			return E_NOTIMPL;
+		}
+		if (size) // Optional
+			*size = (INT32_UNSIGNED)sizeof(kSDIRemoteControlData) / sizeof(*kSDIRemoteControlData);
+		if (data) // Optional
+			*data = (void*)kSDIRemoteControlData;
+		return S_OK;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	INT8_UNSIGNED STDMETHODCALLTYPE GetDID(void)
+	{
+		return kSDIRemoteControlDID;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	INT8_UNSIGNED STDMETHODCALLTYPE GetSDID(void)
+	{
+		return kSDIRemoteControlSDID;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	INT32_UNSIGNED STDMETHODCALLTYPE GetLineNumber(void)
+	{
+		// Returning zero here tells DeckLink to attempt to assume the line for known DIDs/SDIDs or otherwise place the
+		// packet on the initial VANC lines of a frame. In this example we know the line for this mode, so let's use it.
+		return kSDIRemoteControlLine;
+	}
+	
+	// IDeckLinkAncillaryPacket
+	INT8_UNSIGNED STDMETHODCALLTYPE GetDataStreamIndex(void)
+	{
+		return 0;
+	}
+	
+	// IUnknown
+	HRESULT	STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv)
+	{
+		*ppv = NULL;
+		return E_NOINTERFACE;
+	}
+	
+	// IUnknown
+	ULONG STDMETHODCALLTYPE AddRef()
+	{
+		MutexLock(&m_mutex);
+		m_refCount++;
+		INT32_SIGNED newRefValue = m_refCount;
+		MutexUnlock(&m_mutex);
+		return newRefValue;
+	}
+	
+	// IUnknown
+	ULONG STDMETHODCALLTYPE Release()
+	{
+		MutexLock(&m_mutex);
+		m_refCount--;
+		INT32_SIGNED newRefValue = m_refCount;
+		MutexUnlock(&m_mutex);
+		
+		if (newRefValue == 0)
+			delete this;
+		
+		return newRefValue;
+	}
+	
+private:
+	INT32_SIGNED m_refCount;
+	MUTEX m_mutex;
+};
 
 static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
 {
@@ -214,9 +223,10 @@ static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
 
 static IDeckLinkMutableVideoFrame* CreateFrame(IDeckLinkOutput* deckLinkOutput)
 {
-	HRESULT                         result;
-	IDeckLinkMutableVideoFrame*     frame = NULL;
-	IDeckLinkVideoFrameAncillary*	ancillaryData = NULL;
+	HRESULT									result;
+	IDeckLinkMutableVideoFrame*				frame = NULL;
+	IDeckLinkVideoFrameAncillaryPackets*	ancillaryPackets = NULL;
+	IDeckLinkAncillaryPacket*				packet = NULL;
 	
 	result = deckLinkOutput->CreateVideoFrame(kFrameWidth, kFrameHeight, kRowBytes, kPixelFormat, bmdFrameFlagDefault, &frame);
 	if (result != S_OK)
@@ -225,23 +235,22 @@ static IDeckLinkMutableVideoFrame* CreateFrame(IDeckLinkOutput* deckLinkOutput)
 		goto bail;
 	}
 	FillBlue(frame);
-	result = deckLinkOutput->CreateAncillaryData(kPixelFormat, &ancillaryData);
+	result = frame->QueryInterface(IID_IDeckLinkVideoFrameAncillaryPackets, (void**)&ancillaryPackets);
 	if(result != S_OK)
 	{
-		fprintf(stderr, "Could not create Ancillary data - result = %08x\n", result);
+		fprintf(stderr, "Could not get frame's ancillary packet store - result = %08x\n", result);
 		goto bail;
 	}
-	SetVancData(ancillaryData);
-	result = frame->SetAncillaryData(ancillaryData);
+	packet = new RemoteControlAncillaryPacket;
+	result = ancillaryPackets->AttachPacket(packet);
 	if (result != S_OK)
 	{
-		fprintf(stderr, "Fail to set ancillary data to the frame - result = %08x\n", result);
-		goto bail;
+		fprintf(stderr, "Could not attach packet to VANC - result = %08x\n", result);
+		packet->Release(); // IDeckLinkVideoFrameAncillaryPackets didn't take ownership of the packet object
 	}
 bail:
-	// Release the Ancillary object
-	if(ancillaryData != NULL)
-		ancillaryData->Release();
+	if (ancillaryPackets != NULL)
+		ancillaryPackets->Release();
 	return frame;
 }
 
@@ -362,8 +371,8 @@ bail:
 		videoFrameBlue->Release();
 	
 	// Release the outputCallback callback object
-	if(outputCallback)
-		delete outputCallback;
+	if(outputCallback != NULL)
+		outputCallback->Release();
 	
 	return(result == S_OK) ? 0 : 1;
 }

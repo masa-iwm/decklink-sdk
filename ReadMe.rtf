@@ -1,20 +1,164 @@
 {\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf400
-\cocoascreenfonts1{\fonttbl\f0\fnil\fcharset0 LucidaGrande-Bold;\f1\fnil\fcharset0 LucidaGrande;\f2\fswiss\fcharset0 Helvetica;
-}
-{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
-{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+\cocoascreenfonts1{\fonttbl\f0\fnil\fcharset0 LucidaGrande-Bold;\f1\fnil\fcharset0 LucidaGrande;\f2\froman\fcharset0 Times-Roman;
+\f3\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red21\green21\blue21;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c10980\c10980\c10588;\cssrgb\c0\c0\c0;}
 \paperw11900\paperh16840\vieww25560\viewh19380\viewkind0
 \deftab720
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\partightenfactor0
 
-\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 10.9.12\
+\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 10.10\
 \
 
 \f1\b0 Please refer to the Blackmagic Design DeckLink SDK documentation for a detailed explanation of the available functionality.\
+Please refer to\'a0{\field{\*\fldinst{HYPERLINK "https://www.blackmagicdesign.com/au/developer/"}}{\fldrslt https://www.blackmagicdesign.com/developer/}} for Frequently Asked Questions.\
 \
 \pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 10.9.12\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 10.10\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 	- 
+\f0\b New Interfaces\
+		\
+		- \expnd0\expndtw0\kerning0
+IDeckLinkVideoFrameAncillaryPackets
+\f1\b0 \
+			\
+			- New interface representing the ancillary data associated with a video frame\
+\
+		
+\f0\b - IDeckLinkAncillaryPacketIterator
+\f1\b0 \
+			\
+			- New interface representing an iterator that enumerates the available ancillary data packets in a video frame\
+\
+		
+\f0\b - IDeckLinkAncillaryPacket
+\f1\b0 \
+\
+			- New interface representing an ancillary data packet
+\f0\b \kerning1\expnd0\expndtw0 \
+
+\f1\b0 \
+	- 
+\f0\b Updated Interfaces\
+\
+		- IDeckLinkVideoFrame\
+			\
+
+\f1\b0 			- An 
+\f0\b \expnd0\expndtw0\kerning0
+IDeckLinkVideoFrameAncillaryPackets
+\f1\b0  interface object can be queried from the 
+\f0\b \kerning1\expnd0\expndtw0 IDeckLinkVideoFrame
+\f1\b0  interface\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 		\
+	- New Types\
+\
+		- \cf2 \expnd0\expndtw0\kerning0
+BMDPanelType \
+			\
+			
+\f1\b0 - Enumerates the type of interchangeable panel installed\cf3 \uc0\u8232 
+\f0\b \cf0 \kerning1\expnd0\expndtw0 \
+		- \cf2 \expnd0\expndtw0\kerning0
+BMDAncillaryPacketFormat \
+\
+			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 - Enumerates the possible data formats of the ancillary data packet \
+
+\f0\b \
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 	- 
+\f0\b Updated Types\
+\
+		- BMDFrameFlags\
+			\
+			- 
+\f1\b0 added
+\f0\b  bmdFrameCapturedAsPsF
+\f2\fs26\fsmilli13333 \cf2 \expnd0\expndtw0\kerning0
+ \
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0\fs24 \cf2 				- Frame captured as progressive segmented frame\
+
+\f0\b \
+		- BMDDeckLinkAttributeID \
+\
+			- 
+\f1\b0 added
+\f0\b  BMDDeckLinkDeviceHandle \
+
+\f1\b0 \cf3 				- \cf2 String representing an unique identifier for the device.\uc0\u8232 \cf3 \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf3 		- BMDDeckLinkStatusID\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf3 \
+			- added 
+\f0\b \cf2 bmdDeckLinkStatusInterchangeablePanelType \
+
+\f1\b0 				- Integer representing the interchangeable panel installed (
+\f0\b BMDPanelType
+\f1\b0 )\
+\cf3 \
+			- added 
+\f0\b \cf2 bmdDeckLinkStatusReceivedEDID \
+
+\f1\b0 				- Bytes representing the received EDID from a connected HDMI sink\cf3 \
+\
+			- added 
+\f0\b \cf2 bmdDeckLinkStatusDeviceTemperature \
+
+\f1\b0 				- Integer representing the on board device temperature\cf3 \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \kerning1\expnd0\expndtw0 \
+	- New Samples\
+\
+		- DeviceConfigure\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 			- Uses the 
+\f0\b IDeckLinkConfiguration
+\f1\b0  object interface to modify common configuration IDs\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+		- StillsCSharp\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 			- Subclasses 
+\f0\b IDeckLinkVideoFrame
+\f1\b0  to convert the video frame pixel format for purpose of writing/reading image files\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+	- Updated Samples\
+\
+		- LoopThroughWithDX11Compositing\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 			- Updated sample to improve output scheduling when targeting certain GPUs\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+		- DeckLinkKeyer\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 			- Updated to target AVFoundation and CoreGraphics\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+\
+Changes in Blackmagic DeckLink SDK 10.9.12\
 \
 \pard\pardeftab720\partightenfactor0
 
@@ -32,7 +176,7 @@
 				- RAW modes for Cintel Scanner (input only)\
 \
 		- 
-\f0\b \cf2 \expnd0\expndtw0\kerning0
+\f0\b \cf3 \expnd0\expndtw0\kerning0
 BMDPixelFormat 
 \f1\b0 \
 \cf0 \kerning1\expnd0\expndtw0 			\
@@ -58,7 +202,7 @@ BMDPixelFormat
 \f1\b0 \
 \pard\pardeftab720\partightenfactor0
 
-\f0\b \cf0 		- \cf2 \expnd0\expndtw0\kerning0
+\f0\b \cf0 		- \cf3 \expnd0\expndtw0\kerning0
 IDeckLinkVideoFrameMetadataExtensions \
 			\
 			
@@ -76,8 +220,9 @@ IDeckLinkVideoFrameMetadataExtensions \
 \pard\pardeftab720\partightenfactor0
 
 \f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 	- 
+\fs24 \cf0 	- 
 \f0\b Updated Samples\
 \
 
@@ -96,16 +241,18 @@ IDeckLinkVideoFrameMetadataExtensions \
 \f1\b0 			- added preview window rendered using 
 \f0\b IDeckLinkDX9ScreenPreviewHelper 
 \f1\b0 interface\
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 10.9.10\
 \pard\pardeftab720\partightenfactor0
 
 \f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 	- 
+\fs24 \cf0 	- 
 \f0\b Updated Samples\
 \
 
@@ -142,8 +289,9 @@ IDeckLinkVideoFrameMetadataExtensions \
 \pard\pardeftab720\partightenfactor0
 
 \f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 	- 
+\fs24 \cf0 	- 
 \f0\b Updated Types\
 \
 
@@ -200,8 +348,9 @@ Changes in Blackmagic DeckLink SDK 10.8.6\
 \pard\pardeftab720\partightenfactor0
 
 \f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 	- 
+\fs24 \cf0 	- 
 \f0\b Updated Types\
 \
 
@@ -841,10 +990,12 @@ Changes in Blackmagic DeckLink SDK 10.4.1\
 
 \f1\b0 	- 
 \f0\b Updated Types\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDDeckLinkAttributeID\
 \
 
@@ -878,10 +1029,12 @@ Changes in Blackmagic DeckLink SDK 10.4\
 \
 	- 
 \f0\b Updated Types\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDDeckLinkAttributeID\
 \
 
@@ -1037,10 +1190,12 @@ Changes in Blackmagic DeckLink SDK 10.3\
 \f1\b0 \cf0 	- 
 \f0\b Added Types
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDVideoIOSupport\
 	
 \f1\b0 		- An enumeration of capture and playback support\
@@ -1052,10 +1207,12 @@ Changes in Blackmagic DeckLink SDK 10.3\
 \f1\b0 \cf0 	- 
 \f0\b Updated Types
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDDeckLinkAttributeID\
 \
 
@@ -1177,7 +1334,7 @@ Changes in Blackmagic DeckLink SDK 10.3\
 \f0\b  BMDPixelFormat\
 \pard\pardeftab720\partightenfactor0
 
-\f2\b0 \cf0 \
+\f3\b0 \cf0 \
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b \cf0 \CocoaLigature0 					- 
@@ -1200,10 +1357,12 @@ Changes in Blackmagic DeckLink SDK 10.1.1\
 \f1\b0 \cf0 	- 
 \f0\b Updated Types
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDDeckLinkAttributeID\
 \
 
@@ -1223,15 +1382,19 @@ Changes in Blackmagic DeckLink SDK 10.0\
 \f1\b0 \cf0 	- 
 \f0\b Updated Types
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDDeckLinkAttributeID\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 	\
+\f1\b0\fs28 \cf0 	\
+\pard\pardeftab720\partightenfactor0
 
-\fs24 			- added
+\fs24 \cf0 			- added
 \f0\b  BMDDeckLinkSupportsFullDuplex
 \f1\b0 \
 				- Whether the device support full duplex operation
@@ -1360,7 +1523,7 @@ Changes in Blackmagic DeckLink SDK 9.8\
 \f0\b  BMDPixelFormat\
 \pard\pardeftab720\partightenfactor0
 
-\f2\b0 \cf0 \
+\f3\b0 \cf0 \
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b \cf0 \CocoaLigature0 					- 
@@ -1380,7 +1543,7 @@ Changes in Blackmagic DeckLink SDK 9.8\
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 \cf0 \CocoaLigature0 					- 
 \f1\b0 added 
-\f2\b \CocoaLigature1 bmdDeckLinkConfigUseDedicatedLTCInput
+\f3\b \CocoaLigature1 bmdDeckLinkConfigUseDedicatedLTCInput
 \f1\b0 \
 \pard\pardeftab720\partightenfactor0
 
@@ -1413,13 +1576,16 @@ Changes in Blackmagic DeckLink SDK 9.7\
 \f1\b0 \cf0 	- 
 \f0\b Updated Types
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDDeckLinkAttributeID\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 	\
+\f1\b0\fs28 \cf0 	\
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b\fs24 \cf0 \CocoaLigature0 					- 
@@ -1430,8 +1596,9 @@ Changes in Blackmagic DeckLink SDK 9.7\
 
 \f1\b0 \cf0 \CocoaLigature1 		- 
 \f0\b BMDVideoIOSupport\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 	\
+\f1\b0\fs28 \cf0 	\
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b\fs24 \cf0 \CocoaLigature0 					- 
@@ -1445,8 +1612,9 @@ Changes in Blackmagic DeckLink SDK 9.7\
 
 \f1\b0 \cf0 \CocoaLigature1 		- 
 \f0\b BMDDisplayMode\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 	\
+\f1\b0\fs28 \cf0 	\
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b\fs24 \cf0 \CocoaLigature0 					- 
@@ -1475,7 +1643,7 @@ Changes in Blackmagic DeckLink SDK 9.6.4\
 \f0\b Added Interfaces\
 \pard\pardeftab720\partightenfactor0
 
-\f2\b0 \cf0 \
+\f3\b0 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \f1 \cf0 		- 
@@ -1566,7 +1734,7 @@ Changes in Blackmagic DeckLink SDK 9.5\
 
 \f1\b0 \cf0 \
 	- 
-\f2 Custom allocators for both capture and playback now allow full control over all video frame memory allocations
+\f3 Custom allocators for both capture and playback now allow full control over all video frame memory allocations
 \f1 \
 \
 	- 
@@ -1627,15 +1795,19 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \fs24 \cf0 	- 
 \f0\b Updated Types
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDTimecodeFormat\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 	\
+\f1\b0\fs28 \cf0 	\
+\pard\pardeftab720\partightenfactor0
 
-\fs24 			- enumeration now uses fourCC values
+\fs24 \cf0 			- enumeration now uses fourCC values
 \f0\b . 
 \f1\b0 \
 \
@@ -1688,8 +1860,9 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \CocoaLigature1 			- added 
 \f0\b \CocoaLigature0 bmdDeckControlVTRControlJogReverse
 \f1\b0 \CocoaLigature1 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 8.1
@@ -1707,19 +1880,24 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \pard\pardeftab720\partightenfactor0
 
 \fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 	- 
+\fs24 \cf0 	- 
 \f0\b Updated Types
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 		- 
+\fs24 \cf0 		- 
 \f0\b BMDDeckLinkAttributeID\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 	\
+\f1\b0\fs28 \cf0 	\
+\pard\pardeftab720\partightenfactor0
 
-\fs24 			- added
+\fs24 \cf0 			- added
 \f0\b  BMDDeckLinkDeviceBusyState
 \f1\b0 \
 \
@@ -1773,12 +1951,14 @@ Changes in Blackmagic DeckLink SDK 8.5\
 			- added 
 \f0\b bmdTimecodeRP188Field2
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 			
+\fs28 \cf0 			
 \fs24 - added 
 \f0\b bmdTimecodeVITCField2\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \
+\f1\b0 \cf0 \
 				- the second field of timecode data\
 \
 		- 
@@ -1941,12 +2121,15 @@ Changes in Blackmagic DeckLink SDK 8.5\
 			- added 
 \f0\b bmdIdleVideoOutputLastFrame
 \f1\b0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 				- the video output when not playing video\
+\fs24 \cf0 				- the video output when not playing video\
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \f0\b\fs24 \cf0 	- Updated interfaces
@@ -1988,7 +2171,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 
 \f1\b0 \
 				- frame packing is only supported on HDMI 1.4a
-\f2 \
+\f3 \
 
 \f1 \
 \pard\pardeftab720\partightenfactor0
@@ -2131,7 +2314,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \pard\pardeftab720\partightenfactor0
 
 \f1\b0 \cf0 			- new\'a0enumeration of the\'a0dual preview formats available for the DeckLink GL screen preview helper.\'a0
-\f2 \
+\f3 \
 
 \f1 \
 \pard\pardeftab720\partightenfactor0
@@ -2143,7 +2326,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \pard\pardeftab720\partightenfactor0
 
 \f1\b0 \cf0 			- new\'a0enumeration\'a0of the standard modes where two frames are packed into one
-\f2 \
+\f3 \
 \pard\pardeftab720\partightenfactor0
 
 \f0\b \cf0 \
@@ -2200,10 +2383,12 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \
 		-\'a0
 \f0\b BMDVideoOutputConversionMode\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\fs24 			-\'a0added\'a0
+\fs24 \cf0 			-\'a0added\'a0
 \f0\b bmdVideoOutputHardwareAnamorphic149To720pUpconversion
 \f1\b0\fs28 \
 
@@ -2702,4 +2887,4 @@ Some applications may use third party code under license. For details please ref
 \fs18 \
 \'a9 2018 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
 \
-Updated March 29, 2018.}
+Updated May 08, 2018.}

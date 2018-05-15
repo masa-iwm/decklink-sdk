@@ -102,6 +102,24 @@ bool VideoFrameTransfer::initialize(ID3D11Device* pD3DDevice, unsigned width, un
 	return true;
 }
 
+bool VideoFrameTransfer::destroy(ID3D11Device* pD3DDevice)
+{
+	if (!mInitialized)
+		return false;
+
+	if (mUseDvp)
+	{
+		DVP_CHECK(dvpFreeBuffer(mDvpCaptureTextureHandle));
+		DVP_CHECK(dvpFreeBuffer(mDvpPlaybackTextureHandle));
+
+		DVP_CHECK(dvpCloseD3D11Device(pD3DDevice));
+	}
+
+	mInitialized = false;
+
+	return true;
+}
+
 bool VideoFrameTransfer::initializeMemoryLocking(unsigned memSize)
 {
 	// Increase the process working set size to allow pinning of memory.
@@ -246,14 +264,9 @@ bool VideoFrameTransfer::performFrameTransfer()
 			// Copy from GPU texture to system memory
 			dvpMapBufferWaitDVP(mDvpPlaybackTextureHandle);
 
-			mGpuSync->mReleaseValue++;
-
-			status = dvpMemcpyLined(mDvpPlaybackTextureHandle, mExtSync->mDvpSync, mExtSync->mAcquireValue, DVP_TIMEOUT_IGNORED,
+			status = dvpMemcpyLined(mDvpPlaybackTextureHandle, mExtSync->mDvpSync, mExtSync->mReleaseValue, DVP_TIMEOUT_IGNORED,
 				mDvpSysMemHandle, mGpuSync->mDvpSync, mGpuSync->mReleaseValue, 0, mHeight);
 			dvpMapBufferEndDVP(mDvpPlaybackTextureHandle);
-
-			mExtSync->mAcquireValue++;
-
 		}
 		dvpEnd();
 

@@ -45,7 +45,15 @@ namespace CapturePreviewCSharp
             m_deckLink = deckLink;
 
             // Get input interface
-            m_deckLinkInput = (IDeckLinkInput)m_deckLink;
+            try
+            {
+                m_deckLinkInput = (IDeckLinkInput)m_deckLink;
+            }
+            catch (InvalidCastException)
+            {
+                // No output interface found, eg in case of DeckLink Mini Monitor
+                return;
+            }
         }
 
         public event DeckLinkInputSignalHandler InputSignalChanged;
@@ -56,6 +64,11 @@ namespace CapturePreviewCSharp
             get { return m_deckLink; }
         }
 
+        public IDeckLinkInput deckLinkInput
+        {
+            get { return m_deckLinkInput; }
+        }
+        
         public string deviceName
         {
             get

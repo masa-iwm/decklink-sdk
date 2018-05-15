@@ -1,5 +1,5 @@
 /* -LICENSE-START-
- ** Copyright (c) 2009 Blackmagic Design
+ ** Copyright (c) 2018 Blackmagic Design
  **
  ** Permission is hereby granted, free of charge, to any person or organization
  ** obtaining a copy of the software and accompanying documentation covered by
@@ -28,10 +28,8 @@
 /*  main.m */
 
 #import <Cocoa/Cocoa.h>
-#import <QuickTime/QuickTime.h>
 
 int main(int argc, char *argv[])
 {
-	EnterMovies();
-    return NSApplicationMain(argc,  (const char **) argv);
+	return NSApplicationMain(argc,  (const char **) argv);
 }

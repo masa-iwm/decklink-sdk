@@ -97,3 +97,12 @@ void StringToStdString(STRINGOBJ bmdStr, std::string& stdStr)
 	stdStr = bmdStr;
 }
 
+INT32_SIGNED AtomicIncrement(volatile INT32_SIGNED* value)
+{
+	return __sync_add_and_fetch(value, 1);
+}
+
+INT32_SIGNED AtomicDecrement(volatile INT32_SIGNED* value)
+{
+	return __sync_sub_and_fetch(value, 1);
+}

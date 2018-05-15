@@ -34,16 +34,11 @@ class NotificationCallback : public IDeckLinkInputCallback
 public:
     IDeckLinkInput* m_deckLinkInput;
     
-    NotificationCallback(IDeckLinkInput *deckLinkInput)
+	NotificationCallback(IDeckLinkInput *deckLinkInput) : m_refCount(1)
     {
         m_deckLinkInput = deckLinkInput;
     }
     
-    ~NotificationCallback(void)
-    {
-        
-    }
-	
 	HRESULT		STDMETHODCALLTYPE QueryInterface (REFIID iid, LPVOID *ppv)
 	{
         return E_NOINTERFACE;
@@ -51,13 +46,18 @@ public:
 	
     ULONG		STDMETHODCALLTYPE AddRef ()
     {
-        return 1;
-    }
+		return AtomicIncrement(&m_refCount);
+	}
 	
     ULONG		STDMETHODCALLTYPE Release ()
     {
-        return 1;
-    }
+		INT32_UNSIGNED newRefValue = AtomicDecrement(&m_refCount);
+
+		if (newRefValue == 0)
+			delete this;
+
+		return newRefValue;
+	}
     
     // The callback that is called when a property of the video input stream has changed.
 	HRESULT		STDMETHODCALLTYPE VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newDisplayMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
@@ -141,6 +141,14 @@ public:
     {
         return S_OK;
     }
+
+private:
+	INT32_SIGNED		m_refCount;
+
+	virtual ~NotificationCallback(void)
+	{
+
+	}
 };
 
 
@@ -266,8 +274,8 @@ bail:
         deckLinkIterator->Release();
 
     // Release the notification callback object
-    if(notificationCallback)
-        delete notificationCallback;
+    if(notificationCallback != NULL)
+        notificationCallback->Release();
         
 	return returnCode;
 }

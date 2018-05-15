@@ -1,5 +1,5 @@
 /* -LICENSE-START-
- ** Copyright (c) 2009 Blackmagic Design
+ ** Copyright (c) 2018 Blackmagic Design
  **
  ** Permission is hereby granted, free of charge, to any person or organization
  ** obtaining a copy of the software and accompanying documentation covered by
@@ -30,21 +30,6 @@
 #import "DeckLinkKeyerMovieView.h"
 #import "DeckLinkKeyerController.h"
 
-// Functions missing from the 10.7+ SDKs
-#if !defined(__QUICKDRAWAPI__)
-extern "C" {
-	extern void SetRect(Rect * r,    short  left,    short  top,    short  right,    short  bottom)    __attribute__((weak_import));
-}
-#endif /* __QUICKDRAWAPI__ */
-
-#if !defined(__QDOFFSCREEN__)
-extern "C" {
-	extern QDErr NewGWorldFromPtr( GWorldPtr* offscreenGWorld, UInt32 PixelFormat,    const Rect *  boundsRect, CTabHandle cTable,/* can be NULL */ GDHandle aGDevice,/* can be NULL */ GWorldFlags flags, Ptr           newBuffer, SInt32 rowBytes) __attribute__((weak_import));
-	extern void DisposeGWorld(GWorldPtr offscreenGWorld) __attribute__((weak_import));
-	extern GDHandle GetGWorldDevice(GWorldPtr offscreenGWorld) __attribute__((weak_import));
-}
-#endif /* __QDOFFSCREEN__ */
-
 @implementation DeckLinkKeyerMovieView
 
 - (id)initWithCoder:(NSCoder*)coder
@@ -53,8 +38,6 @@ extern "C" {
 	{
 		highlight = NO;
 		acceptDrags = YES;
-		frameGWorld = NULL;
-		frameGWorldStorage = NULL;
 		[self registerForDraggedTypes:[NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
 	}
 	return self;
@@ -65,142 +48,112 @@ extern "C" {
 	acceptDrags = flag;
 }
 
-- (BOOL)setMovieFile:(NSString*)filename forMode:(IDeckLinkDisplayMode*)displayMode
+- (BOOL)setMovieFile:(NSURL*)fileURL forMode:(IDeckLinkDisplayMode*)displayMode
 {
-	NSURL*			fileURL;
-	FSRef			movieRef;
-	FSSpec			movieSpec;
-	short			movieFileRefNum = 0;
-	short			movieResID = 0;
+	AVURLAsset*				asset;
+	AVAssetImageGenerator*	imageGen;
+	CGImageRef				cgImage;
 	//
-	int				movieWidth;
-	int				movieHeight;
+	NSBitmapImageRep*		ourRep = nil;
+	NSData*					bitmapPtr = nil;
+	NSImage*				ourImage = nil;
+	NSImage*				sourceImage;
+	NSSize					frameSize;
+	NSSize					imageSize;
+	NSUInteger				frameRowBytes;
 	//
-	Rect			qdRect;
-	Movie			newMovie = NULL;
-	OSErr			error;
-	//
-	NSBitmapImageRep* ourRep = NULL;
-	unsigned char * bitmapPtr = NULL;
-	NSImage *		ourImage = NULL;
-	NSSize			ourImageSize;
-	//
-	BOOL			success = NO;
+	BOOL					success = NO;
 	
-	fileURL = [NSURL fileURLWithPath:filename];
-	// Convert the document's path to a FSRef
-	if (CFURLGetFSRef((CFURLRef)fileURL, &movieRef) == false)
-		goto bail;
+	asset = [[[AVURLAsset alloc] initWithURL:fileURL options:nil] autorelease];
 	
-	// Convert the movie's FSRef to a FSSpec
-	if (FSGetCatalogInfo(&movieRef, kFSCatInfoNone, NULL, NULL, &movieSpec, NULL) != noErr)
-		goto bail;
+	// First try to access URL as movie content
+	if ([[asset tracksWithMediaType:AVMediaTypeVideo] count] > 0)
+	{
+		imageGen = [AVAssetImageGenerator assetImageGeneratorWithAsset:asset];
 	
-	// Open the movie from the FSSpec
-	error = OpenMovieFile(&movieSpec, &movieFileRefNum, fsRdPerm);
-    if (error != noErr)
-		goto bail;
+		imageGen.maximumSize = CGSizeMake(displayMode->GetWidth(), displayMode->GetHeight());
+		imageGen.apertureMode = AVAssetImageGeneratorApertureModeProductionAperture;
+		imageGen.appliesPreferredTrackTransform = YES;
+	
+		cgImage = [imageGen copyCGImageAtTime:CMTimeMake(0, 1) actualTime:nil error:nil];
+	}
+	else
+	{
+		// Otherwise try to read file as CGImage
+		CGImageSourceRef myImageSource = CGImageSourceCreateWithURL((CFURLRef)fileURL, NULL);
+		
+		if (myImageSource == NULL)
+			// Image source does not exist
+			goto bail;
+			
+		// Create an image from the first item in the image source.
+		cgImage = CGImageSourceCreateImageAtIndex(myImageSource, 0, NULL);
+		CFRelease(myImageSource);
+	}
 
-	if (NewMovieFromFile(&newMovie, movieFileRefNum, &movieResID, NULL, newMovieActive, NULL) != noErr)
-		goto bail;
-	
-	
-	GetMovieBox(newMovie, &qdRect);
-	movieWidth = (qdRect.right - qdRect.left);
-	movieHeight = (qdRect.bottom - qdRect.top);
-	
+	imageSize.width = CGImageGetWidth(cgImage);
+	imageSize.height = CGImageGetHeight(cgImage);
+
 	// If the movie dimensions are larger than the display mode dimensions,
 	// scale the frame (preserving its aspect ratio) to fit within the
 	// display mode dimensions.
-	if ((movieWidth > displayMode->GetWidth()) || (movieHeight > displayMode->GetHeight()))
+	if ((imageSize.width > displayMode->GetWidth()) || (imageSize.height > displayMode->GetHeight()))
 	{
 		// -- First attempt to resize to the display mode width
-		frameGWorldWidth = displayMode->GetWidth();
-		frameGWorldHeight = ((movieHeight * displayMode->GetWidth()) / movieWidth);
+		frameSize.width = displayMode->GetWidth();
+		frameSize.height = ((imageSize.height * displayMode->GetWidth()) / imageSize.width);
 		// -- If the height exceeds the display mode height, resize to the display mode height
-		if (frameGWorldHeight > displayMode->GetHeight())
+		if (frameSize.height > displayMode->GetHeight())
 		{
-			frameGWorldWidth = ((displayMode->GetHeight() * movieWidth) / movieHeight);
-			frameGWorldHeight = displayMode->GetHeight();
+			frameSize.width = ((displayMode->GetHeight() * imageSize.width) / imageSize.height);
+			frameSize.height = displayMode->GetHeight();
 		}
 	}
 	else
 	{
 		// Centre smaller image in output window
-		frameGWorldWidth = movieWidth;
-		frameGWorldHeight = movieHeight;
+		frameSize.width = imageSize.width;
+		frameSize.height = imageSize.height;
 	}
-	
-	if (frameGWorld)
-	{
-		DisposeGWorld(frameGWorld);
-		frameGWorld = NULL;
-	}
-	
-	frameGWorldStorage = (Ptr) [controller getFrameBuffer:frameGWorldWidth height:frameGWorldHeight];
-	if(frameGWorldStorage == NULL)
-		goto bail;
-			
-	SetRect(&qdRect, 0, 0, frameGWorldWidth, frameGWorldHeight);
-	error = QTNewGWorldFromPtr(&frameGWorld, k32ARGBPixelFormat, &qdRect, NULL, NULL, 0, frameGWorldStorage, frameGWorldWidth*4*sizeof(uint8_t));
-	if (error)
-		goto bail;
+	frameRowBytes = (NSUInteger)frameSize.width * 4;
 
+	// Create bitmap representation to write image content into
+	ourRep = [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+										pixelsWide:frameSize.width
+										pixelsHigh:frameSize.height
+										bitsPerSample:8
+										samplesPerPixel:4
+										hasAlpha:YES
+										isPlanar:NO
+										colorSpaceName:NSCalibratedRGBColorSpace
+										bitmapFormat:NSAlphaFirstBitmapFormat
+										bytesPerRow:frameRowBytes
+										bitsPerPixel:32] autorelease];
+
+	[NSGraphicsContext saveGraphicsState];
+	[NSGraphicsContext setCurrentContext:[NSGraphicsContext
+										graphicsContextWithBitmapImageRep:ourRep]];
 	
-	// Draw to offscreen GWorld
-	SetMovieGWorld(newMovie, frameGWorld, GetGWorldDevice(frameGWorld));
-	SetMovieBox(newMovie, &qdRect);
-	UpdateMovie(newMovie);
-	MoviesTask(newMovie, 0);
+	sourceImage = [[[NSImage alloc] initWithCGImage:cgImage size:imageSize] autorelease];
+	[sourceImage drawInRect:NSMakeRect(0.0, 0.0, frameSize.width, frameSize.height) fromRect:NSZeroRect operation:NSCompositeCopy fraction:1.0];
+	[NSGraphicsContext restoreGraphicsState];
 	
+	// Write bitmap to DeckLink video frame buffer
+	bitmapPtr = [NSData dataWithBytes:[ourRep bitmapData] length:frameRowBytes * frameSize.height];
+	[bitmapPtr getBytes:[controller getFrameBuffer:frameSize.width height:frameSize.height] length:frameRowBytes * frameSize.height];
 	
-	ourRep = [[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:frameGWorldWidth pixelsHigh:frameGWorldHeight
-																 bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES
-																  isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace bytesPerRow:frameGWorldWidth*4
-																  bitsPerPixel:32] autorelease];
-	bitmapPtr = [ourRep bitmapData];
-	int x, y;
-	for (x = 0; x < frameGWorldWidth; x++)
-	{
-		for (y = 0; y < frameGWorldHeight; y++)
-		{
-			bitmapPtr[(y * frameGWorldWidth + x) * 4 + 0] = ((unsigned char*)frameGWorldStorage)[(y * frameGWorldWidth + x) * 4 + 1];
-			bitmapPtr[(y * frameGWorldWidth + x) * 4 + 1] = ((unsigned char*)frameGWorldStorage)[(y * frameGWorldWidth + x) * 4 + 2];
-			bitmapPtr[(y * frameGWorldWidth + x) * 4 + 2] = ((unsigned char*)frameGWorldStorage)[(y * frameGWorldWidth + x) * 4 + 3];
-			bitmapPtr[(y * frameGWorldWidth + x) * 4 + 3] = ((unsigned char*)frameGWorldStorage)[(y * frameGWorldWidth + x) * 4 + 0];
-		}
-	}
-	
-	ourImageSize.width = frameGWorldWidth;
-	ourImageSize.height = frameGWorldHeight;
-	ourImage = [[[NSImage alloc] initWithSize:ourImageSize] autorelease];
+	// Update Image View with new frame
+	ourImage = [[[NSImage alloc] initWithSize:frameSize] autorelease];
 	[ourImage addRepresentation:ourRep];
 	[self setImage:ourImage];
-	
-	
 	[self setNeedsDisplay:YES];
+
 	success = YES;
 	
 bail:
-	// Close the movie file, even if the movie was successfully opened
-	if (movieFileRefNum != 0)
-	{
-		CloseMovieFile(movieFileRefNum);
-		movieFileRefNum = 0;
-	}
-	if (newMovie != NULL)
-	{
-		DisposeMovie(newMovie);
-	}
+	CGImageRelease(cgImage);
 	
 	return success;
-}
-
-- (void)getImageGWorldStorage:(Ptr*)storage width:(int*)outWidth height:(int*)outHeight
-{
-	*storage = 	frameGWorldStorage;
-	*outWidth = frameGWorldWidth;
-	*outHeight = frameGWorldHeight;
 }
 
 - (void)drawRect:(NSRect)rect
@@ -209,11 +162,11 @@ bail:
 	
 	if (highlight)
 	{
-        // Highlight by overlaying a gray border
-        [[NSColor grayColor] set];
-        [NSBezierPath setDefaultLineWidth:5];
-        [NSBezierPath strokeRect:rect];
-    }
+		// Highlight by overlaying a gray border
+		[[NSColor grayColor] set];
+		[NSBezierPath setDefaultLineWidth:5];
+		[NSBezierPath strokeRect:rect];
+	}
 }
 
 /* Dragging destination methods */
@@ -254,18 +207,11 @@ bail:
 	// Do the work here
 	// -- Examine the contents
 	pboard = [sender draggingPasteboard];
-	if ([[pboard types] containsObject:NSFilenamesPboardType])
+	if ([[pboard types] containsObject:NSURLPboardType])
 	{
-		NSArray*		files;
-		
-		files = [pboard propertyListForType:NSFilenamesPboardType];
-		if ([files count] > 0)
-		{
-			[controller setMovieFile:[files objectAtIndex:0]];
-		}
-		
+		[controller setMovieFile:[NSURL URLFromPasteboard:pboard]];
 		return YES;
-    }
+	}
 	
 	return NO;
 }

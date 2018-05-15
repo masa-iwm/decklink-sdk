@@ -74,6 +74,9 @@ BMD_CONST REFIID IID_IDeckLinkMutableVideoFrame                   = /* 69E2639F-
 BMD_CONST REFIID IID_IDeckLinkVideoFrame3DExtensions              = /* DA0F7E4A-EDC7-48A8-9CDD-2DB51C729CD7 */ {0xDA,0x0F,0x7E,0x4A,0xED,0xC7,0x48,0xA8,0x9C,0xDD,0x2D,0xB5,0x1C,0x72,0x9C,0xD7};
 BMD_CONST REFIID IID_IDeckLinkVideoFrameMetadataExtensions        = /* D5973DC9-6432-46D0-8F0B-2496F8A1238F */ {0xD5,0x97,0x3D,0xC9,0x64,0x32,0x46,0xD0,0x8F,0x0B,0x24,0x96,0xF8,0xA1,0x23,0x8F};
 BMD_CONST REFIID IID_IDeckLinkVideoInputFrame                     = /* 05CFE374-537C-4094-9A57-680525118F44 */ {0x05,0xCF,0xE3,0x74,0x53,0x7C,0x40,0x94,0x9A,0x57,0x68,0x05,0x25,0x11,0x8F,0x44};
+BMD_CONST REFIID IID_IDeckLinkAncillaryPacket                     = /* CC5BBF7E-029C-4D3B-9158-6000EF5E3670 */ {0xCC,0x5B,0xBF,0x7E,0x02,0x9C,0x4D,0x3B,0x91,0x58,0x60,0x00,0xEF,0x5E,0x36,0x70};
+BMD_CONST REFIID IID_IDeckLinkAncillaryPacketIterator             = /* 3FC8994B-88FB-4C17-968F-9AAB69D964A7 */ {0x3F,0xC8,0x99,0x4B,0x88,0xFB,0x4C,0x17,0x96,0x8F,0x9A,0xAB,0x69,0xD9,0x64,0xA7};
+BMD_CONST REFIID IID_IDeckLinkVideoFrameAncillaryPackets          = /* 6C186C0F-459E-41D8-AEE2-4812D81AEE68 */ {0x6C,0x18,0x6C,0x0F,0x45,0x9E,0x41,0xD8,0xAE,0xE2,0x48,0x12,0xD8,0x1A,0xEE,0x68};
 BMD_CONST REFIID IID_IDeckLinkVideoFrameAncillary                 = /* 732E723C-D1A4-4E29-9E8E-4A88797A0004 */ {0x73,0x2E,0x72,0x3C,0xD1,0xA4,0x4E,0x29,0x9E,0x8E,0x4A,0x88,0x79,0x7A,0x00,0x04};
 BMD_CONST REFIID IID_IDeckLinkEncoderPacket                       = /* B693F36C-316E-4AF1-B6C2-F389A4BCA620 */ {0xB6,0x93,0xF3,0x6C,0x31,0x6E,0x4A,0xF1,0xB6,0xC2,0xF3,0x89,0xA4,0xBC,0xA6,0x20};
 BMD_CONST REFIID IID_IDeckLinkEncoderVideoPacket                  = /* 4E7FD944-E8C7-4EAC-B8C0-7B77F80F5AE0 */ {0x4E,0x7F,0xD9,0x44,0xE8,0xC7,0x4E,0xAC,0xB8,0xC0,0x7B,0x77,0xF8,0x0F,0x5A,0xE0};
@@ -121,6 +124,7 @@ enum _BMDFrameFlags {
 
     /* Flags that are applicable only to instances of IDeckLinkVideoInputFrame */
 
+    bmdFrameCapturedAsPsF                                        = 1 << 30,
     bmdFrameHasNoInputSource                                     = 1 << 31
 };
 
@@ -216,6 +220,15 @@ enum _BMDDisplayModeSupport {
     bmdDisplayModeNotSupported                                   = 0,
     bmdDisplayModeSupported,                                    
     bmdDisplayModeSupportedWithConversion                       
+};
+
+/* Enum BMDAncillaryPacketFormat - Ancillary packet format */
+
+typedef uint32_t BMDAncillaryPacketFormat;
+enum _BMDAncillaryPacketFormat {
+    bmdAncillaryPacketFormatUInt8                                = /* 'ui08' */ 0x75693038,
+    bmdAncillaryPacketFormatUInt16                               = /* 'ui16' */ 0x75693136,
+    bmdAncillaryPacketFormatYCbCr10                              = /* 'v210' */ 0x76323130
 };
 
 /* Enum BMDTimecodeFormat - Timecode formats for frame metadata */
@@ -501,6 +514,7 @@ enum _BMDDeckLinkStatusID {
     bmdDeckLinkStatusDuplexMode                                  = /* 'dupx' */ 0x64757078,
     bmdDeckLinkStatusBusy                                        = /* 'busy' */ 0x62757379,
     bmdDeckLinkStatusInterchangeablePanelType                    = /* 'icpt' */ 0x69637074,
+    bmdDeckLinkStatusDeviceTemperature                           = /* 'dtmp' */ 0x64746D70,
 
     /* Flags */
 
@@ -590,6 +604,9 @@ class IDeckLinkMutableVideoFrame;
 class IDeckLinkVideoFrame3DExtensions;
 class IDeckLinkVideoFrameMetadataExtensions;
 class IDeckLinkVideoInputFrame;
+class IDeckLinkAncillaryPacket;
+class IDeckLinkAncillaryPacketIterator;
+class IDeckLinkVideoFrameAncillaryPackets;
 class IDeckLinkVideoFrameAncillary;
 class IDeckLinkEncoderPacket;
 class IDeckLinkEncoderVideoPacket;
@@ -703,7 +720,7 @@ public:
 
     virtual HRESULT SetVideoOutputFrameMemoryAllocator (/* in */ IDeckLinkMemoryAllocator *theAllocator) = 0;
     virtual HRESULT CreateVideoFrame (/* in */ int32_t width, /* in */ int32_t height, /* in */ int32_t rowBytes, /* in */ BMDPixelFormat pixelFormat, /* in */ BMDFrameFlags flags, /* out */ IDeckLinkMutableVideoFrame **outFrame) = 0;
-    virtual HRESULT CreateAncillaryData (/* in */ BMDPixelFormat pixelFormat, /* out */ IDeckLinkVideoFrameAncillary **outBuffer) = 0;
+    virtual HRESULT CreateAncillaryData (/* in */ BMDPixelFormat pixelFormat, /* out */ IDeckLinkVideoFrameAncillary **outBuffer) = 0; // Use of IDeckLinkVideoFrameAncillaryPackets is preferred
 
     virtual HRESULT DisplayVideoFrameSync (/* in */ IDeckLinkVideoFrame *theFrame) = 0;
     virtual HRESULT ScheduleVideoFrame (/* in */ IDeckLinkVideoFrame *theFrame, /* in */ BMDTimeValue displayTime, /* in */ BMDTimeValue displayDuration, /* in */ BMDTimeScale timeScale) = 0;
@@ -832,7 +849,7 @@ public:
     virtual HRESULT GetBytes (/* out */ void **buffer) = 0;
 
     virtual HRESULT GetTimecode (/* in */ BMDTimecodeFormat format, /* out */ IDeckLinkTimecode **timecode) = 0;
-    virtual HRESULT GetAncillaryData (/* out */ IDeckLinkVideoFrameAncillary **ancillary) = 0;
+    virtual HRESULT GetAncillaryData (/* out */ IDeckLinkVideoFrameAncillary **ancillary) = 0; // Use of IDeckLinkVideoFrameAncillaryPackets is preferred
 
 protected:
     virtual ~IDeckLinkVideoFrame () {} // call Release method to drop reference count
@@ -892,13 +909,56 @@ protected:
     virtual ~IDeckLinkVideoInputFrame () {} // call Release method to drop reference count
 };
 
-/* Interface IDeckLinkVideoFrameAncillary - Obtained through QueryInterface() on an IDeckLinkVideoFrame object. */
+/* Interface IDeckLinkAncillaryPacket - On output, user needs to implement this interface */
+
+class BMD_PUBLIC IDeckLinkAncillaryPacket : public IUnknown
+{
+public:
+
+    virtual HRESULT GetBytes (/* in */ BMDAncillaryPacketFormat format /* For output, only one format need be offered */, /* out */ const void **data /* Optional */, /* out */ uint32_t *size /* Optional */) = 0;
+    virtual uint8_t GetDID (void) = 0;
+    virtual uint8_t GetSDID (void) = 0;
+    virtual uint32_t GetLineNumber (void) = 0; // On output, zero is auto
+    virtual uint8_t GetDataStreamIndex (void) = 0; // Usually zero. Can only be 1 if non-SD and the first data stream is completely full
+
+protected:
+    virtual ~IDeckLinkAncillaryPacket () {} // call Release method to drop reference count
+};
+
+/* Interface IDeckLinkAncillaryPacketIterator - Enumerates ancillary packets */
+
+class BMD_PUBLIC IDeckLinkAncillaryPacketIterator : public IUnknown
+{
+public:
+    virtual HRESULT Next (/* out */ IDeckLinkAncillaryPacket **packet) = 0;
+
+protected:
+    virtual ~IDeckLinkAncillaryPacketIterator () {} // call Release method to drop reference count
+};
+
+/* Interface IDeckLinkVideoFrameAncillaryPackets - Obtained through QueryInterface() on an IDeckLinkVideoFrame object. */
+
+class BMD_PUBLIC IDeckLinkVideoFrameAncillaryPackets : public IUnknown
+{
+public:
+
+    virtual HRESULT GetPacketIterator (/* out */ IDeckLinkAncillaryPacketIterator **iterator) = 0;
+    virtual HRESULT GetFirstPacketByID (/* in */ uint8_t DID, /* in */ uint8_t SDID, /* out */ IDeckLinkAncillaryPacket **packet) = 0;
+    virtual HRESULT AttachPacket (/* in */ IDeckLinkAncillaryPacket *packet) = 0; // Implement IDeckLinkAncillaryPacket to output your own
+    virtual HRESULT DetachPacket (/* in */ IDeckLinkAncillaryPacket *packet) = 0;
+    virtual HRESULT DetachAllPackets (void) = 0;
+
+protected:
+    virtual ~IDeckLinkVideoFrameAncillaryPackets () {} // call Release method to drop reference count
+};
+
+/* Interface IDeckLinkVideoFrameAncillary - Use of IDeckLinkVideoFrameAncillaryPackets is preferred. Obtained through QueryInterface() on an IDeckLinkVideoFrame object. */
 
 class BMD_PUBLIC IDeckLinkVideoFrameAncillary : public IUnknown
 {
 public:
 
-    virtual HRESULT GetBufferForVerticalBlankingLine (/* in */ uint32_t lineNumber, /* out */ void **buffer) = 0;
+    virtual HRESULT GetBufferForVerticalBlankingLine (/* in */ uint32_t lineNumber, /* out */ void **buffer) = 0; // Pixels/rowbytes is same as display mode, except for above HD where it's 1920 pixels for UHD modes and 2048 pixels for DCI modes
     virtual BMDPixelFormat GetPixelFormat (void) = 0;
     virtual BMDDisplayMode GetDisplayMode (void) = 0;
 
@@ -1104,6 +1164,7 @@ extern "C" {
     IDeckLinkAPIInformation* BMD_PUBLIC CreateDeckLinkAPIInformationInstance (void);
     IDeckLinkGLScreenPreviewHelper* BMD_PUBLIC CreateOpenGLScreenPreviewHelper (void);
     IDeckLinkVideoConversion* BMD_PUBLIC CreateVideoConversionInstance (void);
+    IDeckLinkVideoFrameAncillaryPackets* BMD_PUBLIC CreateVideoFrameAncillaryPacketsInstance (void); // For use when creating a custom IDeckLinkVideoFrame without wrapping IDeckLinkOutput::CreateVideoFrame
 
 }
 

@@ -149,7 +149,7 @@
             // 
             this.previewWindow.Location = new System.Drawing.Point(6, 17);
             this.previewWindow.Name = "previewWindow";
-            this.previewWindow.Size = new System.Drawing.Size(640, 360);
+            this.previewWindow.Size = new System.Drawing.Size(639, 359);
             this.previewWindow.TabIndex = 0;
             // 
             // CapturePreview

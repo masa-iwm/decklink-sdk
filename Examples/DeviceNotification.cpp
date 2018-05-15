@@ -75,25 +75,26 @@ private:
     
     // A mutex is required...
     MUTEX	mutex;
-    
+
+	INT32_SIGNED		m_refCount;
+
+	~DeckLinkDeviceDiscoveryCallback(void)
+	{
+		// A mutex is not required, as UninstallNotifications() has been called guaranteeing that other callbacks will not occur.
+		while (!deckLinkList.empty())
+		{
+			// Release any AddRef'ed DeckLink objects before the program exits.
+			deckLinkList.back()->Release();
+			deckLinkList.pop_back();
+		}
+
+		MutexDestroy(&mutex);
+	}
+
 public:
-    
-    DeckLinkDeviceDiscoveryCallback()
+	DeckLinkDeviceDiscoveryCallback() : m_refCount(1)
     {
         MutexInit(&mutex);
-    }
-    
-    ~DeckLinkDeviceDiscoveryCallback(void)
-    {
-        // A mutex is not required, as UninstallNotifications() has been called guaranteeing that other callbacks will not occur.
-        while (!deckLinkList.empty())
-        {
-            // Release any AddRef'ed DeckLink objects before the program exits.
-            deckLinkList.back()->Release();
-            deckLinkList.pop_back();
-        }
-        
-        MutexDestroy(&mutex);
     }
 
 	HRESULT     STDMETHODCALLTYPE DeckLinkDeviceArrived (/* in */ IDeckLink* deckLink)
@@ -141,12 +142,17 @@ public:
 	
     ULONG		STDMETHODCALLTYPE AddRef ()
     {
-        return 1;
-    }
+		return AtomicIncrement(&m_refCount);
+	}
 	
     ULONG		STDMETHODCALLTYPE Release ()
     {
-        return 1;
+		INT32_UNSIGNED newRefValue = AtomicDecrement(&m_refCount);
+
+		if (newRefValue == 0)
+			delete this;
+
+		return newRefValue;
     }
     
 };
@@ -210,8 +216,8 @@ bail:
         deckLinkDiscovery->Release();
 
     // Release the DeckLink device notification callback object
-    if(deckLinkDeviceDiscoveryCallback)
-        delete deckLinkDeviceDiscoveryCallback;
-    
+    if(deckLinkDeviceDiscoveryCallback != NULL)
+        deckLinkDeviceDiscoveryCallback->Release();
+   
 	return returnCode;
 }

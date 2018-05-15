@@ -25,6 +25,7 @@
  ** -LICENSE-END-
  */
 
+#include <libkern/OSAtomic.h>
 #include "platform.h"
 
 // Mac platform functions
@@ -131,3 +132,12 @@ void StringToStdString(STRINGOBJ bmdStr, std::string& stdStr)
 	}
 }
 
+INT32_SIGNED AtomicIncrement(volatile INT32_SIGNED* value)
+{
+	return OSAtomicIncrement32(value);
+}
+
+INT32_SIGNED AtomicDecrement(volatile INT32_SIGNED* value)
+{
+	return OSAtomicDecrement32(value);
+}

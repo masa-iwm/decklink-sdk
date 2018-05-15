@@ -1,5 +1,5 @@
 /* -LICENSE-START-
- ** Copyright (c) 2009 Blackmagic Design
+ ** Copyright (c) 2018 Blackmagic Design
  **
  ** Permission is hereby granted, free of charge, to any person or organization
  ** obtaining a copy of the software and accompanying documentation covered by
@@ -28,24 +28,22 @@
 /* DeckLinkKeyerMovieView.h */
 
 #import <Cocoa/Cocoa.h>
-#include <QuickTime/QuickTime.h>
+#import <AVFoundation/AVAsset.h>
+#import <AVFoundation/AVAssetImageGenerator.h>
+#import <AVFoundation/AVFoundation.h>
 #include "DeckLinkAPI.h"
 
 @interface DeckLinkKeyerMovieView : NSImageView
 {
 	BOOL		highlight;
 	BOOL		acceptDrags;
-	GWorldPtr	frameGWorld;
-	Ptr			frameGWorldStorage;
-	int			frameGWorldWidth;
-	int			frameGWorldHeight;
 	
-    IBOutlet id controller;
+	IBOutlet id controller;
 }
 
 - (void)setAcceptDrags:(BOOL)flag;
 
-- (void)getImageGWorldStorage:(Ptr*)storage width:(int*)outWidth height:(int*)outHeight;
-- (BOOL)setMovieFile:(NSString*)filename forMode:(IDeckLinkDisplayMode*)displayMode;
+//- (void)getImageGWorldStorage:(Ptr*)storage width:(int*)outWidth height:(int*)outHeight;
+- (BOOL)setMovieFile:(NSURL*)fileURL forMode:(IDeckLinkDisplayMode*)displayMode;
 
 @end

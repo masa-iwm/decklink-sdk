@@ -82,6 +82,9 @@ namespace CapturePreviewCSharp
         {
             m_d3DDevice.BeginScene();
 
+            // Render target needs to be set to 640x360 for optimal scaling. However the pixel coordinates for 
+            // Direct3D 9 render target is actually (-0.5,-0.5) to (639.5,359.5).  As such the Viewport is set 
+            // to 639x359 to account for the pixel coordinate offset of render target
             tagRECT rect;
             rect.top = m_d3DDevice.Viewport.Y;
             rect.left = m_d3DDevice.Viewport.X;
