@@ -78,6 +78,8 @@ enum _BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigLowLatencyVideoOutput                       = /* 'llvo' */ 0x6C6C766F,
     bmdDeckLinkConfigDownConversionOnAllAnalogOutput             = /* 'caao' */ 0x6361616F,
     bmdDeckLinkConfigSMPTELevelAOutput                           = /* 'smta' */ 0x736D7461,
+    bmdDeckLinkConfigRec2020Output                               = /* 'rec2' */ 0x72656332,	// Ensure output is Rec.2020 colorspace
+    bmdDeckLinkConfigQuadLinkSDIVideoOutputSquareDivisionSplit   = /* 'SDQS' */ 0x53445153,
 
     /* Video Output Flags */
 

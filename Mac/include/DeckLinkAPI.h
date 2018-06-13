@@ -354,10 +354,20 @@ enum _BMDDeviceInterface {
     bmdDeviceInterfaceThunderbolt                                = 'thun'
 };
 
+/* Enum BMDColorspace - Colorspace */
+
+typedef uint32_t BMDColorspace;
+enum _BMDColorspace {
+    bmdColorspaceRec601                                          = 'r601',
+    bmdColorspaceRec709                                          = 'r709',
+    bmdColorspaceRec2020                                         = '2020'
+};
+
 /* Enum BMDDeckLinkFrameMetadataID - DeckLink Frame Metadata ID */
 
 typedef uint32_t BMDDeckLinkFrameMetadataID;
 enum _BMDDeckLinkFrameMetadataID {
+    bmdDeckLinkFrameMetadataColorspace                           = 'cspc',	// Colorspace of video frame (see BMDColorspace)
     bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc        = 'eotf',	// EOTF in range 0-7 as per CEA 861.3
     bmdDeckLinkFrameMetadataCintelFilmType                       = 'cfty',	// Current film type
     bmdDeckLinkFrameMetadataCintelFilmGauge                      = 'cfga',	// Current film gauge
@@ -447,6 +457,7 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkHasLTCTimecodeInput                               = 'hltc',
     BMDDeckLinkSupportsDuplexModeConfiguration                   = 'dupx',
     BMDDeckLinkSupportsHDRMetadata                               = 'hdrm',
+    BMDDeckLinkSupportsColorspaceMetadata                        = 'cmet',
 
     /* Integers */
 

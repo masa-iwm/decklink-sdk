@@ -142,7 +142,6 @@ struct SyncInfo
 	~SyncInfo();
 
 	volatile uint32_t*	mSem; 
-	volatile uint32_t*	mSemUnaligned;
 	volatile uint32_t	mReleaseValue; 
 	volatile uint32_t	mAcquireValue;
 	DVPSyncObjectHandle	mDvpSync;
@@ -150,13 +149,7 @@ struct SyncInfo
 
 SyncInfo::SyncInfo(uint32_t semaphoreAllocSize, uint32_t semaphoreAddrAlignment)
 {
-	mSemUnaligned = (uint32_t*)malloc(semaphoreAllocSize + semaphoreAddrAlignment - 1);
-
-	// Apply alignment constraints
-	uint64_t val = (uint64_t)mSemUnaligned;
-	val += semaphoreAddrAlignment - 1;
-	val &= ~(semaphoreAddrAlignment - 1);
-	mSem = (uint32_t*)val;
+	mSem = (uint32_t*)_aligned_malloc(semaphoreAllocSize, semaphoreAddrAlignment);
     
 	// Initialise
 	mSem[0] = 0;
@@ -174,7 +167,7 @@ SyncInfo::SyncInfo(uint32_t semaphoreAllocSize, uint32_t semaphoreAddrAlignment)
 SyncInfo::~SyncInfo()
 {
 	DVP_CHECK(dvpFreeSyncObject(mDvpSync));
-	free((void*)mSemUnaligned);
+	_aligned_free((void*)mSem);
 }
 
 VideoFrameTransfer::VideoFrameTransfer(unsigned long memSize, void* address, Direction direction) :
