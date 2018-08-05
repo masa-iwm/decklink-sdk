@@ -35,6 +35,7 @@ namespace StillsCSharp
         private int m_width;
         private int m_height;
         private _BMDFrameFlags m_flags;
+        private int m_pixelBufferBytes;
         private IntPtr m_pixelBuffer;
         private IntPtr m_unmanagedBuffer = IntPtr.Zero;
 
@@ -45,9 +46,14 @@ namespace StillsCSharp
             m_height = height;
             m_flags = flags;
 
+            m_pixelBufferBytes = m_width * m_height * 4;
+
             // Allocate pixel buffer from unmanaged memory
-            m_unmanagedBuffer = System.Runtime.InteropServices.Marshal.AllocCoTaskMem(m_width * m_height * 4);
+            m_unmanagedBuffer = System.Runtime.InteropServices.Marshal.AllocCoTaskMem(m_pixelBufferBytes);
             m_pixelBuffer = m_unmanagedBuffer;
+
+            // Inform runtime of large unmanaged memory allocation for scheduling garbage collection
+            System.GC.AddMemoryPressure(m_pixelBufferBytes);
         }
 
         // Constructor from external pixel buffer
@@ -65,7 +71,10 @@ namespace StillsCSharp
         {
             // Free pixel buffer from unmanaged memory
             if (m_unmanagedBuffer != IntPtr.Zero)
+            {
                 System.Runtime.InteropServices.Marshal.FreeCoTaskMem(m_unmanagedBuffer);
+                System.GC.RemoveMemoryPressure(m_pixelBufferBytes);
+            }
         }
 
         int IDeckLinkVideoFrame.GetWidth()
