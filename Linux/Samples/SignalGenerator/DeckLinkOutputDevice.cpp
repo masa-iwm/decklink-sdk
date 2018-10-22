@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2017 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -32,7 +32,7 @@
 #include "DeckLinkOutputDevice.h"
 
 DeckLinkOutputDevice::DeckLinkOutputDevice(SignalGenerator* owner, IDeckLink* deckLink) 
-	: m_uiDelegate(owner), m_deckLink(deckLink), m_refCount(1)
+	: m_refCount(1), m_uiDelegate(owner), m_deckLink(deckLink)
 {
 	m_deckLink->AddRef();
 }
@@ -41,6 +41,9 @@ DeckLinkOutputDevice::~DeckLinkOutputDevice()
 {
 	if (m_deckLinkOutput)
 	{
+		m_deckLinkOutput->SetScheduledFrameCompletionCallback(NULL);
+		m_deckLinkOutput->SetAudioCallback(NULL);
+
 		m_deckLinkOutput->Release();
 		m_deckLinkOutput = NULL;
 	}
@@ -126,15 +129,17 @@ ULONG DeckLinkOutputDevice::Release(void)
 	return (ULONG)(oldValue - 1);
 }
 
-HRESULT	DeckLinkOutputDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
+HRESULT	DeckLinkOutputDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame* /* completedFrame */, BMDOutputFrameCompletionResult /* result */)
 {
-	// When a video frame has been 
+	// When a scheduled video frame is complete, schedule next frame
 	m_uiDelegate->scheduleNextFrame(false);
 	return S_OK;
 }
 
 HRESULT	DeckLinkOutputDevice::ScheduledPlaybackHasStopped()
 {
+	// Notify delegate that playback has stopped, so it can disable output
+	m_uiDelegate->playbackStopped();
 	return S_OK;
 }
 

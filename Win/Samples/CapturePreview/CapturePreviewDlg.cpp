@@ -68,6 +68,20 @@ void CCapturePreviewDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_RP188_LTC_TC_STATIC, m_rp188LtcTc);
 	DDX_Control(pDX, IDC_RP188_LTC_UB_STATIC, m_rp188LtcUb);
 
+	DDX_Control(pDX, IDC_HDR_EOTF_STATIC, m_hdrEotf);
+	DDX_Control(pDX, IDC_HDR_DP_RED_X_STATIC, m_hdrDpRedX);
+	DDX_Control(pDX, IDC_HDR_DP_RED_Y_STATIC, m_hdrDpRedY);
+	DDX_Control(pDX, IDC_HDR_DP_GREEN_X_STATIC, m_hdrDpGreenX);
+	DDX_Control(pDX, IDC_HDR_DP_GREEN_Y_STATIC, m_hdrDpGreenY);
+	DDX_Control(pDX, IDC_HDR_DP_BLUE_X_STATIC, m_hdrDpBlueX);
+	DDX_Control(pDX, IDC_HDR_DP_BLUE_Y_STATIC, m_hdrDpBlueY);
+	DDX_Control(pDX, IDC_HDR_WHITE_POINT_X_STATIC, m_hdrWhitePointX);
+	DDX_Control(pDX, IDC_HDR_WHITE_POINT_Y_STATIC, m_hdrWhitePointY);
+	DDX_Control(pDX, IDC_HDR_MAX_DML_STATIC, m_hdrMaxDml);
+	DDX_Control(pDX, IDC_HDR_MIN_DML_STATIC, m_hdrMinDml);
+	DDX_Control(pDX, IDC_HDR_MAX_CLL_STATIC, m_hdrMaxCll);
+	DDX_Control(pDX, IDC_HDR_MAX_FALL_STATIC, m_hdrMaxFall);
+
 	DDX_Control(pDX, IDC_PREVIEW_BOX, m_previewBox);
 }
 
@@ -327,11 +341,12 @@ void CCapturePreviewDlg::RemoveDevice(IDeckLink* deckLink)
 	deviceToRemove->Release();
 }
 
-void	CCapturePreviewDlg::UpdateAncillaryData(AncillaryDataStruct& ancillaryData)
+void	CCapturePreviewDlg::UpdateFrameData(AncillaryDataStruct& ancillaryData, HDRMetadataStruct& hdrMetadata)
 {
 	// Copy ancillary data under protection of critsec object
 	m_critSec.Lock();
 		m_ancillaryData = ancillaryData;
+		m_hdrMetadata = hdrMetadata;
 	m_critSec.Unlock();
 }
 
@@ -352,6 +367,20 @@ LRESULT  CCapturePreviewDlg::OnRefreshInputStreamData(WPARAM wParam, LPARAM lPar
 	m_rp188LtcTc.SetWindowText(m_ancillaryData.rp188ltcTimecode);
 	m_rp188LtcUb.SetWindowText(m_ancillaryData.rp188ltcUserBits);
 
+	m_hdrEotf.SetWindowText(m_hdrMetadata.electroOpticalTransferFunction);
+	m_hdrDpRedX.SetWindowText(m_hdrMetadata.displayPrimariesRedX);
+	m_hdrDpRedY.SetWindowText(m_hdrMetadata.displayPrimariesRedY);
+	m_hdrDpGreenX.SetWindowText(m_hdrMetadata.displayPrimariesGreenX);
+	m_hdrDpGreenY.SetWindowText(m_hdrMetadata.displayPrimariesGreenY);
+	m_hdrDpBlueX.SetWindowText(m_hdrMetadata.displayPrimariesBlueX);
+	m_hdrDpBlueY.SetWindowText(m_hdrMetadata.displayPrimariesBlueY);
+	m_hdrWhitePointX.SetWindowText(m_hdrMetadata.whitePointX);
+	m_hdrWhitePointY.SetWindowText(m_hdrMetadata.whitePointY);
+	m_hdrMaxDml.SetWindowText(m_hdrMetadata.maxDisplayMasteringLuminance);
+	m_hdrMinDml.SetWindowText(m_hdrMetadata.minDisplayMasteringLuminance);
+	m_hdrMaxCll.SetWindowText(m_hdrMetadata.maximumContentLightLevel);
+	m_hdrMaxFall.SetWindowText(m_hdrMetadata.maximumFrameAverageLightLevel);                             
+	
 	m_critSec.Unlock();
 
 	m_invalidInputLabel.ShowWindow((wParam) ? SW_SHOW : SW_HIDE);

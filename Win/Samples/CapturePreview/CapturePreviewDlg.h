@@ -56,6 +56,22 @@ typedef struct {
 } AncillaryDataStruct;
 
 
+typedef struct {
+	CString electroOpticalTransferFunction;
+	CString displayPrimariesRedX;
+	CString displayPrimariesRedY;
+	CString displayPrimariesGreenX;
+	CString displayPrimariesGreenY;
+	CString displayPrimariesBlueX;
+	CString displayPrimariesBlueY;
+	CString whitePointX;
+	CString whitePointY;
+	CString maxDisplayMasteringLuminance;
+	CString minDisplayMasteringLuminance;
+	CString maximumContentLightLevel;
+	CString maximumFrameAverageLightLevel;
+} HDRMetadataStruct;
+
 // Forward declarations
 class DeckLinkDevice;
 class DeckLinkDeviceDiscovery;
@@ -83,7 +99,7 @@ public:
 	
 	// DeckLinkDevice delegate methods
 	void					ShowErrorMessage(TCHAR* msg, TCHAR* title);
-	void					UpdateAncillaryData(AncillaryDataStruct& ancillaryData);
+	void					UpdateFrameData(AncillaryDataStruct& ancillaryData, HDRMetadataStruct& hdrMetadata);
 
 protected:
 	// Internal helper methods
@@ -113,12 +129,27 @@ protected:
 	CStatic					m_rp188LtcTc;
 	CStatic					m_rp188LtcUb;
 
+	CStatic					m_hdrEotf;
+	CStatic					m_hdrDpRedX;
+	CStatic					m_hdrDpRedY;
+	CStatic					m_hdrDpGreenX;
+	CStatic					m_hdrDpGreenY;
+	CStatic					m_hdrDpBlueX;
+	CStatic					m_hdrDpBlueY;
+	CStatic					m_hdrWhitePointX;
+	CStatic					m_hdrWhitePointY;
+	CStatic					m_hdrMaxDml;
+	CStatic					m_hdrMinDml;
+	CStatic					m_hdrMaxCll;
+	CStatic					m_hdrMaxFall;
+
 	CStatic					m_previewBox;
 	PreviewWindow*			m_previewWindow;
 
 	//
 	AncillaryDataStruct			m_ancillaryData;
-	CCriticalSection			m_critSec; // to synchronise access to the above structure
+	HDRMetadataStruct			m_hdrMetadata;
+	CCriticalSection			m_critSec; // to synchronise access to the above structures
 	DeckLinkDevice*				m_selectedDevice;
 	DeckLinkDeviceDiscovery*	m_deckLinkDiscovery;
 

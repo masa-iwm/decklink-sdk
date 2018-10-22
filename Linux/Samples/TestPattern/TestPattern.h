@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2013 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,6 +24,9 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
+
+#include <mutex>
+#include <condition_variable>
 
 #include "DeckLinkAPI.h"
 #include "Config.h"
@@ -61,6 +64,9 @@ private:
 	unsigned long			m_audioBufferSampleLength;
 	unsigned long			m_audioBufferOffset;
 	BMDAudioSampleRate		m_audioSampleRate;
+
+	std::mutex				m_mutex;
+	std::condition_variable	m_stoppedCondition;
 
 	~TestPattern();
 
@@ -101,4 +107,4 @@ static inline void FillReverseColourBars(IDeckLinkVideoFrame* theFrame)
 	FillColourBars(theFrame, true);
 }
 void FillBlack(IDeckLinkVideoFrame* theFrame);
-int GetBytesPerPixel(BMDPixelFormat pixelFormat);
+int GetRowBytes(BMDPixelFormat pixelFormat, int frameWidth);

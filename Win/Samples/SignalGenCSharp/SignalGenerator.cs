@@ -1,5 +1,5 @@
 ﻿/* -LICENSE-START-
-** Copyright (c) 2009 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -30,6 +30,7 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using DeckLinkAPI;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SignalGenCSharp
 {
@@ -43,10 +44,19 @@ namespace SignalGenCSharp
         const uint kAudioWaterlevel = 48000;
         private IReadOnlyList<int> kAudioChannels = new List<int> {2, 8, 16};
 
+        private IReadOnlyList<StringObjectPair<_BMDPixelFormat>> kPixelFormatList = new List<StringObjectPair<_BMDPixelFormat>>
+        {
+            new StringObjectPair<_BMDPixelFormat>("8-Bit YUV", _BMDPixelFormat.bmdFormat8BitYUV),
+            new StringObjectPair<_BMDPixelFormat>("10-Bit YUV", _BMDPixelFormat.bmdFormat10BitYUV),
+            new StringObjectPair<_BMDPixelFormat>("8-Bit RGB", _BMDPixelFormat.bmdFormat8BitARGB),
+            new StringObjectPair<_BMDPixelFormat>("10-Bit RGB", _BMDPixelFormat.bmdFormat10BitRGB),
+        };
+    
         private bool m_running;
 
         private DeckLinkDeviceDiscovery m_deckLinkDiscovery;
         private DeckLinkOutputDevice m_selectedDevice;
+        private IDeckLinkDisplayMode m_selectedDisplayMode;
         //
         private int m_frameWidth;
         private int m_frameHeight;
@@ -64,7 +74,7 @@ namespace SignalGenCSharp
         private uint m_audioChannelCount;
         private _BMDAudioSampleRate m_audioSampleRate;
         private _BMDAudioSampleType m_audioSampleDepth;
-        private _BMDPixelFormat m_pixelFormat;
+        private _BMDPixelFormat m_selectedPixelFormat;
 
         public SignalGenerator()
         {
@@ -80,8 +90,6 @@ namespace SignalGenCSharp
             InitDialog();
 
             previewWindow.InitD3D();
-
-            m_pixelFormat = ((StringObjectPair<_BMDPixelFormat>)comboBoxPixelFormat.SelectedItem).value;
         }
 
         private void InitDialog()
@@ -100,18 +108,8 @@ namespace SignalGenCSharp
             comboBoxAudioDepth.Items.Add(new StringObjectPair<_BMDAudioSampleType>("32 Bit", _BMDAudioSampleType.bmdAudioSampleType32bitInteger));
             comboBoxAudioDepth.EndUpdate();
 
-            // Pixel format combo box
-            comboBoxPixelFormat.BeginUpdate();
-            comboBoxPixelFormat.Items.Clear();
-            comboBoxPixelFormat.Items.Add(new StringObjectPair<_BMDPixelFormat>("8 Bit YUV", _BMDPixelFormat.bmdFormat8BitYUV));
-            comboBoxPixelFormat.Items.Add(new StringObjectPair<_BMDPixelFormat>("10 Bit YUV", _BMDPixelFormat.bmdFormat10BitYUV));
-            comboBoxPixelFormat.Items.Add(new StringObjectPair<_BMDPixelFormat>("8 Bit ARGB", _BMDPixelFormat.bmdFormat8BitARGB));
-            comboBoxPixelFormat.Items.Add(new StringObjectPair<_BMDPixelFormat>("10 Bit RGB", _BMDPixelFormat.bmdFormat10BitRGB));
-            comboBoxPixelFormat.EndUpdate();
-
             comboBoxOutputSignal.SelectedIndex = 0;
             comboBoxAudioDepth.SelectedIndex = 0;
-            comboBoxPixelFormat.SelectedIndex = 0;
         }
 
         void AddDevice(IDeckLink decklinkDevice)
@@ -195,16 +193,14 @@ namespace SignalGenCSharp
             m_audioSampleRate = _BMDAudioSampleRate.bmdAudioSampleRate48kHz;
             //
             //- Extract the IDeckLinkDisplayMode from the display mode popup menu
-            IDeckLinkDisplayMode videoDisplayMode;
-            videoDisplayMode = ((DisplayModeEntry)comboBoxVideoFormat.SelectedItem).displayMode;
-            m_frameWidth = videoDisplayMode.GetWidth();
-            m_frameHeight = videoDisplayMode.GetHeight();
-            videoDisplayMode.GetFrameRate(out m_frameDuration, out m_frameTimescale);
+            m_frameWidth = m_selectedDisplayMode.GetWidth();
+            m_frameHeight = m_selectedDisplayMode.GetHeight();
+            m_selectedDisplayMode.GetFrameRate(out m_frameDuration, out m_frameTimescale);
             // Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
             m_framesPerSecond = (uint)((m_frameTimescale + (m_frameDuration-1))  /  m_frameDuration);
 
             // Set the video output mode
-            m_selectedDevice.deckLinkOutput.EnableVideoOutput(videoDisplayMode.GetDisplayMode(), _BMDVideoOutputFlags.bmdVideoOutputFlagDefault);
+            m_selectedDevice.deckLinkOutput.EnableVideoOutput(m_selectedDisplayMode.GetDisplayMode(), _BMDVideoOutputFlags.bmdVideoOutputFlagDefault);
 
             // Set the audio output mode
             m_selectedDevice.deckLinkOutput.EnableAudioOutput(m_audioSampleRate, m_audioSampleDepth, m_audioChannelCount, _BMDAudioOutputStreamType.bmdAudioOutputStreamContinuous);
@@ -251,8 +247,8 @@ namespace SignalGenCSharp
             IDeckLinkMutableVideoFrame  scheduleFrame = null;
             IDeckLinkVideoConversion    frameConverter = new CDeckLinkVideoConversion();
 
-            m_selectedDevice.deckLinkOutput.CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth * bytesPerPixel, m_pixelFormat, _BMDFrameFlags.bmdFrameFlagDefault, out scheduleFrame);
-            if (m_pixelFormat == _BMDPixelFormat.bmdFormat8BitYUV)
+            m_selectedDevice.deckLinkOutput.CreateVideoFrame(m_frameWidth, m_frameHeight, BytesPerRow, m_selectedPixelFormat, _BMDFrameFlags.bmdFrameFlagDefault, out scheduleFrame);
+            if (m_selectedPixelFormat == _BMDPixelFormat.bmdFormat8BitYUV)
             {
                 // Fill 8-bit YUV directly without conversion
                 fillFrame(scheduleFrame);
@@ -271,15 +267,15 @@ namespace SignalGenCSharp
         private void StopRunning()
         {
             long unused;
-            
             m_selectedDevice.deckLinkOutput.StopScheduledPlayback(0, out unused, 100);
-            m_selectedDevice.deckLinkOutput.SetScreenPreviewCallback(null);
 
             m_running = false;
         }
 
         private void DisableOutput()
         {
+            m_selectedDevice.deckLinkOutput.SetScreenPreviewCallback(null);
+
             m_selectedDevice.deckLinkOutput.DisableAudioOutput();
             m_selectedDevice.deckLinkOutput.DisableVideoOutput();
             m_selectedDevice.RemoveAllListeners();
@@ -385,15 +381,23 @@ namespace SignalGenCSharp
             EnableInterface(true);
         }
 
-        private void comboBoxPixelFormat_SelectedValueChanged(object sender, EventArgs e)
+        private void comboBoxVideoFormat_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (comboBoxVideoFormat.SelectedIndex < 0)
+                return;
+
+            m_selectedDisplayMode = ((DisplayModeEntry)comboBoxVideoFormat.SelectedItem).displayMode;
+
+            RefreshPixelFormatList();
+        }
+
+
+        private void comboBoxPixelFormat_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (comboBoxPixelFormat.SelectedIndex < 0)
                 return;
 
-            m_pixelFormat = ((StringObjectPair<_BMDPixelFormat>)comboBoxPixelFormat.SelectedItem).value;
-            
-            // Update the video mode popup menu
-            RefreshVideoModeList();
+            m_selectedPixelFormat = ((StringObjectPair<_BMDPixelFormat>)comboBoxPixelFormat.SelectedItem).value;
         }
 
         private void EnableInterface(bool enabled)
@@ -416,6 +420,21 @@ namespace SignalGenCSharp
                 comboBoxVideoFormat.SelectedIndex = 0;
                 comboBoxVideoFormat.EndUpdate();
             }
+
+            // Refresh pixel format list
+            RefreshPixelFormatList();
+        }
+
+        private void RefreshPixelFormatList()
+        {
+            comboBoxPixelFormat.BeginUpdate();
+            comboBoxPixelFormat.Items.Clear();
+
+            foreach (StringObjectPair<_BMDPixelFormat> pixelFormat in kPixelFormatList.Where((pf, ret) => { return (m_selectedDevice.IsVideoModeSupported(((DisplayModeEntry)comboBoxVideoFormat.SelectedItem).displayMode, pf.value)); }))
+                comboBoxPixelFormat.Items.Add(pixelFormat);
+
+            comboBoxPixelFormat.SelectedIndex = 0;
+            comboBoxPixelFormat.EndUpdate();
         }
 
         private void RefreshAudioChannelList()
@@ -444,24 +463,35 @@ namespace SignalGenCSharp
             }
         }
 
-        private int bytesPerPixel
+        private int BytesPerRow
         {
             get
             {
-                int bytesPerPixel = 2;
+                int bytesPerRow;
 
-                switch (m_pixelFormat)
+                // Refer to DeckLink SDK Manual - 2.7.4 Pixel Formats
+                switch (m_selectedPixelFormat)
                 {
                     case _BMDPixelFormat.bmdFormat8BitYUV:
-                        bytesPerPixel = 2;
+                        bytesPerRow = m_frameWidth * 2;
                         break;
-                    case _BMDPixelFormat.bmdFormat8BitARGB:
+
                     case _BMDPixelFormat.bmdFormat10BitYUV:
+                        bytesPerRow = ((m_frameWidth + 47) / 48) * 128;
+                        break;
+
                     case _BMDPixelFormat.bmdFormat10BitRGB:
-                        bytesPerPixel = 4;
+                        bytesPerRow = ((m_frameWidth + 63) / 64) * 256;
+                        break;
+
+                    case _BMDPixelFormat.bmdFormat8BitARGB:
+                    case _BMDPixelFormat.bmdFormat8BitBGRA:
+                    default:
+                        bytesPerRow = m_frameWidth * 4;
                         break;
                 }
-                return bytesPerPixel;
+
+                return bytesPerRow; 
             }
         }
 

@@ -97,7 +97,7 @@
             this.comboBoxPixelFormat.Name = "comboBoxPixelFormat";
             this.comboBoxPixelFormat.Size = new System.Drawing.Size(141, 21);
             this.comboBoxPixelFormat.TabIndex = 9;
-            this.comboBoxPixelFormat.SelectedIndexChanged += new System.EventHandler(this.comboBoxPixelFormat_SelectedValueChanged);
+            this.comboBoxPixelFormat.SelectedIndexChanged += new System.EventHandler(this.comboBoxPixelFormat_SelectedIndexChanged);
             // 
             // comboBoxOutputDevice
             // 
@@ -117,6 +117,7 @@
             this.comboBoxVideoFormat.Name = "comboBoxVideoFormat";
             this.comboBoxVideoFormat.Size = new System.Drawing.Size(141, 21);
             this.comboBoxVideoFormat.TabIndex = 7;
+            this.comboBoxVideoFormat.SelectedIndexChanged += new System.EventHandler(this.comboBoxVideoFormat_SelectedIndexChanged);
             // 
             // label4
             // 

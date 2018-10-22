@@ -1,5 +1,5 @@
 ﻿/* -LICENSE-START-
-** Copyright (c) 2017 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -81,6 +81,16 @@ namespace SignalGenCSharp
                 m_deckLink.GetDisplayName(out deviceName);
                 return deviceName;
             }
+        }
+
+        public bool IsVideoModeSupported(IDeckLinkDisplayMode displayMode, _BMDPixelFormat pixelFormat)
+        {
+            _BMDDisplayModeSupport displayModeSupport;
+            IDeckLinkDisplayMode resultDisplayMode;
+
+            m_deckLinkOutput.DoesSupportVideoMode(displayMode.GetDisplayMode(), pixelFormat, _BMDVideoOutputFlags.bmdVideoOutputFlagDefault, out displayModeSupport, out resultDisplayMode);
+
+            return (displayModeSupport == _BMDDisplayModeSupport.bmdDisplayModeSupported);
         }
 
         public void RemoveAllListeners()

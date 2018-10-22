@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2009 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include <functional>
 #include "Resource.h"
 #include "DeckLinkAPI_h.h"
 #include "SignalGenerator3DVideoFrame.h"
@@ -100,6 +101,12 @@ private:
 
 	DeckLinkOutputDevice* 		m_selectedDevice;
 	DeckLinkDeviceDiscovery*	m_deckLinkDiscovery;
+	IDeckLinkDisplayMode*		m_selectedDisplayMode;
+	BMDVideoOutputFlags			m_selectedVideoOutputFlags;
+
+	bool						m_scheduledPlaybackStopped;
+	CRITICAL_SECTION			m_stopPlaybackLock;
+	CONDITION_VARIABLE			m_stopPlaybackCondition;
 
 	// Generated message map functions
 	virtual BOOL	OnInitDialog();
@@ -114,6 +121,7 @@ private:
 	void			StopRunning ();
 
 	void			RefreshDisplayModeMenu(void);
+	void			RefreshPixelFormatMenu(void);
 	void			RefreshAudioChannelMenu(void);
 	void			AddDevice(IDeckLink* deckLink);
 	void			RemoveDevice(IDeckLink* deckLink);
@@ -122,22 +130,20 @@ private:
 public:
 	void			ScheduleNextFrame(bool prerolling);
 	void			WriteNextAudioSamples();
+	void			ScheduledPlaybackStopped();
 
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnNewDeviceSelected();
+	afx_msg void OnNewVideoFormatSelected();
 
 	afx_msg LRESULT	OnAddDevice(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT	OnRemoveDevice(WPARAM wParam, LPARAM lParam);
 
 private:
-	SignalGenerator3DVideoFrame* CreateBlackFrame(void);
-	SignalGenerator3DVideoFrame* CreateBarsFrame(void);
-public:
-	afx_msg void OnCbnSelchangeComboSignal();
-	afx_msg void OnCbnSelchangeComboPixelFormat();
+	SignalGenerator3DVideoFrame* CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*, bool)> fillFrame);
 };
 
 
 void	FillSine (void* audioBuffer, unsigned long samplesToWrite, unsigned long channels, unsigned long sampleDepth);
 void	FillColourBars (IDeckLinkVideoFrame* theFrame, bool reversed);
-void	FillBlack (IDeckLinkVideoFrame* theFrame);
+void	FillBlack (IDeckLinkVideoFrame* theFrame, bool /* unused */);

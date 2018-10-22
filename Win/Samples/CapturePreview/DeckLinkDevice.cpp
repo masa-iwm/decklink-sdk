@@ -25,6 +25,7 @@
 ** -LICENSE-END-
 */
 #include "stdafx.h"
+#include <stdint.h>
 #include <comutil.h>
 #include "DeckLinkDevice.h"
 
@@ -40,6 +41,12 @@ m_refCount(1), m_currentlyCapturing(false), m_applyDetectedInputMode(false)
 
 DeckLinkDevice::~DeckLinkDevice()
 {
+	if (m_deckLinkHDMIInputEDID != NULL)
+	{
+		m_deckLinkHDMIInputEDID->Release();
+		m_deckLinkHDMIInputEDID = NULL;
+	}
+
 	if (m_deckLinkInput != NULL)
 	{
 		m_deckLinkInput->Release();
@@ -129,6 +136,14 @@ bool		DeckLinkDevice::Init()
 			m_supportsFormatDetection = false;
 
 		deckLinkAttributes->Release();
+	}
+
+	// Enable all EDID functionality if possible
+	if (m_deckLink->QueryInterface(IID_IDeckLinkHDMIInputEDID, (void**)&m_deckLinkHDMIInputEDID) == S_OK && m_deckLinkHDMIInputEDID)
+	{
+		int64_t allKnownRanges = bmdDynamicRangeSDR | bmdDynamicRangeHDRStaticPQ | bmdDynamicRangeHDRStaticHLG;
+		m_deckLinkHDMIInputEDID->SetInt(bmdDeckLinkHDMIInputEDIDDynamicRange, allKnownRanges);
+		m_deckLinkHDMIInputEDID->WriteToEDID();
 	}
 
 	// Retrieve and cache mode list
@@ -282,6 +297,7 @@ bail:
 HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFrame* videoFrame, /* in */ IDeckLinkAudioInputPacket* audioPacket)
 {
 	AncillaryDataStruct		ancillaryData;
+	HDRMetadataStruct		hdrMetadata;
 
 	if (videoFrame == NULL)
 		return S_OK;
@@ -292,8 +308,9 @@ HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFra
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC1, &ancillaryData.rp188vitc1Timecode, &ancillaryData.rp188vitc1UserBits);
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC, &ancillaryData.rp188ltcTimecode, &ancillaryData.rp188ltcUserBits);
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2, &ancillaryData.rp188vitc2Timecode, &ancillaryData.rp188vitc2UserBits);
+	GetHDRMetadataFromFrame(videoFrame, hdrMetadata);
 
-	m_uiDelegate->UpdateAncillaryData(ancillaryData);
+	m_uiDelegate->UpdateFrameData(ancillaryData, hdrMetadata);
 
 	// Update the UI
 	PostMessage(m_uiDelegate->GetSafeHwnd(), WM_REFRESH_INPUT_STREAM_DATA_MESSAGE, (videoFrame->GetFlags() & bmdFrameHasNoInputSource), 0);
@@ -334,6 +351,92 @@ void	DeckLinkDevice::GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* videoFr
 
 }
 
+void DeckLinkDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, HDRMetadataStruct& hdrMetadata)
+{
+	hdrMetadata.electroOpticalTransferFunction = _T("");
+	hdrMetadata.displayPrimariesRedX = _T("");
+	hdrMetadata.displayPrimariesRedY = _T("");
+	hdrMetadata.displayPrimariesGreenX = _T("");
+	hdrMetadata.displayPrimariesGreenY = _T("");
+	hdrMetadata.displayPrimariesBlueX = _T("");
+	hdrMetadata.displayPrimariesBlueY = _T("");
+	hdrMetadata.whitePointX = _T("");
+	hdrMetadata.whitePointY = _T("");
+	hdrMetadata.maxDisplayMasteringLuminance = _T("");
+	hdrMetadata.minDisplayMasteringLuminance = _T("");
+	hdrMetadata.maximumContentLightLevel = _T("");
+	hdrMetadata.maximumFrameAverageLightLevel = _T("");
+
+	if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
+	{
+		IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
+		if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
+		{
+			double doubleValue = 0.0;
+			int64_t intValue = 0;
+
+			if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
+			{
+				switch (intValue)
+				{
+				case 0:
+					hdrMetadata.electroOpticalTransferFunction = _T("SDR");
+					break;
+				case 1:
+					hdrMetadata.electroOpticalTransferFunction = _T("HDR");
+					break;
+				case 2:
+					hdrMetadata.electroOpticalTransferFunction = _T("PQ (ST2084)");
+					break;
+				case 3:
+					hdrMetadata.electroOpticalTransferFunction = _T("HLG");
+					break;
+				default:
+					hdrMetadata.electroOpticalTransferFunction.Format(_T("Unknown EOTF: %d"), (int32_t)intValue);
+					break;
+				}
+			}
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
+				hdrMetadata.displayPrimariesRedX.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY, &doubleValue) == S_OK)
+				hdrMetadata.displayPrimariesRedY.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX, &doubleValue) == S_OK)
+				hdrMetadata.displayPrimariesGreenX.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY, &doubleValue) == S_OK)
+				hdrMetadata.displayPrimariesGreenY.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX, &doubleValue) == S_OK)
+				hdrMetadata.displayPrimariesBlueX.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY, &doubleValue) == S_OK)
+				hdrMetadata.displayPrimariesBlueY.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointX, &doubleValue) == S_OK)
+				hdrMetadata.whitePointX.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointY, &doubleValue) == S_OK)
+				hdrMetadata.whitePointY.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance, &doubleValue) == S_OK)
+				hdrMetadata.maxDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance, &doubleValue) == S_OK)
+				hdrMetadata.minDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel, &doubleValue) == S_OK)
+				hdrMetadata.maximumContentLightLevel.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
+				hdrMetadata.maximumFrameAverageLightLevel.Format(_T("%.04f"), doubleValue);
+
+			metadataExtensions->Release();
+		}
+	}
+}
 
 DeckLinkDeviceDiscovery::DeckLinkDeviceDiscovery(CCapturePreviewDlg* delegate)
 : m_uiDelegate(delegate), m_deckLinkDiscovery(NULL), m_refCount(1)

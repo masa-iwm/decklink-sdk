@@ -38,8 +38,39 @@ class DeckLinkDevice;
 	NSString* timecode;
 	NSString* userBits;
 }
-@property (copy) NSString *timecode;
-@property (copy) NSString *userBits;
+@property (copy) NSString* timecode;
+@property (copy) NSString* userBits;
+@end
+
+@interface HDRMetadataStruct : NSObject
+{
+	NSString* electroOpticalTransferFunction;
+	NSString* displayPrimariesRedX;
+	NSString* displayPrimariesRedY;
+	NSString* displayPrimariesGreenX;
+	NSString* displayPrimariesGreenY;
+	NSString* displayPrimariesBlueX;
+	NSString* displayPrimariesBlueY;
+	NSString* whitePointX;
+	NSString* whitePointY;
+	NSString* maxDisplayMasteringLuminance;
+	NSString* minDisplayMasteringLuminance;
+	NSString* maximumContentLightLevel;
+	NSString* maximumFrameAverageLightLevel;
+}
+@property (copy) NSString* electroOpticalTransferFunction;
+@property (copy) NSString* displayPrimariesRedX;
+@property (copy) NSString* displayPrimariesRedY;
+@property (copy) NSString* displayPrimariesGreenX;
+@property (copy) NSString* displayPrimariesGreenY;
+@property (copy) NSString* displayPrimariesBlueX;
+@property (copy) NSString* displayPrimariesBlueY;
+@property (copy) NSString* whitePointX;
+@property (copy) NSString* whitePointY;
+@property (copy) NSString* maxDisplayMasteringLuminance;
+@property (copy) NSString* minDisplayMasteringLuminance;
+@property (copy) NSString* maximumContentLightLevel;
+@property (copy) NSString* maximumFrameAverageLightLevel;
 @end
 
 @interface AncillaryDataStruct : NSObject
@@ -52,12 +83,16 @@ class DeckLinkDevice;
 	TimecodeStruct*	rp188vitc1;
 	TimecodeStruct*	rp188vitc2;
 	TimecodeStruct*	rp188ltc;
+
+	// HDR Metadata
+	HDRMetadataStruct* hdrMetadata;
 }
-@property (nonatomic,copy) TimecodeStruct *vitcF1;
-@property (nonatomic,copy) TimecodeStruct *vitcF2;
-@property (nonatomic,copy) TimecodeStruct *rp188vitc1;
-@property (nonatomic,copy) TimecodeStruct *rp188vitc2;
-@property (nonatomic,copy) TimecodeStruct *rp188ltc;
+@property (nonatomic,copy) TimecodeStruct*    vitcF1;
+@property (nonatomic,copy) TimecodeStruct*    vitcF2;
+@property (nonatomic,copy) TimecodeStruct*    rp188vitc1;
+@property (nonatomic,copy) TimecodeStruct*    rp188vitc2;
+@property (nonatomic,copy) TimecodeStruct*    rp188ltc;
+@property (nonatomic,copy) HDRMetadataStruct* hdrMetadata;
 @end
 
 

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2017 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -126,6 +126,8 @@ HRESULT	DeckLinkOutputDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame* compl
 
 HRESULT	DeckLinkOutputDevice::ScheduledPlaybackHasStopped()
 {
+	// Notify delegate that playback has stopped, so it can disable output
+	m_uiDelegate->ScheduledPlaybackStopped();
 	return S_OK;
 }
 

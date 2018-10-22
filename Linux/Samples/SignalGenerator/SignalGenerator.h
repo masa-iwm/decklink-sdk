@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2009 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -25,7 +25,7 @@
 ** -LICENSE-END-
 */
 //
-//  SyncController.h
+//  SignalGenerator.h
 //  Signal Generator
 //
 
@@ -39,12 +39,14 @@
 #include <QGLWidget>
 #include <QMutex>
 #include <QEvent>
+#include <QWaitCondition>
+#include <functional>
 
 #include "ui_SignalGenerator.h"
 
 // Define custom event type 
-const QEvent::Type ADD_DEVICE_EVENT 	= static_cast<QEvent::Type>(QEvent::User + 1);
-const QEvent::Type REMOVE_DEVICE_EVENT	= static_cast<QEvent::Type>(QEvent::User + 2);
+const QEvent::Type ADD_DEVICE_EVENT			= static_cast<QEvent::Type>(QEvent::User + 1);
+const QEvent::Type REMOVE_DEVICE_EVENT		= static_cast<QEvent::Type>(QEvent::User + 2);
 
 class SignalGeneratorEvent : public QEvent
 {
@@ -131,7 +133,7 @@ public:
 	bool						running;
 	DeckLinkOutputDevice* 		selectedDevice;
 	DeckLinkDeviceDiscovery*	deckLinkDiscovery;
-	BMDPixelFormat				pixelFormat;
+	IDeckLinkDisplayMode*		selectedDisplayMode;
 	
 	uint32_t					frameWidth;
 	uint32_t					frameHeight;
@@ -150,6 +152,9 @@ public:
 	BMDAudioSampleRate			audioSampleRate;
 	uint32_t					audioSampleDepth;
 	uint32_t					totalAudioSecondsScheduled;
+	//
+	QMutex						mutex;
+	QWaitCondition				stopPlaybackCondition;
 	
 	BMDTimecodeFormat			timeCodeFormat;
 
@@ -166,20 +171,27 @@ public:
 	void stopRunning();
 	
 	void refreshDisplayModeMenu(void);
+	void refreshPixelFormatMenu(void);
 	void refreshAudioChannelMenu(void);
 	void addDevice(IDeckLink* deckLink);
 	void removeDevice(IDeckLink* deckLink);
+	void playbackStopped(void);
 	
 public slots:
 	void outputDeviceChanged(int selectedDeviceIndex);
-	void pixelFormatChanged(int selectedDeviceIndex);
+	void videoFormatChanged(int videoFormatIndex);
 	void toggleStart();
 	
 private:
 	QGridLayout *layout;
 	Timecode *timeCode;
+
+	bool scheduledPlaybackStopped;
+
+	IDeckLinkMutableVideoFrame* CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*)> fillFrame);
 };
 
+int		GetRowBytes(BMDPixelFormat pixelFormat, uint32_t frameWidth);
 void	FillSine (void* audioBuffer, uint32_t samplesToWrite, uint32_t channels, uint32_t sampleDepth);
 void	FillColourBars (IDeckLinkVideoFrame* theFrame);
 void	FillBlack (IDeckLinkVideoFrame* theFrame);

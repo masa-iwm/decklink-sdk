@@ -43,6 +43,12 @@ DeckLinkDevice::~DeckLinkDevice()
 		deckLinkInput->Release();
 		deckLinkInput = NULL;
 	}
+
+	if (deckLinkHDMIInputEDID)
+	{
+		deckLinkHDMIInputEDID->Release();
+		deckLinkHDMIInputEDID = NULL;
+	}
 	
 	if (deckLink)
 	{
@@ -118,6 +124,14 @@ bool        DeckLinkDevice::init()
 		deckLinkAttributes->Release();
 	}
 	
+	// Enable all EDID functionality if possible
+	if (deckLink->QueryInterface(IID_IDeckLinkHDMIInputEDID, (void**)&deckLinkHDMIInputEDID) == S_OK && deckLinkHDMIInputEDID)
+	{
+		int64_t allKnownRanges = bmdDynamicRangeSDR | bmdDynamicRangeHDRStaticPQ | bmdDynamicRangeHDRStaticHLG;
+		deckLinkHDMIInputEDID->SetInt(bmdDeckLinkHDMIInputEDIDDynamicRange, allKnownRanges);
+		deckLinkHDMIInputEDID->WriteToEDID();
+	}
+
 	// Retrieve and cache mode list
 	if (deckLinkInput->GetDisplayModeIterator(&displayModeIterator) == S_OK)
 	{
@@ -276,7 +290,8 @@ HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFra
 	ancillaryData.rp188vitc1 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC1);
 	ancillaryData.rp188ltc = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC);
 	ancillaryData.rp188vitc2 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2);
-	
+	ancillaryData.hdrMetadata = getHDRMetadataFromFrame(videoFrame);
+
 	// Update the UI
 	dispatch_block_t updateAncillary = ^{
 		[uiDelegate setAncillaryData:ancillaryData];
@@ -321,6 +336,96 @@ TimecodeStruct*				DeckLinkDevice::getAncillaryDataFromFrame(IDeckLinkVideoInput
 	}
 	
 	return returnTimeCode;
+}
+
+HDRMetadataStruct*	DeckLinkDevice::getHDRMetadataFromFrame(IDeckLinkVideoInputFrame* frame)
+{
+	HDRMetadataStruct* returnHDRMetadata = [[[HDRMetadataStruct alloc] init] autorelease];
+
+	returnHDRMetadata.electroOpticalTransferFunction = @"";
+	returnHDRMetadata.displayPrimariesRedX = @"";
+	returnHDRMetadata.displayPrimariesRedY = @"";
+	returnHDRMetadata.displayPrimariesGreenX = @"";
+	returnHDRMetadata.displayPrimariesGreenY = @"";
+	returnHDRMetadata.displayPrimariesBlueX = @"";
+	returnHDRMetadata.displayPrimariesBlueY = @"";
+	returnHDRMetadata.whitePointX = @"";
+	returnHDRMetadata.whitePointY = @"";
+	returnHDRMetadata.maxDisplayMasteringLuminance = @"";
+	returnHDRMetadata.minDisplayMasteringLuminance = @"";
+	returnHDRMetadata.maximumContentLightLevel = @"";
+	returnHDRMetadata.maximumFrameAverageLightLevel = @"";
+
+	if (frame->GetFlags() & bmdFrameContainsHDRMetadata)
+	{
+		IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
+		if (frame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**) &metadataExtensions) == S_OK)
+		{
+			double doubleValue = 0.0;
+			int64_t intValue = 0;
+
+			if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
+			{
+				switch (intValue)
+				{
+					case 0:
+						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"SDR"];
+						break;
+					case 1:
+						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HDR"];
+						break;
+					case 2:
+						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"PQ (ST2084)"];
+						break;
+					case 3:
+						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HLG"];
+						break;
+					default:
+						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"Unknown EOTF: %d", (int32_t)intValue];
+						break;
+				}
+			}
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
+				returnHDRMetadata.displayPrimariesRedX = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY, &doubleValue) == S_OK)
+				returnHDRMetadata.displayPrimariesRedY = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX, &doubleValue) == S_OK)
+				returnHDRMetadata.displayPrimariesGreenX = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY, &doubleValue) == S_OK)
+				returnHDRMetadata.displayPrimariesGreenY = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX, &doubleValue) == S_OK)
+				returnHDRMetadata.displayPrimariesBlueX = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY, &doubleValue) == S_OK)
+				returnHDRMetadata.displayPrimariesBlueY = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointX, &doubleValue) == S_OK)
+				returnHDRMetadata.whitePointX = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointY, &doubleValue) == S_OK)
+				returnHDRMetadata.whitePointY = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance, &doubleValue) == S_OK)
+				returnHDRMetadata.maxDisplayMasteringLuminance = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance, &doubleValue) == S_OK)
+				returnHDRMetadata.minDisplayMasteringLuminance = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel, &doubleValue) == S_OK)
+				returnHDRMetadata.maximumContentLightLevel = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
+				returnHDRMetadata.maximumFrameAverageLightLevel = [NSString stringWithFormat:@"%.04f", doubleValue];
+
+			metadataExtensions->Release();
+		}
+	}
+	return returnHDRMetadata;
 }
 
 

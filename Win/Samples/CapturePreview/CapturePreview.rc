@@ -16,13 +16,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -77,13 +75,13 @@ IDR_MAINFRAME           ICON                    "res\\CapturePreview.ico"
 // Dialog
 //
 
-IDD_CAPTUREPREVIEW_DIALOG DIALOGEX 0, 0, 593, 263
+IDD_CAPTUREPREVIEW_DIALOG DIALOGEX 0, 0, 931, 403
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "CapturePreview"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    GROUPBOX        "Capture properties",IDC_STATIC,6,3,242,88
+    GROUPBOX        "Capture properties",IDC_STATIC,6,7,243,88
     LTEXT           "Input device",IDC_STATIC,72,23,41,8
     LTEXT           "Apply detected input format",IDC_STATIC,22,39,91,8
     LTEXT           "Video format",IDC_STATIC,71,55,42,8
@@ -92,29 +90,55 @@ BEGIN
     COMBOBOX        IDC_INPUT_MODE_COMBO,125,53,117,111,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "",IDC_AUTODETECT_FORMAT_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,126,39,16,10
     PUSHBUTTON      "Start capture",IDC_START_STOP_BUTTON,192,73,50,14
-    GROUPBOX        "Ancillary data",IDC_STATIC,6,96,242,160
-    LTEXT           "VITC Timecode field 1",IDC_STATIC,17,114,70,8
-    LTEXT           "VITC Userbits field 1",IDC_STATIC,17,126,66,8
-    LTEXT           "VITC Timecode field 2",IDC_STATIC,17,138,70,8
-    LTEXT           "VITC Userbits field 2",IDC_STATIC,17,150,66,8
-    LTEXT           "RP188 VITC1 Timecode",IDC_STATIC,17,162,75,8
-    LTEXT           "RP188 VITC1 Userbits",IDC_STATIC,17,175,71,8
-    LTEXT           "RP188 VITC2 Timecode",IDC_STATIC,17,187,75,8
-    LTEXT           "RP188 VITC2 Userbits",IDC_STATIC,17,200,71,8
-    LTEXT           "RP188 LTC Timecode",IDC_STATIC,17,212,68,8
-    LTEXT           "RP188 LTC Userbits",IDC_STATIC,17,225,64,8
-    LTEXT           "",IDC_VITC_TC_F1_STATIC,128,114,111,8
-    LTEXT           "",IDC_VITC_UB_F1_STATIC,128,127,110,8
-    LTEXT           "",IDC_VITC_TC_F2_STATIC,128,138,109,8
-    LTEXT           "",IDC_VITC_UB_F2__STATIC,128,151,112,8
-    LTEXT           "",IDC_RP188_VITC1_TC_STATIC,128,162,111,8
-    LTEXT           "",IDC_RP188_VITC1_UB_STATIC,128,175,109,8
-    LTEXT           "",IDC_RP188_VITC2_TC_STATIC,128,188,108,8
-    LTEXT           "",IDC_RP188_VITC2_TC__STATIC,128,201,109,8
-    LTEXT           "",IDC_RP188_LTC_TC_STATIC,128,213,110,8
-    LTEXT           "",IDC_RP188_LTC_UB_STATIC,128,226,109,8
-    GROUPBOX        "Preview",IDC_STATIC,255,2,331,254
-    LTEXT           "",IDC_PREVIEW_BOX,265,15,314,233
+    GROUPBOX        "Ancillary data",IDC_STATIC,7,101,242,295
+    LTEXT           "VITC Timecode field 1",IDC_STATIC,17,114,120,8
+    LTEXT           "VITC Userbits field 1",IDC_STATIC,17,126,120,8
+    LTEXT           "VITC Timecode field 2",IDC_STATIC,17,138,120,8
+    LTEXT           "VITC Userbits field 2",IDC_STATIC,17,150,120,8
+    LTEXT           "RP188 VITC1 Timecode",IDC_STATIC,17,162,120,8
+    LTEXT           "RP188 VITC1 Userbits",IDC_STATIC,17,174,120,8
+    LTEXT           "RP188 VITC2 Timecode",IDC_STATIC,17,186,120,8
+    LTEXT           "RP188 VITC2 Userbits",IDC_STATIC,17,198,120,8
+    LTEXT           "RP188 LTC Timecode",IDC_STATIC,17,210,120,8
+    LTEXT           "RP188 LTC Userbits",IDC_STATIC,17,222,120,8
+    LTEXT           "",IDC_VITC_TC_F1_STATIC,176,114,70,8
+    LTEXT           "",IDC_VITC_UB_F1_STATIC,176,126,70,8
+    LTEXT           "",IDC_VITC_TC_F2_STATIC,176,138,70,8
+    LTEXT           "",IDC_VITC_UB_F2__STATIC,176,150,70,8
+    LTEXT           "",IDC_RP188_VITC1_TC_STATIC,176,162,70,8
+    LTEXT           "",IDC_RP188_VITC1_UB_STATIC,176,174,70,8
+    LTEXT           "",IDC_RP188_VITC2_TC_STATIC,176,186,70,8
+    LTEXT           "",IDC_RP188_VITC2_TC__STATIC,176,198,70,8
+    LTEXT           "",IDC_RP188_LTC_TC_STATIC,176,210,70,8
+    LTEXT           "",IDC_RP188_LTC_UB_STATIC,176,222,70,8
+    GROUPBOX        "Preview",IDC_STATIC,251,7,672,389
+    LTEXT           "",IDC_PREVIEW_BOX,259,18,656,369
+    LTEXT           "Static HDR Electro-optical Transfer Function",IDC_STATIC,17,234,150,8
+    LTEXT           "Static HDR Display Primaries Red X",IDC_STATIC,17,246,150,8
+    LTEXT           "Static HDR Display Primaries Red Y",IDC_STATIC,17,258,150,8
+    LTEXT           "Static HDR Display Primaries Green X",IDC_STATIC,17,270,150,8
+    LTEXT           "Static HDR Display Primaries Green Y",IDC_STATIC,17,282,150,8
+    LTEXT           "Static HDR Display Primaries Blue X",IDC_STATIC,17,294,150,8
+    LTEXT           "Static HDR Display Primaries Blue Y",IDC_STATIC,17,306,150,8
+    LTEXT           "Static HDR White Point X",IDC_STATIC,17,318,150,8
+    LTEXT           "Static HDR White Point Y",IDC_STATIC,17,330,150,8
+    LTEXT           "Static HDR Max Display Mastering Luminance",IDC_STATIC,17,342,150,8
+    LTEXT           "Static HDR Min Display Mastering Luminance",IDC_STATIC,17,354,150,8
+    LTEXT           "Static HDR Max Content Light Level",IDC_STATIC,17,366,150,8
+    LTEXT           "Static HDR Max Frame Average Light Level",IDC_STATIC,17,378,150,8
+    LTEXT           "",IDC_HDR_EOTF_STATIC,176,234,70,8
+    LTEXT           "",IDC_HDR_DP_RED_X_STATIC,176,246,70,8
+    LTEXT           "",IDC_HDR_DP_RED_Y_STATIC,176,258,70,8
+    LTEXT           "",IDC_HDR_DP_GREEN_X_STATIC,176,270,70,8
+    LTEXT           "",IDC_HDR_DP_GREEN_Y_STATIC,176,282,70,8
+    LTEXT           "",IDC_HDR_DP_BLUE_X_STATIC,176,294,70,8
+    LTEXT           "",IDC_HDR_DP_BLUE_Y_STATIC,176,306,70,8
+    LTEXT           "",IDC_HDR_WHITE_POINT_X_STATIC,176,318,70,8
+    LTEXT           "",IDC_HDR_WHITE_POINT_Y_STATIC,176,330,70,8
+    LTEXT           "",IDC_HDR_MAX_DML_STATIC,176,342,70,8
+    LTEXT           "",IDC_HDR_MIN_DML_STATIC,176,354,64,8
+    LTEXT           "",IDC_HDR_MAX_CLL_STATIC,176,366,70,8
+    LTEXT           "",IDC_HDR_MAX_FALL_STATIC,176,378,70,8
 END
 
 
@@ -163,19 +187,19 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_CAPTUREPREVIEW_DIALOG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 586
+        RIGHTMARGIN, 924
         TOPMARGIN, 7
-        BOTTOMMARGIN, 256
+        BOTTOMMARGIN, 396
     END
 END
 #endif    // APSTUDIO_INVOKED
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

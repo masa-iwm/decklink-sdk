@@ -42,12 +42,14 @@ private:
 	CString								m_deviceName;
 	IDeckLink*							m_deckLink;
 	IDeckLinkInput*						m_deckLinkInput;
+	IDeckLinkHDMIInputEDID*				m_deckLinkHDMIInputEDID;
 	std::vector<IDeckLinkDisplayMode*>	m_modeList;
 	BOOL								m_supportsFormatDetection;
 	bool								m_currentlyCapturing;
 	bool								m_applyDetectedInputMode;
 	//
 	static void							GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format, CString* timecodeString, CString* userBitsString);
+	static void							GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, HDRMetadataStruct& hdrMetadata);
 
 public:
 	DeckLinkDevice(CCapturePreviewDlg* uiDelegate, IDeckLink* device);

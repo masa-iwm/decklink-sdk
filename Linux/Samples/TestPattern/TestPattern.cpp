@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2013 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -211,8 +211,6 @@ bool TestPattern::Run()
 
 	printf("\n");
 
-	m_running = false;
-
 bail:
 	if (displayModeName != NULL)
 		free(displayModeName);
@@ -327,8 +325,11 @@ void TestPattern::StartRunning()
 		goto bail;
 	}
 
-	m_running = true;
-
+	{
+		std::lock_guard<std::mutex> guard(m_mutex);
+		m_running = true;
+	}
+	
 	return;
 
 bail:
@@ -340,7 +341,13 @@ void TestPattern::StopRunning()
 {
 	// Stop the audio and video output streams immediately
 	m_deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
-	//
+
+	{
+		// Wait for scheduled playback to stop
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_stoppedCondition.wait(lock, [this]{ return m_running == false; });
+	}
+
 	m_deckLinkOutput->DisableAudioOutput();
 	m_deckLinkOutput->DisableVideoOutput();
 
@@ -355,9 +362,6 @@ void TestPattern::StopRunning()
 	if (m_audioBuffer != NULL)
 		free(m_audioBuffer);
 	m_audioBuffer = NULL;
-
-	// Success; update the UI
-	m_running = false;
 }
 
 void TestPattern::ScheduleNextFrame(bool prerolling)
@@ -365,6 +369,7 @@ void TestPattern::ScheduleNextFrame(bool prerolling)
 	if (prerolling == false)
 	{
 		// If not prerolling, make sure that playback is still active
+		std::lock_guard<std::mutex> guard(m_mutex);
 		if (m_running == false)
 			return;
 	}
@@ -428,14 +433,15 @@ void TestPattern::WriteNextAudioSamples()
 HRESULT TestPattern::CreateFrame(IDeckLinkVideoFrame** frame, void (*fillFunc)(IDeckLinkVideoFrame*))
 {
 	HRESULT						result;
-	int							bytesPerPixel = GetBytesPerPixel(m_config->m_pixelFormat);
+	int							bytesPerRow = GetRowBytes(m_config->m_pixelFormat, m_frameWidth);
+	int							referenceBytesPerRow = GetRowBytes(bmdFormat8BitYUV, m_frameWidth);
 	IDeckLinkMutableVideoFrame*	newFrame = NULL;
 	IDeckLinkMutableVideoFrame*	referenceFrame = NULL;
 	IDeckLinkVideoConversion*	frameConverter = NULL;
 
 	*frame = NULL;
 
-	result = m_deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth * bytesPerPixel, m_config->m_pixelFormat, bmdFrameFlagDefault, &newFrame);
+	result = m_deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, bytesPerRow, m_config->m_pixelFormat, bmdFrameFlagDefault, &newFrame);
 	if (result != S_OK)
 	{
 		fprintf(stderr, "Failed to create video frame\n");
@@ -449,7 +455,7 @@ HRESULT TestPattern::CreateFrame(IDeckLinkVideoFrame** frame, void (*fillFunc)(I
 	else
 	{
 		// Create a black frame in 8 bit YUV and convert to desired format
-		result = m_deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth * 2, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrame);
+		result = m_deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrame);
 		if (result != S_OK)
 		{
 			fprintf(stderr, "Failed to create reference video frame\n");
@@ -526,6 +532,10 @@ HRESULT TestPattern::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame
 
 HRESULT TestPattern::ScheduledPlaybackHasStopped()
 {
+	std::lock_guard<std::mutex> guard(m_mutex);
+	m_running = false;
+	m_stoppedCondition.notify_all();
+
 	return S_OK;
 }
 
@@ -627,22 +637,32 @@ void FillBlack(IDeckLinkVideoFrame* theFrame)
 		*(nextWord++) = 0x10801080;
 }
 
-int GetBytesPerPixel(BMDPixelFormat pixelFormat)
+int GetRowBytes(BMDPixelFormat pixelFormat, int frameWidth)
 {
-	int bytesPerPixel = 2;
+	int bytesPerRow;
 
-	switch(pixelFormat)
+	// Refer to DeckLink SDK Manual - 2.7.4 Pixel Formats
+	switch (pixelFormat)
 	{
 	case bmdFormat8BitYUV:
-		bytesPerPixel = 2;
+		bytesPerRow = frameWidth * 2;
 		break;
-	case bmdFormat8BitARGB:
+
 	case bmdFormat10BitYUV:
+		bytesPerRow = ((frameWidth + 47) / 48) * 128;
+		break;
+
 	case bmdFormat10BitRGB:
-		bytesPerPixel = 4;
+		bytesPerRow = ((frameWidth + 63) / 64) * 256;
+		break;
+
+	case bmdFormat8BitARGB:
+	case bmdFormat8BitBGRA:
+	default:
+		bytesPerRow = frameWidth * 4;
 		break;
 	}
 
-	return bytesPerPixel;
+	return bytesPerRow;
 }
 

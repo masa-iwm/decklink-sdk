@@ -62,6 +62,7 @@ using namespace std;
 @synthesize rp188vitc1;
 @synthesize rp188vitc2;
 @synthesize rp188ltc;
+@synthesize hdrMetadata;
 
 - (void)dealloc
 {
@@ -70,8 +71,65 @@ using namespace std;
 	[rp188vitc1 dealloc];
 	[rp188vitc2 dealloc];
 	[rp188ltc dealloc];
+	[hdrMetadata dealloc];
 	
 	[super dealloc];
+}
+@end
+
+@implementation HDRMetadataStruct
+@synthesize electroOpticalTransferFunction;
+@synthesize displayPrimariesRedX;
+@synthesize displayPrimariesRedY;
+@synthesize displayPrimariesGreenX;
+@synthesize displayPrimariesGreenY;
+@synthesize displayPrimariesBlueX;
+@synthesize displayPrimariesBlueY;
+@synthesize whitePointX;
+@synthesize whitePointY;
+@synthesize maxDisplayMasteringLuminance;
+@synthesize minDisplayMasteringLuminance;
+@synthesize maximumContentLightLevel;
+@synthesize maximumFrameAverageLightLevel;
+
+- (void)dealloc;
+{
+	[electroOpticalTransferFunction release];
+	[displayPrimariesRedX release];
+	[displayPrimariesRedY release];
+	[displayPrimariesGreenX release];
+	[displayPrimariesGreenY release];
+	[displayPrimariesBlueX release];
+	[displayPrimariesBlueY release];
+	[whitePointX release];
+	[whitePointY release];
+	[maxDisplayMasteringLuminance release];
+	[minDisplayMasteringLuminance release];
+	[maximumContentLightLevel release];
+	[maximumFrameAverageLightLevel release];
+
+	[super dealloc];
+}
+
+-(id) copyWithZone: (NSZone *) zone
+{
+	HDRMetadataStruct *hdrMetadataCopy = [[[self class] allocWithZone: zone] init];
+
+	hdrMetadataCopy.electroOpticalTransferFunction = [NSString stringWithString:self.electroOpticalTransferFunction];
+	hdrMetadataCopy.displayPrimariesRedX = [NSString stringWithString:self.displayPrimariesRedX];
+	hdrMetadataCopy.displayPrimariesRedY = [NSString stringWithString:self.displayPrimariesRedY];
+	hdrMetadataCopy.displayPrimariesGreenX = [NSString stringWithString:self.displayPrimariesGreenX];
+	hdrMetadataCopy.displayPrimariesGreenY = [NSString stringWithString:self.displayPrimariesGreenY];
+	hdrMetadataCopy.displayPrimariesBlueX = [NSString stringWithString:self.displayPrimariesBlueX];
+	hdrMetadataCopy.displayPrimariesBlueY = [NSString stringWithString:self.displayPrimariesBlueY];
+	hdrMetadataCopy.whitePointX = [NSString stringWithString:self.whitePointX];
+	hdrMetadataCopy.whitePointY = [NSString stringWithString:self.whitePointY];
+	hdrMetadataCopy.maxDisplayMasteringLuminance = [NSString stringWithString:self.maxDisplayMasteringLuminance];
+	hdrMetadataCopy.minDisplayMasteringLuminance = [NSString stringWithString:self.minDisplayMasteringLuminance];
+	hdrMetadataCopy.maximumContentLightLevel = [NSString stringWithString:self.maximumContentLightLevel];
+	hdrMetadataCopy.maximumFrameAverageLightLevel = [NSString stringWithString:self.maximumFrameAverageLightLevel];
+
+	return hdrMetadataCopy;
 }
 @end
 
@@ -84,7 +142,7 @@ using namespace std;
 	self = [super init];
 	if (self)
 	{
-		ancillaryDataValues = [[NSMutableArray arrayWithObjects:@"", @"", @"", @"", @"", @"", @"", @"", @"", @"", nil] retain];
+		ancillaryDataValues = [[NSMutableArray arrayWithObjects:@"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", nil] retain];
 		ancillaryDataTypes = [[NSMutableArray arrayWithObjects:
 							@"VITC Timecode field 1", 
 							@"VITC User bits field 1", 
@@ -96,6 +154,19 @@ using namespace std;
 							@"RP188 LTC User bits",
 							@"RP188 VITC2 Timecode", 
 							@"RP188 VITC2 User bits",
+							@"Static HDR Electro-optical Transfer Function",
+							@"Static HDR Display Primaries Red X",
+							@"Static HDR Display Primaries Red Y",
+							@"Static HDR Display Primaries Green X",
+							@"Static HDR Display Primaries Green Y",
+							@"Static HDR Display Primaries Blue X",
+							@"Static HDR Display Primaries Blue Y",
+							@"Static HDR White Point X",
+							@"Static HDR White Point Y",
+							@"Static HDR Max Display Mastering Luminance",
+							@"Static HDR Min Display Mastering Luminance",
+							@"Static HDR Max Content Light Level",
+							@"Static HDR Max Frame Average Light Level",
 							nil] retain];
 	}
 	return self;
@@ -339,6 +410,21 @@ using namespace std;
 	[ancillaryDataValues replaceObjectAtIndex:7 withObject:latestAncillaryDataValues.rp188ltc.userBits];
 	[ancillaryDataValues replaceObjectAtIndex:8 withObject:latestAncillaryDataValues.rp188vitc2.timecode];
 	[ancillaryDataValues replaceObjectAtIndex:9 withObject:latestAncillaryDataValues.rp188vitc2.userBits];
+
+	// HDR metadata
+	[ancillaryDataValues replaceObjectAtIndex:10 withObject:latestAncillaryDataValues.hdrMetadata.electroOpticalTransferFunction];
+	[ancillaryDataValues replaceObjectAtIndex:11 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesRedX];
+	[ancillaryDataValues replaceObjectAtIndex:12 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesRedY];
+	[ancillaryDataValues replaceObjectAtIndex:13 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesGreenX];
+	[ancillaryDataValues replaceObjectAtIndex:14 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesGreenY];
+	[ancillaryDataValues replaceObjectAtIndex:15 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesBlueX];
+	[ancillaryDataValues replaceObjectAtIndex:16 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesBlueY];
+	[ancillaryDataValues replaceObjectAtIndex:17 withObject:latestAncillaryDataValues.hdrMetadata.whitePointX];
+	[ancillaryDataValues replaceObjectAtIndex:18 withObject:latestAncillaryDataValues.hdrMetadata.whitePointY];
+	[ancillaryDataValues replaceObjectAtIndex:19 withObject:latestAncillaryDataValues.hdrMetadata.maxDisplayMasteringLuminance];
+	[ancillaryDataValues replaceObjectAtIndex:20 withObject:latestAncillaryDataValues.hdrMetadata.minDisplayMasteringLuminance];
+	[ancillaryDataValues replaceObjectAtIndex:21 withObject:latestAncillaryDataValues.hdrMetadata.maximumContentLightLevel];
+	[ancillaryDataValues replaceObjectAtIndex:22 withObject:latestAncillaryDataValues.hdrMetadata.maximumFrameAverageLightLevel];
 }
 
 - (void)reloadAncillaryTable;
@@ -372,6 +458,11 @@ using namespace std;
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)aTableView
 {
 	return [ancillaryDataValues count];
+}
+
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)theApplication
+{
+	return YES;
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification

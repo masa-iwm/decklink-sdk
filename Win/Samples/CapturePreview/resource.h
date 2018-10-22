@@ -21,6 +21,19 @@
 #define IDC_RP188_LTC_UB_STATIC         1016
 #define IDC_PREVIEW_STATIC              1017
 #define IDC_PREVIEW_BOX                 1017
+#define IDC_HDR_EOTF_STATIC             1018
+#define IDC_HDR_DP_RED_X_STATIC         1019
+#define IDC_HDR_DP_RED_Y_STATIC         1020
+#define IDC_HDR_DP_GREEN_X_STATIC       1021
+#define IDC_HDR_DP_GREEN_Y_STATIC       1022
+#define IDC_HDR_DP_BLUE_X_STATIC        1023
+#define IDC_HDR_DP_BLUE_Y_STATIC        1024
+#define IDC_HDR_WHITE_POINT_X_STATIC    1025
+#define IDC_HDR_WHITE_POINT_Y_STATIC    1026
+#define IDC_HDR_MAX_DML_STATIC          1027
+#define IDC_HDR_MIN_DML_STATIC          1028
+#define IDC_HDR_MAX_CLL_STATIC          1029
+#define IDC_HDR_MAX_FALL_STATIC         1030
 
 // Next default values for new objects
 // 

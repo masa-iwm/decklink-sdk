@@ -1,0 +1,333 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		16DD765F20B6AFB700CEC139 /* CaptureStills.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16DD765E20B6AFB700CEC139 /* CaptureStills.cpp */; };
+		16DD766420B6AFE500CEC139 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16DD766220B6AFE500CEC139 /* platform.cpp */; };
+		16DD766920B6AFF600CEC139 /* Bgra32VideoFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16DD766520B6AFF600CEC139 /* Bgra32VideoFrame.cpp */; };
+		16DD766A20B6AFF600CEC139 /* DeckLinkInputDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16DD766720B6AFF600CEC139 /* DeckLinkInputDevice.cpp */; };
+		16DD766D20B6B11900CEC139 /* ImageWriterMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 16DD766C20B6B11900CEC139 /* ImageWriterMac.mm */; };
+		16DD767020B6B29500CEC139 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16DD766F20B6B29500CEC139 /* DeckLinkAPIDispatch.cpp */; };
+		16DD767220B6B8D100CEC139 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16DD767120B6B8D100CEC139 /* Accelerate.framework */; };
+		16DD767420B6B8DB00CEC139 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16DD767320B6B8DB00CEC139 /* CoreGraphics.framework */; };
+		16DD767920B6BE0700CEC139 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16DD767820B6BE0700CEC139 /* ImageIO.framework */; };
+		16DD767B20B6BEE800CEC139 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16DD767A20B6BEE800CEC139 /* CoreFoundation.framework */; };
+		16DD767D20B6BFAB00CEC139 /* CoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16DD767C20B6BFAB00CEC139 /* CoreServices.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		16DD765120B6AF0300CEC139 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		16DD765320B6AF0300CEC139 /* CaptureStills */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = CaptureStills; sourceTree = BUILT_PRODUCTS_DIR; };
+		16DD765E20B6AFB700CEC139 /* CaptureStills.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CaptureStills.cpp; sourceTree = SOURCE_ROOT; };
+		16DD766220B6AFE500CEC139 /* platform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = platform.cpp; sourceTree = "<group>"; };
+		16DD766320B6AFE500CEC139 /* platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = "<group>"; };
+		16DD766520B6AFF600CEC139 /* Bgra32VideoFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Bgra32VideoFrame.cpp; sourceTree = SOURCE_ROOT; };
+		16DD766620B6AFF600CEC139 /* Bgra32VideoFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bgra32VideoFrame.h; sourceTree = SOURCE_ROOT; };
+		16DD766720B6AFF600CEC139 /* DeckLinkInputDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeckLinkInputDevice.cpp; sourceTree = SOURCE_ROOT; };
+		16DD766820B6AFF600CEC139 /* DeckLinkInputDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkInputDevice.h; sourceTree = SOURCE_ROOT; };
+		16DD766B20B6B00500CEC139 /* ImageWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageWriter.h; sourceTree = "<group>"; };
+		16DD766C20B6B11900CEC139 /* ImageWriterMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ImageWriterMac.mm; sourceTree = "<group>"; };
+		16DD766E20B6B29500CEC139 /* DeckLinkAPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeckLinkAPI.h; path = ../../../Mac/include/DeckLinkAPI.h; sourceTree = "<group>"; };
+		16DD766F20B6B29500CEC139 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../../Mac/include/DeckLinkAPIDispatch.cpp; sourceTree = "<group>"; };
+		16DD767120B6B8D100CEC139 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		16DD767320B6B8DB00CEC139 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		16DD767820B6BE0700CEC139 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
+		16DD767A20B6BEE800CEC139 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		16DD767C20B6BFAB00CEC139 /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = System/Library/Frameworks/CoreServices.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		16DD765020B6AF0300CEC139 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				16DD767D20B6BFAB00CEC139 /* CoreServices.framework in Frameworks */,
+				16DD767B20B6BEE800CEC139 /* CoreFoundation.framework in Frameworks */,
+				16DD767920B6BE0700CEC139 /* ImageIO.framework in Frameworks */,
+				16DD767420B6B8DB00CEC139 /* CoreGraphics.framework in Frameworks */,
+				16DD767220B6B8D100CEC139 /* Accelerate.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		16DD764A20B6AF0300CEC139 = {
+			isa = PBXGroup;
+			children = (
+				16DD767720B6B8EF00CEC139 /* External Frameworks */,
+				16DD765520B6AF0300CEC139 /* CaptureStills */,
+				16DD765D20B6AF4600CEC139 /* DeckLinkAPI */,
+				16DD766120B6AFD300CEC139 /* ImageWriter */,
+				16DD766020B6AFBB00CEC139 /* Platform */,
+				16DD765420B6AF0300CEC139 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		16DD765420B6AF0300CEC139 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				16DD765320B6AF0300CEC139 /* CaptureStills */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		16DD765520B6AF0300CEC139 /* CaptureStills */ = {
+			isa = PBXGroup;
+			children = (
+				16DD766520B6AFF600CEC139 /* Bgra32VideoFrame.cpp */,
+				16DD766620B6AFF600CEC139 /* Bgra32VideoFrame.h */,
+				16DD766720B6AFF600CEC139 /* DeckLinkInputDevice.cpp */,
+				16DD766820B6AFF600CEC139 /* DeckLinkInputDevice.h */,
+				16DD765E20B6AFB700CEC139 /* CaptureStills.cpp */,
+			);
+			path = CaptureStills;
+			sourceTree = "<group>";
+		};
+		16DD765D20B6AF4600CEC139 /* DeckLinkAPI */ = {
+			isa = PBXGroup;
+			children = (
+				16DD766E20B6B29500CEC139 /* DeckLinkAPI.h */,
+				16DD766F20B6B29500CEC139 /* DeckLinkAPIDispatch.cpp */,
+			);
+			name = DeckLinkAPI;
+			sourceTree = "<group>";
+		};
+		16DD766020B6AFBB00CEC139 /* Platform */ = {
+			isa = PBXGroup;
+			children = (
+				16DD766220B6AFE500CEC139 /* platform.cpp */,
+				16DD766320B6AFE500CEC139 /* platform.h */,
+			);
+			name = Platform;
+			sourceTree = "<group>";
+		};
+		16DD766120B6AFD300CEC139 /* ImageWriter */ = {
+			isa = PBXGroup;
+			children = (
+				16DD766B20B6B00500CEC139 /* ImageWriter.h */,
+				16DD766C20B6B11900CEC139 /* ImageWriterMac.mm */,
+			);
+			name = ImageWriter;
+			sourceTree = "<group>";
+		};
+		16DD767720B6B8EF00CEC139 /* External Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				16DD767120B6B8D100CEC139 /* Accelerate.framework */,
+				16DD767A20B6BEE800CEC139 /* CoreFoundation.framework */,
+				16DD767320B6B8DB00CEC139 /* CoreGraphics.framework */,
+				16DD767C20B6BFAB00CEC139 /* CoreServices.framework */,
+				16DD767820B6BE0700CEC139 /* ImageIO.framework */,
+			);
+			name = "External Frameworks";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		16DD765220B6AF0300CEC139 /* CaptureStills */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 16DD765A20B6AF0300CEC139 /* Build configuration list for PBXNativeTarget "CaptureStills" */;
+			buildPhases = (
+				16DD764F20B6AF0300CEC139 /* Sources */,
+				16DD765020B6AF0300CEC139 /* Frameworks */,
+				16DD765120B6AF0300CEC139 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CaptureStills;
+			productName = CaptureStills;
+			productReference = 16DD765320B6AF0300CEC139 /* CaptureStills */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		16DD764B20B6AF0300CEC139 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0720;
+				ORGANIZATIONNAME = "Blackmagic Design";
+				TargetAttributes = {
+					16DD765220B6AF0300CEC139 = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
+				};
+			};
+			buildConfigurationList = 16DD764E20B6AF0300CEC139 /* Build configuration list for PBXProject "CaptureStills" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 16DD764A20B6AF0300CEC139;
+			productRefGroup = 16DD765420B6AF0300CEC139 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				16DD765220B6AF0300CEC139 /* CaptureStills */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		16DD764F20B6AF0300CEC139 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				16DD766920B6AFF600CEC139 /* Bgra32VideoFrame.cpp in Sources */,
+				16DD767020B6B29500CEC139 /* DeckLinkAPIDispatch.cpp in Sources */,
+				16DD766A20B6AFF600CEC139 /* DeckLinkInputDevice.cpp in Sources */,
+				16DD766D20B6B11900CEC139 /* ImageWriterMac.mm in Sources */,
+				16DD766420B6AFE500CEC139 /* platform.cpp in Sources */,
+				16DD765F20B6AFB700CEC139 /* CaptureStills.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		16DD765820B6AF0300CEC139 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
+			};
+			name = Debug;
+		};
+		16DD765920B6AF0300CEC139 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
+			};
+			name = Release;
+		};
+		16DD765B20B6AF0300CEC139 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.capturestills";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		16DD765C20B6AF0300CEC139 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.capturestills";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		16DD764E20B6AF0300CEC139 /* Build configuration list for PBXProject "CaptureStills" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16DD765820B6AF0300CEC139 /* Debug */,
+				16DD765920B6AF0300CEC139 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		16DD765A20B6AF0300CEC139 /* Build configuration list for PBXNativeTarget "CaptureStills" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16DD765B20B6AF0300CEC139 /* Debug */,
+				16DD765C20B6AF0300CEC139 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 16DD764B20B6AF0300CEC139 /* Project object */;
+}

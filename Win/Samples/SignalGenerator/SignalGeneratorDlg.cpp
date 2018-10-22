@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2009 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -28,6 +28,8 @@
 //
 
 #include "stdafx.h"
+#include <vector>
+#include <utility>
 #include "SignalGenerator.h"
 #include "SignalGeneratorDlg.h"
 #include "PreviewWindow.h"
@@ -59,6 +61,14 @@ static DWORD gHD75pcColourBars[8] =
 // Supported number audio channels
 static const int gAudioChannels[] = { 2, 8, 16 };
 
+// Supported pixel formats
+static const std::vector<std::pair<BMDPixelFormat, CString>> kPixelFormats = {
+	std::make_pair(bmdFormat8BitYUV, _T("8-bit YUV")),
+	std::make_pair(bmdFormat10BitYUV, _T("10-bit YUV")),
+	std::make_pair(bmdFormat8BitARGB, _T("8-bit RGB")),
+	std::make_pair(bmdFormat10BitRGB, _T("10-bit RGB")),
+};
+
 CSignalGeneratorDlg::CSignalGeneratorDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CSignalGeneratorDlg::IDD, pParent)
 {
@@ -66,10 +76,14 @@ CSignalGeneratorDlg::CSignalGeneratorDlg(CWnd* pParent /*=NULL*/)
 	
 	// Initialize instance variables
 	m_running = false;
+	m_scheduledPlaybackStopped = false;
 	
 	m_videoFrameBlack = NULL;
 	m_videoFrameBars = NULL;
 	m_audioBuffer = NULL;
+
+	InitializeConditionVariable(&m_stopPlaybackCondition);
+	InitializeCriticalSection(&m_stopPlaybackLock);
 }
 
 void CSignalGeneratorDlg::DoDataExchange(CDataExchange* pDX)
@@ -91,11 +105,11 @@ BEGIN_MESSAGE_MAP(CSignalGeneratorDlg, CDialog)
 	ON_WM_QUERYDRAGICON()
 	//}}AFX_MSG_MAP
 	ON_BN_CLICKED(IDOK, &CSignalGeneratorDlg::OnBnClickedOk)
-	ON_CBN_SELCHANGE(IDC_COMBO_PIXEL_FORMAT, &CSignalGeneratorDlg::OnCbnSelchangeComboPixelFormat)
 	ON_CBN_SELCHANGE(IDC_COMBO_DEVICE, &CSignalGeneratorDlg::OnNewDeviceSelected)
 	ON_MESSAGE(WM_ADD_DEVICE_MESSAGE, &CSignalGeneratorDlg::OnAddDevice)
 	ON_MESSAGE(WM_REMOVE_DEVICE_MESSAGE, &CSignalGeneratorDlg::OnRemoveDevice)
 	ON_WM_CLOSE()
+	ON_CBN_SELCHANGE(IDC_COMBO_VIDEO_FORMAT, &CSignalGeneratorDlg::OnNewVideoFormatSelected)
 END_MESSAGE_MAP()
 
 
@@ -105,9 +119,6 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 	IDeckLinkDisplayModeIterator*	displayModeIterator;
 	IDeckLinkDisplayMode*			deckLinkDisplayMode;
 	IDeckLinkOutput*                deckLinkOutput;
-	BMDPixelFormat					pixelFormat;
-	
-	pixelFormat = (BMDPixelFormat)m_pixelFormatCombo.GetItemData(m_pixelFormatCombo.GetCurSel());
 
 	for (int i = 1; i < m_videoFormatCombo.GetCount(); i++)
 	{
@@ -138,8 +149,16 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 		CString modeNameCString(modeName);
 		newIndex = m_videoFormatCombo.AddString(modeNameCString);
 		m_videoFormatCombo.SetItemDataPtr(newIndex, deckLinkDisplayMode); 
-		
-		hr = deckLinkOutput->DoesSupportVideoMode(deckLinkDisplayMode->GetDisplayMode(), pixelFormat, videoOutputFlags, &displayModeSupport, NULL);
+
+		if (m_videoFormatCombo.GetCount() == 1)
+		{
+			// We have added our first item, refresh pixel format menu
+			m_videoFormatCombo.SetCurSel(0);
+			OnNewVideoFormatSelected();
+		}
+
+		// Check Dual Stream 3D support with any pixel format
+		hr = deckLinkOutput->DoesSupportVideoMode(deckLinkDisplayMode->GetDisplayMode(), (BMDPixelFormat)0, videoOutputFlags, &displayModeSupport, NULL);
 		if (hr != S_OK || ! displayModeSupport)
 		{
 			SysFreeString(modeName);
@@ -154,9 +173,35 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 
 		SysFreeString(modeName);
 	}
-	displayModeIterator->Release();
 
-	m_videoFormatCombo.SetCurSel(0);
+	displayModeIterator->Release();
+}
+
+
+void CSignalGeneratorDlg::RefreshPixelFormatMenu(void)
+{
+	// Populate the pixel format mode combo with a list of pixel formats supported by the installed DeckLink card
+	IDeckLinkOutput* deckLinkOutput;
+
+	m_pixelFormatCombo.ResetContent();
+
+	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
+
+	for (auto& pixelFormat : kPixelFormats)
+	{
+		HRESULT					hr;
+		int						newIndex;
+		BMDDisplayModeSupport	displayModeSupport;
+
+		hr = deckLinkOutput->DoesSupportVideoMode(m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, m_selectedVideoOutputFlags, &displayModeSupport, NULL);
+		if (hr != S_OK || !displayModeSupport)
+			continue;
+
+		newIndex = m_pixelFormatCombo.AddString(pixelFormat.second);
+		m_pixelFormatCombo.SetItemData(newIndex, pixelFormat.first);
+	}
+
+	m_pixelFormatCombo.SetCurSel(0);
 }
 
 
@@ -217,11 +262,6 @@ BOOL CSignalGeneratorDlg::OnInitDialog()
 	//
 	m_audioSampleDepthCombo.SetItemData(0, 16);	// 16-bit samples
 	m_audioSampleDepthCombo.SetItemData(1, 32);	// 32-bit samples
-
-	m_pixelFormatCombo.SetItemData(0, bmdFormat8BitYUV);
-	m_pixelFormatCombo.SetItemData(1, bmdFormat10BitYUV);
-	m_pixelFormatCombo.SetItemData(2, bmdFormat8BitARGB);
-	m_pixelFormatCombo.SetItemData(3, bmdFormat10BitRGB);
 
 	// Select the first item in each combo box
 	m_outputSignalCombo.SetCurSel(0);
@@ -287,6 +327,24 @@ void CSignalGeneratorDlg::OnNewDeviceSelected()
 
 	// Enable the interface
 	EnableInterface(true);
+}
+
+
+void CSignalGeneratorDlg::OnNewVideoFormatSelected()
+{
+	int			selectedVideoFormatIndex;
+	CString		videoFormatName;
+
+	selectedVideoFormatIndex = m_videoFormatCombo.GetCurSel();
+	if (selectedVideoFormatIndex < 0)
+		return;
+
+	m_selectedDisplayMode = (IDeckLinkDisplayMode*)m_videoFormatCombo.GetItemDataPtr(selectedVideoFormatIndex);
+
+	m_videoFormatCombo.GetLBText(selectedVideoFormatIndex, videoFormatName);
+	m_selectedVideoOutputFlags = (videoFormatName.Find(_T(" 3D"), 0) != -1) ? bmdVideoOutputDualStream3D : bmdVideoOutputFlagDefault;
+
+	RefreshPixelFormatMenu();
 }
 
 void CSignalGeneratorDlg::AddDevice(IDeckLink* deckLink)
@@ -366,148 +424,137 @@ void CSignalGeneratorDlg::RemoveDevice(IDeckLink* deckLink)
 	deviceToRemove->Release();
 }
 
-static int GetBytesPerPixel(BMDPixelFormat pixelFormat)
+static int GetRowBytes(BMDPixelFormat pixelFormat, ULONG frameWidth)
 {
-	int bytesPerPixel = 2;
+	int bytesPerRow;
 
+	// Refer to DeckLink SDK Manual - 2.7.4 Pixel Formats
 	switch (pixelFormat)
 	{
 	case bmdFormat8BitYUV:
-		bytesPerPixel = 2;
+		bytesPerRow = frameWidth * 2;
 		break;
-	case bmdFormat8BitARGB:
+
 	case bmdFormat10BitYUV:
+		bytesPerRow = ((frameWidth + 47) / 48) * 128;
+		break;
+
 	case bmdFormat10BitRGB:
-		bytesPerPixel = 4;
+		bytesPerRow = ((frameWidth + 63) / 64) * 256;
+		break;
+
+	case bmdFormat8BitARGB:
+	case bmdFormat8BitBGRA:
+	default:
+		bytesPerRow = frameWidth * 4;
 		break;
 	}
 
-	return bytesPerPixel;
+	return bytesPerRow;
 }
 
-SignalGenerator3DVideoFrame* CSignalGeneratorDlg::CreateBlackFrame ()
+SignalGenerator3DVideoFrame* CSignalGeneratorDlg::CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*, bool)> fillFrame)
 {
 	IDeckLinkOutput*                deckLinkOutput;
-	IDeckLinkMutableVideoFrame*		referenceBlack = NULL;
-	IDeckLinkMutableVideoFrame*		scheduleBlack = NULL;
+	IDeckLinkMutableVideoFrame*		referenceFrameLeft	= NULL;
+	IDeckLinkMutableVideoFrame*		referenceFrameRight	= NULL;
+	IDeckLinkMutableVideoFrame*		scheduleFrameLeft	= NULL;
+	IDeckLinkMutableVideoFrame*		scheduleFrameRight	= NULL;
 	HRESULT							hr;
 	BMDPixelFormat					pixelFormat;
-	int								bytesPerPixel;
-	IDeckLinkVideoConversion*		frameConverter = NULL;
-	SignalGenerator3DVideoFrame*	ret = NULL;
+	int								bytesPerRow;
+	int								referenceBytesPerRow;
+	IDeckLinkVideoConversion*		frameConverter		= NULL;
+	SignalGenerator3DVideoFrame*	ret					= NULL;
 
 	pixelFormat = (BMDPixelFormat)m_pixelFormatCombo.GetItemData(m_pixelFormatCombo.GetCurSel());
-	bytesPerPixel = GetBytesPerPixel(pixelFormat);
+	bytesPerRow = GetRowBytes(pixelFormat, m_frameWidth);
+	referenceBytesPerRow = GetRowBytes(bmdFormat8BitYUV, m_frameWidth);
 
 	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
 
-	hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth*bytesPerPixel, pixelFormat, bmdFrameFlagDefault, &scheduleBlack);
+	hr = CoCreateInstance(CLSID_CDeckLinkVideoConversion, NULL, CLSCTX_ALL, IID_IDeckLinkVideoConversion, (void**)&frameConverter);
 	if (hr != S_OK)
 		goto bail;
+
+	hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrameLeft);
+	if (hr != S_OK)
+		goto bail;
+
+	fillFrame(referenceFrameLeft, false);
 
 	if (pixelFormat == bmdFormat8BitYUV)
 	{
-		FillBlack(scheduleBlack);
+		// Frame is already 8-bit YUV, no conversion required
+		scheduleFrameLeft = referenceFrameLeft;
+		scheduleFrameLeft->AddRef();
 	}
 	else
 	{
-		hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth*2, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceBlack);
-		if (hr != S_OK)
-			goto bail;
-		FillBlack(referenceBlack);
-
-		hr = CoCreateInstance(CLSID_CDeckLinkVideoConversion, NULL, CLSCTX_ALL, IID_IDeckLinkVideoConversion, (void**)&frameConverter);
+		hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, bytesPerRow, pixelFormat, bmdFrameFlagDefault, &scheduleFrameLeft);
 		if (hr != S_OK)
 			goto bail;
 
-		hr = frameConverter->ConvertFrame(referenceBlack, scheduleBlack);
+		hr = frameConverter->ConvertFrame(referenceFrameLeft, scheduleFrameLeft);
 		if (hr != S_OK)
 			goto bail;
 	}
 
-	ret = new SignalGenerator3DVideoFrame(scheduleBlack);
+	// If dual-stream 3D, generate right-eye frame
+	if (m_selectedVideoOutputFlags == bmdVideoOutputDualStream3D)
+	{
+		hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrameRight);
+		if (hr != S_OK)
+			goto bail;
+
+		fillFrame(referenceFrameRight, true);
+
+		if (pixelFormat == bmdFormat8BitYUV)
+		{
+			// Frame is already 8-bit YUV, no conversion required
+			scheduleFrameRight = referenceFrameRight;
+			scheduleFrameRight->AddRef();
+		}
+		else
+		{
+			hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, bytesPerRow, pixelFormat, bmdFrameFlagDefault, &scheduleFrameRight);
+			if (hr != S_OK)
+				goto bail;
+
+			hr = frameConverter->ConvertFrame(referenceFrameRight, scheduleFrameRight);
+			if (hr != S_OK)
+				goto bail;
+		}
+	}
+
+	ret = new SignalGenerator3DVideoFrame(scheduleFrameLeft, scheduleFrameRight);
 
 bail:
-	if (referenceBlack)
-		referenceBlack->Release();
-	if (scheduleBlack)
-		scheduleBlack->Release();
-	if (frameConverter)
-		frameConverter->Release();
-
-	return ret;
-}
-
-SignalGenerator3DVideoFrame* CSignalGeneratorDlg::CreateBarsFrame ()
-{
-	IDeckLinkOutput*                deckLinkOutput;
-	IDeckLinkMutableVideoFrame*		referenceBarsLeft = NULL;
-	IDeckLinkMutableVideoFrame*		referenceBarsRight = NULL;
-	IDeckLinkMutableVideoFrame*		scheduleBarsLeft = NULL;
-	IDeckLinkMutableVideoFrame*		scheduleBarsRight = NULL;
-	HRESULT							hr;
-	BMDPixelFormat					pixelFormat;
-	int								bytesPerPixel;
-	IDeckLinkVideoConversion*		frameConverter = NULL;
-	SignalGenerator3DVideoFrame*	ret = NULL;
-
-	pixelFormat = (BMDPixelFormat)m_pixelFormatCombo.GetItemData(m_pixelFormatCombo.GetCurSel());
-	bytesPerPixel = GetBytesPerPixel(pixelFormat);
-
-	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
-
-	hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth*bytesPerPixel, pixelFormat, bmdFrameFlagDefault, &scheduleBarsLeft);
-	if (hr != S_OK)
-		goto bail;
-
-	hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth*bytesPerPixel, pixelFormat, bmdFrameFlagDefault, &scheduleBarsRight);
-	if (hr != S_OK)
-		goto bail;
-
-	if (pixelFormat == bmdFormat8BitYUV)
+	if (referenceFrameLeft)
 	{
-		FillColourBars(scheduleBarsLeft, false);
-		FillColourBars(scheduleBarsRight, true);
+		referenceFrameLeft->Release();
+		referenceFrameLeft = NULL;
 	}
-	else
+	if (referenceFrameRight)
 	{
-		hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth*2, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceBarsLeft);
-		if (hr != S_OK)
-			goto bail;
-
-		hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, m_frameWidth*2, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceBarsRight);
-		if (hr != S_OK)
-			goto bail;
-
-		FillColourBars(referenceBarsLeft, false);
-		FillColourBars(referenceBarsRight, true);
-
-		hr = CoCreateInstance(CLSID_CDeckLinkVideoConversion, NULL, CLSCTX_ALL, IID_IDeckLinkVideoConversion, (void**)&frameConverter);
-		if (hr != S_OK)
-			goto bail;
-
-		hr = frameConverter->ConvertFrame(referenceBarsLeft, scheduleBarsLeft);
-		if (hr != S_OK)
-			goto bail;
-
-		hr = frameConverter->ConvertFrame(referenceBarsRight, scheduleBarsRight);
-		if (hr != S_OK)
-			goto bail;
+		referenceFrameRight->Release();
+		referenceFrameRight = NULL;
 	}
-
-	ret = new SignalGenerator3DVideoFrame(scheduleBarsLeft, scheduleBarsRight);
-
-bail:
-	if (referenceBarsLeft)
-		referenceBarsLeft->Release();
-	if (referenceBarsRight)
-		referenceBarsRight->Release();
-	if (scheduleBarsLeft)
-		scheduleBarsLeft->Release();
-	if (scheduleBarsRight)
-		scheduleBarsRight->Release();
+	if (scheduleFrameLeft)
+	{
+		scheduleFrameLeft->Release();
+		scheduleFrameLeft = NULL;
+	}
+	if (scheduleFrameRight)
+	{
+		scheduleFrameRight->Release();
+		scheduleFrameRight = NULL;
+	}
 	if (frameConverter)
+	{
 		frameConverter->Release();
+		frameConverter = NULL;
+	}
 
 	return ret;
 }
@@ -515,16 +562,7 @@ bail:
 void	CSignalGeneratorDlg::StartRunning ()
 {
 	IDeckLinkOutput*        deckLinkOutput;
-	IDeckLinkDisplayMode*	videoDisplayMode = NULL;
-	BMDVideoOutputFlags		videoOutputFlags = bmdVideoOutputFlagDefault;
-	int						curSelection;
-	CString					videoFormatName;
 
-	curSelection = m_videoFormatCombo.GetCurSel();
-	m_videoFormatCombo.GetLBText(curSelection, videoFormatName);
-	if (videoFormatName.Find(_T(" 3D"), 0) != -1)
-		videoOutputFlags = bmdVideoOutputDualStream3D;
-	
 	// Determine the audio and video properties for the output stream
 	m_outputSignal = (OutputSignal)m_outputSignalCombo.GetCurSel();
 	m_audioChannelCount = m_audioChannelCombo.GetItemData(m_audioChannelCombo.GetCurSel());
@@ -532,16 +570,15 @@ void	CSignalGeneratorDlg::StartRunning ()
 	m_audioSampleRate = bmdAudioSampleRate48kHz;
 	//
 	// - Extract the IDeckLinkDisplayMode from the display mode popup menu (stashed in the item's tag)
-	videoDisplayMode = (IDeckLinkDisplayMode*)m_videoFormatCombo.GetItemDataPtr(m_videoFormatCombo.GetCurSel());
-	m_frameWidth = videoDisplayMode->GetWidth();
-	m_frameHeight = videoDisplayMode->GetHeight();
-	videoDisplayMode->GetFrameRate(&m_frameDuration, &m_frameTimescale);
+	m_frameWidth = m_selectedDisplayMode->GetWidth();
+	m_frameHeight = m_selectedDisplayMode->GetHeight();
+	m_selectedDisplayMode->GetFrameRate(&m_frameDuration, &m_frameTimescale);
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	m_framesPerSecond = (unsigned long)((m_frameTimescale + (m_frameDuration-1))  /  m_frameDuration);
 	
 	// Set the video output mode
 	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
-	if (deckLinkOutput->EnableVideoOutput(videoDisplayMode->GetDisplayMode(), videoOutputFlags) != S_OK)
+	if (deckLinkOutput->EnableVideoOutput(m_selectedDisplayMode->GetDisplayMode(), m_selectedVideoOutputFlags) != S_OK)
 		goto bail;
 
 	// Set the audio output mode
@@ -562,12 +599,12 @@ void	CSignalGeneratorDlg::StartRunning ()
 	FillSine(m_audioBuffer, m_audioBufferSampleLength, m_audioChannelCount, m_audioSampleDepth);
 	
 	// Generate a frame of black
-	m_videoFrameBlack = CreateBlackFrame();
+	m_videoFrameBlack = CreateOutputFrame(FillBlack);
 	if (! m_videoFrameBlack)
 		goto bail;
 
 	// Generate a frame of colour bars
-	m_videoFrameBars = CreateBarsFrame();
+	m_videoFrameBars = CreateOutputFrame(FillColourBars);
 	if (! m_videoFrameBars)
 		goto bail;
 
@@ -581,6 +618,10 @@ void	CSignalGeneratorDlg::StartRunning ()
 	if (deckLinkOutput->BeginAudioPreroll() != S_OK)
 		goto bail;
 	
+	EnterCriticalSection(&m_stopPlaybackLock);
+	m_scheduledPlaybackStopped = false;
+	LeaveCriticalSection(&m_stopPlaybackLock);
+
 	// Success; update the UI
 	m_running = true;
 	m_startButton.SetWindowText(_T("Stop"));
@@ -601,6 +642,14 @@ void	CSignalGeneratorDlg::StopRunning ()
 
 	// Stop the audio and video output streams immediately
 	deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
+
+	// Recommended to wait for IDeckLinkVideoOutputCallback::ScheduledPlaybackHasStopped callback before disabling output
+	EnterCriticalSection(&m_stopPlaybackLock);
+	while (!m_scheduledPlaybackStopped)
+	{
+		SleepConditionVariableCS(&m_stopPlaybackCondition, &m_stopPlaybackLock, INFINITE);
+	}
+	LeaveCriticalSection(&m_stopPlaybackLock);
 
 	// Dereference DeckLinkOutputDevice delegate from callbacks
 	deckLinkOutput->SetScheduledFrameCompletionCallback(NULL);
@@ -698,6 +747,16 @@ void	CSignalGeneratorDlg::WriteNextAudioSamples ()
 	m_totalAudioSecondsScheduled += 1;
 }
 
+void	CSignalGeneratorDlg::ScheduledPlaybackStopped()
+{
+	// Notify waiting process that scheduled playback has stopped
+	EnterCriticalSection(&m_stopPlaybackLock);
+	m_scheduledPlaybackStopped = true;
+	LeaveCriticalSection(&m_stopPlaybackLock);
+
+	WakeConditionVariable(&m_stopPlaybackCondition);
+}
+
 LRESULT CSignalGeneratorDlg::OnAddDevice(WPARAM wParam, LPARAM lParam)
 {
 	// A new device has been connected
@@ -776,6 +835,8 @@ void CSignalGeneratorDlg::OnClose()
 	{
 		m_deckLinkDiscovery->Release();
 	}
+
+	DeleteCriticalSection(&m_stopPlaybackLock);
 
 	CDialog::OnClose();
 }
@@ -861,7 +922,7 @@ void	FillColourBars (IDeckLinkVideoFrame* theFrame, bool reversed)
 	}
 }
 
-void	FillBlack (IDeckLinkVideoFrame* theFrame)
+void	FillBlack (IDeckLinkVideoFrame* theFrame, bool /* unused */ )
 {
 	DWORD*			nextWord;
 	unsigned long	width;
@@ -878,7 +939,4 @@ void	FillBlack (IDeckLinkVideoFrame* theFrame)
 		*(nextWord++) = 0x10801080;
 }
 
-void CSignalGeneratorDlg::OnCbnSelchangeComboPixelFormat()
-{
-	RefreshDisplayModeMenu();
-}
+

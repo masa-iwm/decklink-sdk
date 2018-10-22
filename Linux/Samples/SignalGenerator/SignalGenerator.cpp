@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2009 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -54,6 +54,15 @@ static uint32_t gHD75pcColourBars[8] =
 
 // Audio channels supported
 static const int gAudioChannels[] = { 2, 8, 16 };
+
+// Supported pixel formats
+static const QVector<QPair<BMDPixelFormat, QString>> kPixelFormats =
+{
+	qMakePair(bmdFormat8BitYUV,		QString("8-bit YUV")),
+	qMakePair(bmdFormat10BitYUV,	QString("10-bit YUV")),
+	qMakePair(bmdFormat8BitARGB,	QString("8-bit RGB")),
+	qMakePair(bmdFormat10BitRGB,	QString("10-bit RGB")),
+};
 
 class CDeckLinkGLWidget : public QGLWidget, public IDeckLinkScreenPreviewCallback
 {
@@ -164,6 +173,7 @@ SignalGenerator::SignalGenerator()
 	videoFrameBars = NULL;
 	audioBuffer = NULL;
 	timeCode = NULL;
+	scheduledPlaybackStopped = false;
 
 	ui = new Ui::SignalGeneratorDialog();
 	ui->setupUi(this);
@@ -183,13 +193,8 @@ SignalGenerator::SignalGenerator()
 	ui->audioSampleDepthPopup->addItem("16", QVariant::fromValue(16));
 	ui->audioSampleDepthPopup->addItem("32", QVariant::fromValue(32));
 
-	ui->pixelFormatPopup->addItem("8-Bit YUV", QVariant::fromValue((int)bmdFormat8BitYUV));
-	ui->pixelFormatPopup->addItem("10-Bit YUV", QVariant::fromValue((int)bmdFormat10BitYUV));
-	ui->pixelFormatPopup->addItem("8-Bit ARGB", QVariant::fromValue((int)bmdFormat8BitARGB));
-	ui->pixelFormatPopup->addItem("10-Bit RGB", QVariant::fromValue((int)bmdFormat10BitRGB));
-
 	connect(ui->startButton, SIGNAL(clicked()), this, SLOT(toggleStart()));
-	connect(ui->pixelFormatPopup, SIGNAL(currentIndexChanged(int)), this, SLOT(pixelFormatChanged(int)));
+	connect(ui->videoFormatPopup, SIGNAL(currentIndexChanged(int)), this, SLOT(videoFormatChanged(int)));
 	connect(ui->outputDevicePopup, SIGNAL(currentIndexChanged(int)), this, SLOT(outputDeviceChanged(int)));
 	enableInterface(false);
 	show();
@@ -197,8 +202,33 @@ SignalGenerator::SignalGenerator()
 
 SignalGenerator::~SignalGenerator()
 {
-	if (running)
-		stopRunning();
+	if (previewView != NULL)
+	{
+		previewView->Release();
+		previewView = NULL;
+	}
+
+	for (int i = 0; i < ui->videoFormatPopup->count(); i++)
+	{
+		IDeckLinkDisplayMode* deckLinkDisplayMode = (IDeckLinkDisplayMode*)(((QVariant)ui->videoFormatPopup->itemData(i)).value<void*>());
+		deckLinkDisplayMode->Release();
+		deckLinkDisplayMode = NULL;
+	}
+	ui->videoFormatPopup->clear();
+
+	for (int i = 0; i < ui->outputDevicePopup->count(); i++)
+	{
+		DeckLinkOutputDevice* deckLinkOutputDevice = (DeckLinkOutputDevice*)(((QVariant)ui->outputDevicePopup->itemData(i)).value<void*>());
+		deckLinkOutputDevice->Release();
+		deckLinkOutputDevice = NULL;
+	}
+	ui->outputDevicePopup->clear();
+
+	if (deckLinkDiscovery != NULL)
+	{
+		deckLinkDiscovery->Release();
+		deckLinkDiscovery = NULL;
+	}
 
 	delete timeCode;
 }
@@ -223,16 +253,17 @@ void SignalGenerator::customEvent(QEvent *event)
 
 	if (event->type() == ADD_DEVICE_EVENT)
 		addDevice(sge->deckLink());
-		
+
 	else if (event->type() == REMOVE_DEVICE_EVENT)
 		removeDevice(sge->deckLink());
-	
 }
 
 void SignalGenerator::closeEvent(QCloseEvent *)
 {
 	if (running)
 		stopRunning();
+
+	deckLinkDiscovery->disable();
 }
 
 void SignalGenerator::enableInterface(bool enable)
@@ -257,8 +288,14 @@ void SignalGenerator::refreshDisplayModeMenu(void)
 	IDeckLinkOutput*                deckLinkOutput;
 
 	// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
+	for (int i = 0; i < ui->videoFormatPopup->count(); i++)
+	{
+		deckLinkDisplayMode = (IDeckLinkDisplayMode*)(((QVariant)ui->videoFormatPopup->itemData(i)).value<void*>());
+		deckLinkDisplayMode->Release();
+		deckLinkDisplayMode = NULL;
+	}
 	ui->videoFormatPopup->clear();
-	
+
 	deckLinkOutput = selectedDevice->GetDeviceOutput();
 	
 	if (deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
@@ -270,13 +307,9 @@ void SignalGenerator::refreshDisplayModeMenu(void)
 		
 		if (deckLinkDisplayMode->GetName(const_cast<const char**>(&modeName)) == S_OK)
 		{
-			ui->videoFormatPopup->addItem(QString(modeName), QVariant::fromValue((unsigned int)deckLinkDisplayMode->GetDisplayMode()));
+			ui->videoFormatPopup->addItem(QString(modeName), QVariant::fromValue((void*)deckLinkDisplayMode));
 			free(modeName);
 		}
-		
-		
-		deckLinkDisplayMode->Release();
-		deckLinkDisplayMode = NULL;
 	}
 	displayModeIterator->Release();
 
@@ -284,6 +317,28 @@ void SignalGenerator::refreshDisplayModeMenu(void)
 
 	enableInterface(true);
 	deckLinkOutput->SetScreenPreviewCallback(previewView);
+}
+
+void SignalGenerator::refreshPixelFormatMenu(void)
+{
+	// Populate the pixel format mode combo with a list of pixel formats supported by the installed DeckLink card
+	IDeckLinkOutput* deckLinkOutput = selectedDevice->GetDeviceOutput();
+
+	ui->pixelFormatPopup->clear();
+
+	for (auto& pixelFormat : kPixelFormats)
+	{
+		HRESULT					hr;
+		BMDDisplayModeSupport	displayModeSupport;
+
+		hr = deckLinkOutput->DoesSupportVideoMode(selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdVideoOutputFlagDefault, &displayModeSupport, NULL);
+		if (hr != S_OK || !displayModeSupport)
+			continue;
+
+		ui->pixelFormatPopup->addItem(QString(pixelFormat.second), QVariant::fromValue((unsigned int)pixelFormat.first));
+	}
+
+	ui->pixelFormatPopup->setCurrentIndex(0);
 }
 
 void SignalGenerator::refreshAudioChannelMenu(void)
@@ -305,7 +360,7 @@ void SignalGenerator::refreshAudioChannelMenu(void)
 	ui->audioChannelPopup->clear();
 
 	// Scan through Audio channel popup menu and disable invalid entries
-	for (int i = 0; i < sizeof(gAudioChannels)/sizeof(*gAudioChannels); i++)
+	for (unsigned int i = 0; i < sizeof(gAudioChannels)/sizeof(*gAudioChannels); i++)
 	{
 		if (maxAudioChannels < (int64_t)gAudioChannels[i])
 			break;
@@ -393,14 +448,78 @@ void SignalGenerator::removeDevice(IDeckLink* deckLink)
 	deviceToRemove->Release();
 }
 
+void SignalGenerator::playbackStopped()
+{
+	// Notify waiting process that scheduled playback has stopped
+	mutex.lock();
+		scheduledPlaybackStopped = true;
+	mutex.unlock();
+	stopPlaybackCondition.wakeOne();
+}
+
+IDeckLinkMutableVideoFrame *SignalGenerator::CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*)> fillFrame)
+{
+	IDeckLinkOutput*                deckLinkOutput;
+	IDeckLinkMutableVideoFrame*		referenceFrame	= NULL;
+	IDeckLinkMutableVideoFrame*		scheduleFrame	= NULL;
+	HRESULT							hr;
+	BMDPixelFormat					pixelFormat;
+	int								bytesPerRow;
+	int								referenceBytesPerRow;
+	IDeckLinkVideoConversion*		frameConverter	= NULL;
+
+	pixelFormat = (BMDPixelFormat)ui->pixelFormatPopup->itemData(ui->pixelFormatPopup->currentIndex()).value<int>();
+	bytesPerRow = GetRowBytes(pixelFormat, frameWidth);
+	referenceBytesPerRow = GetRowBytes(bmdFormat8BitYUV, frameWidth);
+
+	deckLinkOutput = selectedDevice->GetDeviceOutput();
+
+	frameConverter = CreateVideoConversionInstance();
+	if (frameConverter == NULL)
+		goto bail;
+
+	hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrame);
+	if (hr != S_OK)
+		goto bail;
+
+	fillFrame(referenceFrame);
+
+	if (pixelFormat == bmdFormat8BitYUV)
+	{
+		// Frame is already 8-bit YUV, no conversion required
+		scheduleFrame = referenceFrame;
+		scheduleFrame->AddRef();
+	}
+	else
+	{
+		hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, bytesPerRow, pixelFormat, bmdFrameFlagDefault, &scheduleFrame);
+		if (hr != S_OK)
+			goto bail;
+
+		hr = frameConverter->ConvertFrame(referenceFrame, scheduleFrame);
+		if (hr != S_OK)
+			goto bail;
+	}
+
+bail:
+	if (referenceFrame != NULL)
+	{
+		referenceFrame->Release();
+		referenceFrame = NULL;
+	}
+	if (frameConverter != NULL)
+	{
+		frameConverter->Release();
+		frameConverter = NULL;
+	}
+
+	return scheduleFrame;
+}
 
 void SignalGenerator::startRunning()
 {
 	IDeckLinkOutput*        deckLinkOutput = selectedDevice->GetDeviceOutput();;
 	bool					success = false;
-	BMDDisplayModeSupport	supported = bmdDisplayModeNotSupported;
-	BMDDisplayMode			displayMode = bmdModeUnknown;
-	IDeckLinkDisplayMode*	videoDisplayMode = NULL;
 	BMDVideoOutputFlags		videoOutputFlags = 0;
 	QVariant v;
 	
@@ -415,24 +534,16 @@ void SignalGenerator::startRunning()
 	audioSampleDepth = v.value<int>();
 	audioSampleRate = bmdAudioSampleRate48kHz;
 	
-	// - Extract the BMDDisplayMode from the display mode popup menu (stashed in the item's tag)
-	v = ui->videoFormatPopup->itemData(ui->videoFormatPopup->currentIndex());
-	displayMode = (BMDDisplayMode)v.value<unsigned int>();
-
-	// - Use DoesSupportVideoMode to obtain an IDeckLinkDisplayMode instance representing the selected BMDDisplayMode
-	if(deckLinkOutput->DoesSupportVideoMode(displayMode, bmdFormat8BitYUV, bmdFrameFlagDefault, &supported, &videoDisplayMode) != S_OK || supported == bmdDisplayModeNotSupported)
-		goto bail;
+	frameWidth = selectedDisplayMode->GetWidth();
+	frameHeight = selectedDisplayMode->GetHeight();
 	
-	frameWidth = videoDisplayMode->GetWidth();
-	frameHeight = videoDisplayMode->GetHeight();
-	
-	videoDisplayMode->GetFrameRate(&frameDuration, &frameTimescale);
+	selectedDisplayMode->GetFrameRate(&frameDuration, &frameTimescale);
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	framesPerSecond = (frameTimescale + (frameDuration-1))  /  frameDuration;
 	
-	if (videoDisplayMode->GetDisplayMode() == bmdModeNTSC ||
-			videoDisplayMode->GetDisplayMode() == bmdModeNTSC2398 ||
-			videoDisplayMode->GetDisplayMode() == bmdModePAL)
+	if (selectedDisplayMode->GetDisplayMode() == bmdModeNTSC ||
+			selectedDisplayMode->GetDisplayMode() == bmdModeNTSC2398 ||
+			selectedDisplayMode->GetDisplayMode() == bmdModePAL)
 	{
 		timeCodeFormat = bmdTimecodeVITC;
 		videoOutputFlags |= bmdVideoOutputVITC;
@@ -449,7 +560,7 @@ void SignalGenerator::startRunning()
 
 
 	// Set the video output mode
-	if (deckLinkOutput->EnableVideoOutput(videoDisplayMode->GetDisplayMode(), videoOutputFlags) != S_OK)
+	if (deckLinkOutput->EnableVideoOutput(selectedDisplayMode->GetDisplayMode(), videoOutputFlags) != S_OK)
 		goto bail;
 	
 	// Set the audio output mode
@@ -466,14 +577,10 @@ void SignalGenerator::startRunning()
 	FillSine(audioBuffer, audioBufferSampleLength, audioChannelCount, audioSampleDepth);
 	
 	// Generate a frame of black
-	if (deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, frameWidth*2, bmdFormat8BitYUV, bmdFrameFlagDefault, &videoFrameBlack) != S_OK)
-		goto bail;
-	FillBlack(videoFrameBlack);
+	videoFrameBlack = CreateOutputFrame(FillBlack);
 	
 	// Generate a frame of colour bars
-	if (deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, frameWidth*2, bmdFormat8BitYUV, bmdFrameFlagDefault, &videoFrameBars) != S_OK)
-		goto bail;
-	FillColourBars(videoFrameBars);
+	videoFrameBars = CreateOutputFrame(FillColourBars);
 	
 	// Begin video preroll by scheduling a second of frames in hardware
 	totalFramesScheduled = 0;
@@ -490,7 +597,8 @@ void SignalGenerator::startRunning()
 	ui->startButton->setText("Stop");
 	// Disable the user interface while running (prevent the user from making changes to the output signal)
 	enableInterface(false);
-	
+	scheduledPlaybackStopped = false;
+
 	success = true;
 	
 bail:
@@ -500,9 +608,6 @@ bail:
 		// *** Error-handling code.  Cleanup any resources that were allocated. *** //
 		stopRunning();
 	}
-
-	if (videoDisplayMode != NULL)
-		videoDisplayMode->Release();
 }
 
 void SignalGenerator::stopRunning()
@@ -511,7 +616,13 @@ void SignalGenerator::stopRunning()
 
 	// Stop the audio and video output streams immediately
 	deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
-	//
+
+	// Wait until IDeckLinkVideoOutputCallback::ScheduledPlaybackHasStopped callback
+	mutex.lock();
+		while (!scheduledPlaybackStopped)
+			stopPlaybackCondition.wait(&mutex);
+	mutex.unlock();
+
 	deckLinkOutput->DisableAudioOutput();
 	deckLinkOutput->DisableVideoOutput();
 	
@@ -597,6 +708,9 @@ void SignalGenerator::writeNextAudioSamples()
 
 void SignalGenerator::outputDeviceChanged(int selectedDeviceIndex)
 {
+	if (selectedDeviceIndex == -1)
+		return;
+
 	QVariant selectedDeviceVariant = ui->outputDevicePopup->itemData(selectedDeviceIndex);
 	
 	selectedDevice = (DeckLinkOutputDevice*)(selectedDeviceVariant.value<void*>());
@@ -611,14 +725,47 @@ void SignalGenerator::outputDeviceChanged(int selectedDeviceIndex)
 	enableInterface(true);
 }
 
-void SignalGenerator::pixelFormatChanged(int pixelFormatIndex)
+void SignalGenerator::videoFormatChanged(int videoFormatIndex)
 {
-	pixelFormat = (BMDPixelFormat)ui->pixelFormatPopup->itemData(pixelFormatIndex).value<int>();
+	if (videoFormatIndex == -1)
+		return;
 
-	refreshDisplayModeMenu();
+	selectedDisplayMode = (IDeckLinkDisplayMode*)ui->videoFormatPopup->itemData(videoFormatIndex).value<void*>();
+
+	// Update pixel format popup menu
+	refreshPixelFormatMenu();
 }
 
 /*****************************************/
+
+int		GetRowBytes(BMDPixelFormat pixelFormat, uint32_t frameWidth)
+{
+	int bytesPerRow;
+
+	// Refer to DeckLink SDK Manual - 2.7.4 Pixel Formats
+	switch (pixelFormat)
+	{
+	case bmdFormat8BitYUV:
+		bytesPerRow = frameWidth * 2;
+		break;
+
+	case bmdFormat10BitYUV:
+		bytesPerRow = ((frameWidth + 47) / 48) * 128;
+		break;
+
+	case bmdFormat10BitRGB:
+		bytesPerRow = ((frameWidth + 63) / 64) * 256;
+		break;
+
+	case bmdFormat8BitARGB:
+	case bmdFormat8BitBGRA:
+	default:
+		bytesPerRow = frameWidth * 4;
+		break;
+	}
+
+	return bytesPerRow;
+}
 
 void	FillSine (void* audioBuffer, uint32_t samplesToWrite, uint32_t channels, uint32_t sampleDepth)
 {

@@ -57,12 +57,14 @@ public:
     // public members
     IDeckLink*                              deckLink;
 	IDeckLinkInput*                         deckLinkInput;
+	IDeckLinkHDMIInputEDID*                 deckLinkHDMIInputEDID;
     bool                                    supportFormatDetection;
     bool                                	currentlyCapturing;
     
 private:
     
     TimecodeStruct*                         getAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format);
+	HDRMetadataStruct*						getHDRMetadataFromFrame(IDeckLinkVideoInputFrame* frame);
     
     
     CapturePreviewAppDelegate*              uiDelegate;
