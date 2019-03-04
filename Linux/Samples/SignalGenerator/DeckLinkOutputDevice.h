@@ -42,7 +42,8 @@ private:
 	SignalGenerator*			m_uiDelegate;
 	IDeckLinkOutput*			m_deckLinkOutput;
 	IDeckLink*					m_deckLink;
-	QString                 	m_deviceName;
+	IDeckLinkProfileManager*	m_deckLinkProfileManager;
+	QString						m_deviceName;
 
 public:
 	DeckLinkOutputDevice(SignalGenerator* owner, IDeckLink* deckLink);
@@ -66,5 +67,6 @@ public:
 
 	IDeckLinkOutput*    GetDeviceOutput() { return m_deckLinkOutput; };
 	IDeckLink*			GetDeckLinkInstance() { return m_deckLink; };
+	IDeckLinkProfileManager*	GetProfileManager() { return m_deckLinkProfileManager; }
 };
 

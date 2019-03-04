@@ -79,12 +79,12 @@ HRESULT SignalGenerator3DVideoFrame::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG SignalGenerator3DVideoFrame::AddRef(void)
 {
-	return _InterlockedIncrement((volatile long *)&m_refCount);
+	return InterlockedIncrement((volatile long *)&m_refCount);
 }
 
 ULONG SignalGenerator3DVideoFrame::Release(void)
 {
-	ULONG newRefValue = _InterlockedDecrement((volatile long*)&m_refCount);
+	ULONG newRefValue = InterlockedDecrement((volatile long*)&m_refCount);
 
 	if (newRefValue == 0)
 		delete this;

@@ -42,6 +42,7 @@ private:
 	CSignalGeneratorDlg*		m_uiDelegate;
 	IDeckLinkOutput*			m_deckLinkOutput;
 	IDeckLink*					m_deckLink;
+	IDeckLinkProfileManager*	m_deckLinkProfileManager;
 	CString                     m_deviceName;
 
 public:
@@ -65,5 +66,6 @@ public:
 	const CString&      GetDeviceName() { return m_deviceName; };
 	IDeckLinkOutput*    GetDeviceOutput() { return m_deckLinkOutput; };
 	IDeckLink*			GetDeckLinkInstance() { return m_deckLink; };
+	IDeckLinkProfileManager*	GetDeviceProfileManager() { return m_deckLinkProfileManager; };
 };
 

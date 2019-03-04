@@ -30,11 +30,11 @@
 // Print out a DeckLink device's model and ID (if supported)
 void PrintDeckLinkDetails (IDeckLink* deckLink)
 {
-    STRINGOBJ               deckLinkModelNameString = NULL;
-    HRESULT                 result = E_FAIL;
-    INT64_SIGNED            deckLinkPersistentId = 0;
-    std::string             deviceName;
-    IDeckLinkAttributes*    deckLinkAttributes = NULL;
+    STRINGOBJ                   deckLinkModelNameString = NULL;
+    HRESULT                     result = E_FAIL;
+    INT64_SIGNED                deckLinkPersistentId = 0;
+    std::string                 deviceName;
+    IDeckLinkProfileAttributes* deckLinkAttributes = NULL;
     
     result = deckLink->GetModelName(&deckLinkModelNameString);
 
@@ -51,7 +51,7 @@ void PrintDeckLinkDetails (IDeckLink* deckLink)
     // Release the deckLink device model name string
     STRINGFREE(deckLinkModelNameString);
             
-    result = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+    result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
     if (result == S_OK)
     {
         // Obtain the deckLink device's unique id, if this feature is supported.

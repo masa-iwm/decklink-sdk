@@ -129,18 +129,18 @@ namespace StillsCSharp
             m_deckLinkConversion = new CDeckLinkVideoConversion();
         }
 
-        public Bgra32VideoFrame ConvertFrame(IDeckLinkVideoFrame srcFrame)
+		public IDeckLinkVideoFrame ConvertFrame(IDeckLinkVideoFrame srcFrame)
         {
-            Bgra32VideoFrame dstFrame;
+			IDeckLinkVideoFrame dstFrame;
  
             // Check whether srcFrame is already bmdFormat8BitBGRA
             if (srcFrame.GetPixelFormat() == _BMDPixelFormat.bmdFormat8BitBGRA)
-                dstFrame = (Bgra32VideoFrame)srcFrame;
+                dstFrame = srcFrame;
 
             else
             {
-                dstFrame = new Bgra32VideoFrame(srcFrame.GetWidth(), srcFrame.GetHeight(), srcFrame.GetFlags());
-                m_deckLinkConversion.ConvertFrame(srcFrame, (IDeckLinkVideoFrame)dstFrame);
+				dstFrame = new Bgra32VideoFrame(srcFrame.GetWidth(), srcFrame.GetHeight(), srcFrame.GetFlags()) as IDeckLinkVideoFrame;
+                m_deckLinkConversion.ConvertFrame(srcFrame, dstFrame);
             }
 
             return dstFrame;

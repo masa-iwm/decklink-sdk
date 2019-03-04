@@ -199,8 +199,9 @@ bool DeckLinkDevice::startCapture(int videoModeIndex, uint32_t bitrate)
 		return false;
 	}
 
-	BMDDisplayModeSupport support;
-	if (m_deckLinkEncoderInput->DoesSupportVideoMode(m_modeList[videoModeIndex]->GetDisplayMode(), bmdFormatH265, videoInputFlags, &support, NULL) != S_OK || support != bmdDisplayModeSupported)
+	BOOL supported = FALSE;
+	HRESULT hr = m_deckLinkEncoderInput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_modeList[videoModeIndex]->GetDisplayMode(), bmdFormatH265, 0, bmdSupportedVideoModeDefault, &supported);
+	if (hr != S_OK || ! supported)
 	{
 		m_uiDelegate->showErrorMessage("Error starting recording", "The encoder does not support the chosen video mode.");
 		return false;

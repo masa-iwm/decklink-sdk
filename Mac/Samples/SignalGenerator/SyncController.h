@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2009 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -44,6 +44,7 @@ enum OutputSignal
 // Forward declarations
 class DeckLinkDeviceDiscovery;
 class PlaybackDelegate;
+class ProfileCallback;
 
 @interface SyncController : NSObject {
 	NSWindow*					window;
@@ -59,12 +60,16 @@ class PlaybackDelegate;
 
 	IBOutlet NSView*			previewView;
 	
+	NSCondition*				stoppedCondition;
+	BOOL						playbackStopped;
+	
 	DeckLinkDeviceDiscovery*	deckLinkDiscovery;
 	PlaybackDelegate*			selectedDevice;
+	ProfileCallback*			profileCallback;
+	IDeckLinkDisplayMode*		selectedDisplayMode;
+	BMDVideoOutputFlags			selectedVideoOutputFlags;
 	
 	BOOL						running;
-	IDeckLink*					deckLink;
-	IDeckLinkOutput*			deckLinkOutput;
 	
 	uint32_t					frameWidth;
 	uint32_t					frameHeight;
@@ -91,15 +96,21 @@ class PlaybackDelegate;
 - (void)addDevice:(IDeckLink*)deckLink;
 - (void)removeDevice:(IDeckLink*)deckLink;
 
-- (void) refreshDisplayModeMenu;
+- (void)haltStreams;
+- (void)updateProfile:(IDeckLinkProfile*)newProfile;
+
+- (void)refreshDisplayModeMenu;
+- (void)refreshPixelFormatMenu;
 - (void)refreshAudioChannelMenu;
 
 - (IBAction)toggleStart:(id)sender;
 - (IBAction)newDeviceSelected:(id)sender;
+- (IBAction)newDisplayModeSelected:(id)sender;
 - (void)enableInterface:(BOOL)enable;
 
 - (void)startRunning;
 - (void)stopRunning;
+- (void)scheduledPlaybackStopped;
 - (void)scheduleNextFrame:(BOOL)prerolling;
 - (void)writeNextAudioSamples;
 
@@ -107,13 +118,15 @@ class PlaybackDelegate;
 
 @end
 
-class PlaybackDelegate : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
+class PlaybackDelegate : public IDeckLinkVideoOutputCallback,
+						 public IDeckLinkAudioOutputCallback
 {
 private:
 	int32_t						m_refCount;
 	SyncController*				m_controller;
 	IDeckLinkOutput*			m_deckLinkOutput;
 	IDeckLink*					m_deckLink;
+	IDeckLinkProfileManager*	m_deckLinkProfileManager;
 	CFStringRef					m_deviceName;
 
 public:
@@ -133,13 +146,36 @@ public:
 	
 	// IDeckLinkAudioOutputCallback
 	virtual HRESULT		RenderAudioSamples (bool preroll);
+	
 
 	NSString*			getDeviceName() { return (NSString*)m_deviceName; };
 
 	IDeckLinkOutput*	getDeviceOutput() { return m_deckLinkOutput; };
 
 	IDeckLink*			getDeckLinkDevice() { return m_deckLink; };
+	
+	IDeckLinkProfileManager*	getDeckLinkProfileManager() { return m_deckLinkProfileManager; };
 
+};
+
+class ProfileCallback : public IDeckLinkProfileCallback
+{
+private:
+	SyncController*				m_controller;
+	int32_t						m_refCount;
+	
+public:
+	ProfileCallback(SyncController* owner);
+	virtual ~ProfileCallback() {}
+	
+	// IDeckLinkProfileCallback interface
+	virtual HRESULT		ProfileChanging (IDeckLinkProfile *profileToBeActivated, bool streamsWillBeForcedToStop);
+	virtual HRESULT		ProfileActivated (IDeckLinkProfile *activatedProfile);
+	
+	// IUnknown needs only a dummy implementation
+	virtual HRESULT		QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG		AddRef ();
+	virtual ULONG		Release ();
 };
 
 class DeckLinkDeviceDiscovery : public IDeckLinkDeviceNotificationCallback
@@ -170,4 +206,4 @@ void	FillSine (void* audioBuffer, uint32_t samplesToWrite, uint32_t channels, ui
 void	FillColourBars (IDeckLinkVideoFrame* theFrame, bool reversed);
 void	FillBlack (IDeckLinkVideoFrame* theFrame);
 void	ScheduleNextVideoFrame (void);
-int		GetBytesPerPixel (BMDPixelFormat pixelFormat);
+int		GetRowBytes(BMDPixelFormat pixelFormat, int frameWidth);

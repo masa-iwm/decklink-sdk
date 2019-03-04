@@ -30,7 +30,10 @@
 using namespace std;
 
 
-DeckLinkDevice::DeckLinkDevice(CapturePreviewAppDelegate* ui, IDeckLink* device) : uiDelegate(ui), deckLink(device), deckLinkInput(NULL), supportFormatDetection(false), refCount(1), currentlyCapturing(false), deviceName(NULL)
+DeckLinkDevice::DeckLinkDevice(CapturePreviewAppDelegate* ui, IDeckLink* device)
+	: uiDelegate(ui), deckLink(device), deckLinkInput(NULL), deckLinkConfig(NULL),
+	deckLinkHDMIInputEDID(NULL), deckLinkProfileManager(NULL), supportFormatDetection(false),
+	currentlyCapturing(false), deviceName(NULL), supportedInputConnections(0), refCount(1)
 {
 	// DeckLinkDevice owns IDeckLink instance
 	// AddRef has already been called on this IDeckLink instance on our behalf in DeckLinkDeviceArrived to avoid a race
@@ -38,10 +41,22 @@ DeckLinkDevice::DeckLinkDevice(CapturePreviewAppDelegate* ui, IDeckLink* device)
 
 DeckLinkDevice::~DeckLinkDevice()
 {
+	if (deckLinkProfileManager)
+	{
+		deckLinkProfileManager->Release();
+		deckLinkProfileManager = NULL;
+	}
+	
 	if (deckLinkInput)
 	{
 		deckLinkInput->Release();
 		deckLinkInput = NULL;
+	}
+	
+	if (deckLinkConfig)
+	{
+		deckLinkConfig->Release();
+		deckLinkConfig = NULL;
 	}
 
 	if (deckLinkHDMIInputEDID)
@@ -107,22 +122,30 @@ ULONG       DeckLinkDevice::Release (void)
 
 bool        DeckLinkDevice::init()
 {
-	IDeckLinkAttributes*            deckLinkAttributes = NULL;
-	IDeckLinkDisplayModeIterator*   displayModeIterator = NULL;
-	IDeckLinkDisplayMode*           displayMode = NULL;
+	IDeckLinkProfileAttributes*            deckLinkAttributes = NULL;
 	
 	// Get input interface
 	if (deckLink->QueryInterface(IID_IDeckLinkInput, (void**) &deckLinkInput) != S_OK)
 		return false;
 	
+	// Get attributes interface
+	if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**) &deckLinkAttributes) != S_OK)
+		return false;
+
 	// Check if input mode detection format is supported.
-	if (deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**) &deckLinkAttributes) == S_OK)
-	{
-		if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &supportFormatDetection) != S_OK)
-			supportFormatDetection = false;
-		
-		deckLinkAttributes->Release();
-	}
+	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &supportFormatDetection) != S_OK)
+		supportFormatDetection = false;
+
+	// Get the supported video input connections for the device
+	if (deckLinkAttributes->GetInt(BMDDeckLinkVideoInputConnections, &supportedInputConnections) != S_OK)
+		supportedInputConnections = 0;
+	
+	deckLinkAttributes->Release();
+	
+	// Get configuration interface to allow changing of input connector
+	// We hold onto IDeckLinkConfiguration for lifetime of DeckLinkDevice to retain input connector setting
+	if (deckLink->QueryInterface(IID_IDeckLinkConfiguration, (void**) &deckLinkConfig) != S_OK)
+		return false;
 	
 	// Enable all EDID functionality if possible
 	if (deckLink->QueryInterface(IID_IDeckLinkHDMIInputEDID, (void**)&deckLinkHDMIInputEDID) == S_OK && deckLinkHDMIInputEDID)
@@ -131,58 +154,27 @@ bool        DeckLinkDevice::init()
 		deckLinkHDMIInputEDID->SetInt(bmdDeckLinkHDMIInputEDIDDynamicRange, allKnownRanges);
 		deckLinkHDMIInputEDID->WriteToEDID();
 	}
-
-	// Retrieve and cache mode list
-	if (deckLinkInput->GetDisplayModeIterator(&displayModeIterator) == S_OK)
-	{
-		while (displayModeIterator->Next(&displayMode) == S_OK)
-			modeList.push_back(displayMode);
-		
-		displayModeIterator->Release();
-	}
 	
 	// Get device name
 	if (deckLink->GetDisplayName(&deviceName) != S_OK)
 		deviceName = CFStringCreateCopy(NULL, CFSTR("DeckLink"));
 	
+	// Get the profile manager interface
+	// Will return S_OK when the device has > 1 profiles
+	if (deckLink->QueryInterface(IID_IDeckLinkProfileManager, (void**) &deckLinkProfileManager) != S_OK)
+	{
+		deckLinkProfileManager = NULL;
+	}
+	
 	return true;
 }
 
-NSMutableArray*		DeckLinkDevice::getDisplayModeNames()
-{
-	NSMutableArray*		modeNames = [NSMutableArray array];
-	int					modeIndex;
-	CFStringRef			modeName;
-	
-	for (modeIndex = 0; modeIndex < modeList.size(); modeIndex++)
-	{
-		if (modeList[modeIndex]->GetName(&modeName) == S_OK)
-		{
-			[modeNames addObject:(NSString *)modeName];
-			CFRelease(modeName);
-		}
-		else
-		{
-			[modeNames addObject:@"Unknown mode"];
-		}
-	}
-	
-	return modeNames;
-}
-
-bool		DeckLinkDevice::startCapture(int videoModeIndex, IDeckLinkScreenPreviewCallback* screenPreviewCallback)
+bool		DeckLinkDevice::startCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode)
 {
 	BMDVideoInputFlags		videoInputFlags;
 	
 	// Enable input video mode detection if the device supports it
-	videoInputFlags = supportFormatDetection ? bmdVideoInputEnableFormatDetection : bmdVideoInputFlagDefault;
-	
-	// Get the IDeckLinkDisplayMode from the given index
-	if ((videoModeIndex < 0) || (videoModeIndex >= modeList.size()))
-	{
-		[uiDelegate showErrorMessage:@"An invalid display mode was selected." title:@"Error starting the capture"];
-		return false;
-	}
+	videoInputFlags = (supportFormatDetection && applyDetectedInputMode) ? bmdVideoInputEnableFormatDetection : bmdVideoInputFlagDefault;
 	
 	// Set the screen preview
 	deckLinkInput->SetScreenPreviewCallback(screenPreviewCallback);
@@ -191,7 +183,7 @@ bool		DeckLinkDevice::startCapture(int videoModeIndex, IDeckLinkScreenPreviewCal
 	deckLinkInput->SetCallback(this);
 	
 	// Set the video input mode
-	if (deckLinkInput->EnableVideoInput(modeList[videoModeIndex]->GetDisplayMode(), bmdFormat10BitYUV, videoInputFlags) != S_OK)
+	if (deckLinkInput->EnableVideoInput(displayMode, bmdFormat10BitYUV, videoInputFlags) != S_OK)
 	{
 		[uiDelegate showErrorMessage:@"This application was unable to select the chosen video mode. Perhaps, the selected device is currently in-use." title:@"Error starting the capture"];
 		return false;
@@ -224,7 +216,6 @@ void		DeckLinkDevice::stopCapture()
 
 HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {
-	UInt32				modeIndex = 0;
 	UInt32				flags = bmdVideoInputEnableFormatDetection;
 	BMDPixelFormat		pixelFormat = bmdFormat10BitYUV;
 	
@@ -259,16 +250,8 @@ HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatCh
 		}
 	}
 	
-	// Find the index of the new mode in the mode list so we can update the UI
-	while (modeIndex < modeList.size()) {
-		if (modeList[modeIndex]->GetDisplayMode() == newMode->GetDisplayMode())
-		{
-			[uiDelegate selectDetectedVideoModeWithIndex: modeIndex];
-			break;
-		}
-		modeIndex++;
-	}
-	
+	// Update the UI with detected display mode
+	[uiDelegate selectDetectedVideoMode: newMode->GetDisplayMode()];
 	
 bail:
 	[pool release];
@@ -290,6 +273,7 @@ HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFra
 	ancillaryData.rp188vitc1 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC1);
 	ancillaryData.rp188ltc = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC);
 	ancillaryData.rp188vitc2 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2);
+	ancillaryData.rp188hfrtc = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188HighFrameRate);
 	ancillaryData.hdrMetadata = getHDRMetadataFromFrame(videoFrame);
 
 	// Update the UI
@@ -303,7 +287,6 @@ HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFra
 	[pool release];
 	return S_OK;
 }
-
 
 TimecodeStruct*				DeckLinkDevice::getAncillaryDataFromFrame(IDeckLinkVideoInputFrame* videoFrame, BMDTimecodeFormat timecodeFormat)
 {
@@ -426,6 +409,73 @@ HDRMetadataStruct*	DeckLinkDevice::getHDRMetadataFromFrame(IDeckLinkVideoInputFr
 		}
 	}
 	return returnHDRMetadata;
+}
+
+
+ProfileCallback::ProfileCallback(CapturePreviewAppDelegate* delegate)
+	: uiDelegate(delegate), refCount(1)
+{
+}
+
+HRESULT		ProfileCallback::ProfileChanging (IDeckLinkProfile *profileToBeActivated, bool streamsWillBeForcedToStop)
+{
+	// When streamsWillBeForcedToStop is true, the profile to be activated is incompatible with the current
+	// profile and capture will be stopped by the DeckLink driver. It is better to notify the
+	// controller to gracefully stop capture, so that the UI is set to a known state.
+	if (streamsWillBeForcedToStop)
+		[uiDelegate haltStreams];
+	return S_OK;
+}
+
+HRESULT		ProfileCallback::ProfileActivated (IDeckLinkProfile *activatedProfile)
+{
+	// New profile activated, inform owner to update popup menus
+	// Ensure that reference is added to new profile before handing to main thread
+	activatedProfile->AddRef();
+	dispatch_async(dispatch_get_main_queue(), ^{
+		[uiDelegate updateProfile:activatedProfile];
+	});
+	
+	return S_OK;
+}
+
+HRESULT		ProfileCallback::QueryInterface (REFIID iid, LPVOID *ppv)
+{
+	CFUUIDBytes		iunknown;
+	HRESULT			result = E_NOINTERFACE;
+	
+	// Initialise the return result
+	*ppv = NULL;
+	
+	// Obtain the IUnknown interface and compare it the provided REFIID
+	iunknown = CFUUIDGetUUIDBytes(IUnknownUUID);
+	if (memcmp(&iid, &iunknown, sizeof(REFIID)) == 0)
+	{
+		*ppv = this;
+		AddRef();
+		result = S_OK;
+	}
+	
+	return result;
+}
+
+ULONG		ProfileCallback::AddRef (void)
+{
+	return OSAtomicIncrement32(&refCount);
+}
+
+ULONG		ProfileCallback::Release (void)
+{
+	int32_t		newRefValue;
+	
+	newRefValue = OSAtomicDecrement32(&refCount);
+	if (newRefValue == 0)
+	{
+		delete this;
+		return 0;
+	}
+	
+	return newRefValue;
 }
 
 

@@ -32,6 +32,7 @@
 #include "SignalGenerator.h"
 #include "DeckLinkOutputDevice.h"
 #include "DeckLinkDeviceDiscovery.h"
+#include "ProfileCallback.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -169,6 +170,8 @@ SignalGenerator::SignalGenerator()
 	running = false;
 	selectedDevice = NULL;
 	deckLinkDiscovery = NULL;
+	profileCallback = NULL;
+	selectedDisplayMode = bmdModeUnknown;
 	videoFrameBlack = NULL;
 	videoFrameBars = NULL;
 	audioBuffer = NULL;
@@ -202,19 +205,25 @@ SignalGenerator::SignalGenerator()
 
 SignalGenerator::~SignalGenerator()
 {
+	if (selectedDevice != NULL)
+	{
+		if (selectedDevice->GetProfileManager() != NULL)
+			selectedDevice->GetProfileManager()->SetCallback(NULL);
+
+		selectedDevice->GetDeviceOutput()->SetScreenPreviewCallback(NULL);
+	}
+
 	if (previewView != NULL)
 	{
 		previewView->Release();
 		previewView = NULL;
 	}
 
-	for (int i = 0; i < ui->videoFormatPopup->count(); i++)
+	if (profileCallback != NULL)
 	{
-		IDeckLinkDisplayMode* deckLinkDisplayMode = (IDeckLinkDisplayMode*)(((QVariant)ui->videoFormatPopup->itemData(i)).value<void*>());
-		deckLinkDisplayMode->Release();
-		deckLinkDisplayMode = NULL;
+		profileCallback->Release();
+		profileCallback = NULL;
 	}
-	ui->videoFormatPopup->clear();
 
 	for (int i = 0; i < ui->outputDevicePopup->count(); i++)
 	{
@@ -222,7 +231,6 @@ SignalGenerator::~SignalGenerator()
 		deckLinkOutputDevice->Release();
 		deckLinkOutputDevice = NULL;
 	}
-	ui->outputDevicePopup->clear();
 
 	if (deckLinkDiscovery != NULL)
 	{
@@ -236,9 +244,10 @@ SignalGenerator::~SignalGenerator()
 void SignalGenerator::setup()
 {
 	//
-	// Create and initialise DeckLink device discovery and preview objects
+	// Create and initialise DeckLink device discovery and profile objects
 	deckLinkDiscovery = new DeckLinkDeviceDiscovery(this);
-	if (deckLinkDiscovery != NULL)
+	profileCallback = new ProfileCallback(this);
+	if ((deckLinkDiscovery != NULL) && (profileCallback != NULL))
 	{
 		if (!deckLinkDiscovery->enable())
 		{
@@ -249,13 +258,23 @@ void SignalGenerator::setup()
 
 void SignalGenerator::customEvent(QEvent *event)
 {
-	SignalGeneratorEvent* sge = dynamic_cast<SignalGeneratorEvent*>(event);
-
 	if (event->type() == ADD_DEVICE_EVENT)
+	{
+		SignalGeneratorEvent* sge = dynamic_cast<SignalGeneratorEvent*>(event);
 		addDevice(sge->deckLink());
+	}
 
 	else if (event->type() == REMOVE_DEVICE_EVENT)
+	{
+		SignalGeneratorEvent* sge = dynamic_cast<SignalGeneratorEvent*>(event);
 		removeDevice(sge->deckLink());
+	}
+
+	else if (event->type() == PROFILE_ACTIVATED_EVENT)
+	{
+		ProfileCallbackEvent* pce = dynamic_cast<ProfileCallbackEvent*>(event);
+		updateProfile(pce->Profile());
+	}
 }
 
 void SignalGenerator::closeEvent(QCloseEvent *)
@@ -269,7 +288,10 @@ void SignalGenerator::closeEvent(QCloseEvent *)
 void SignalGenerator::enableInterface(bool enable)
 {
 	// Set the enable state of user interface elements
-	ui->groupBox->setEnabled(enable);
+	for (auto& combobox : ui->groupBox->findChildren<QComboBox*>())
+	{
+		combobox->setEnabled(enable);
+	}
 }
 
 void SignalGenerator::toggleStart()
@@ -288,12 +310,6 @@ void SignalGenerator::refreshDisplayModeMenu(void)
 	IDeckLinkOutput*                deckLinkOutput;
 
 	// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
-	for (int i = 0; i < ui->videoFormatPopup->count(); i++)
-	{
-		deckLinkDisplayMode = (IDeckLinkDisplayMode*)(((QVariant)ui->videoFormatPopup->itemData(i)).value<void*>());
-		deckLinkDisplayMode->Release();
-		deckLinkDisplayMode = NULL;
-	}
 	ui->videoFormatPopup->clear();
 
 	deckLinkOutput = selectedDevice->GetDeviceOutput();
@@ -304,19 +320,25 @@ void SignalGenerator::refreshDisplayModeMenu(void)
 	while (displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
 	{
 		char*					modeName;
-		
-		if (deckLinkDisplayMode->GetName(const_cast<const char**>(&modeName)) == S_OK)
+		bool					supported = false;
+		BMDDisplayMode			mode = deckLinkDisplayMode->GetDisplayMode();
+
+		if ((deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, mode, bmdFormatUnspecified, bmdSupportedVideoModeDefault, nullptr, &supported) == S_OK) && supported)
 		{
-			ui->videoFormatPopup->addItem(QString(modeName), QVariant::fromValue((void*)deckLinkDisplayMode));
-			free(modeName);
+			if (deckLinkDisplayMode->GetName(const_cast<const char**>(&modeName)) == S_OK)
+			{
+				ui->videoFormatPopup->addItem(QString(modeName), QVariant::fromValue((uint64_t)mode));
+				free(modeName);
+			}
 		}
+
+		deckLinkDisplayMode->Release();
+		deckLinkDisplayMode = nullptr;
 	}
 	displayModeIterator->Release();
 
 	ui->videoFormatPopup->setCurrentIndex(0);
-
-	enableInterface(true);
-	deckLinkOutput->SetScreenPreviewCallback(previewView);
+	ui->startButton->setEnabled(ui->videoFormatPopup->count() != 0);
 }
 
 void SignalGenerator::refreshPixelFormatMenu(void)
@@ -328,11 +350,9 @@ void SignalGenerator::refreshPixelFormatMenu(void)
 
 	for (auto& pixelFormat : kPixelFormats)
 	{
-		HRESULT					hr;
-		BMDDisplayModeSupport	displayModeSupport;
-
-		hr = deckLinkOutput->DoesSupportVideoMode(selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdVideoOutputFlagDefault, &displayModeSupport, NULL);
-		if (hr != S_OK || !displayModeSupport)
+		bool supported = false;
+		HRESULT hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, pixelFormat.first, bmdSupportedVideoModeDefault, NULL, &supported);
+		if (hr != S_OK || ! supported)
 			continue;
 
 		ui->pixelFormatPopup->addItem(QString(pixelFormat.second), QVariant::fromValue((unsigned int)pixelFormat.first));
@@ -343,14 +363,14 @@ void SignalGenerator::refreshPixelFormatMenu(void)
 
 void SignalGenerator::refreshAudioChannelMenu(void)
 {
-	IDeckLink*				deckLink;
-	IDeckLinkAttributes*	deckLinkAttributes = NULL;
-	int64_t					maxAudioChannels;
+	IDeckLink*					deckLink;
+	IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
+	int64_t						maxAudioChannels;
 
 	deckLink = selectedDevice->GetDeckLinkInstance();
 
 	// Get DeckLink attributes to determine number of audio channels
-	if (deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes) != S_OK)
+	if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
 		goto bail;
 
 	// Get max number of audio channels supported by DeckLink device
@@ -398,8 +418,8 @@ void SignalGenerator::addDevice(IDeckLink* deckLink)
 		ui->outputDevicePopup->setCurrentIndex(0);
 		outputDeviceChanged(0);
 
-		ui->startButton->setText("Start");
 		enableInterface(true);
+		ui->startButton->setText("Start");
 	}
 }
 
@@ -432,8 +452,6 @@ void SignalGenerator::removeDevice(IDeckLink* deckLink)
 	{
 		// We have removed the last device, disable the interface.
 		enableInterface(false);
-		ui->startButton->setEnabled(false);
-
 		selectedDevice = NULL;
 	}
 	else if (selectedDevice == deviceToRemove)
@@ -455,6 +473,22 @@ void SignalGenerator::playbackStopped()
 		scheduledPlaybackStopped = true;
 	mutex.unlock();
 	stopPlaybackCondition.wakeOne();
+}
+
+void SignalGenerator::haltStreams(void)
+{
+	// Profile is changing, stop playback if running
+	if (running)
+		stopRunning();
+}
+
+void SignalGenerator::updateProfile(IDeckLinkProfile* /* newProfile */)
+{
+	// Update the video mode popup menu based on new profile
+	refreshDisplayModeMenu();
+
+	// Update the audio channels popup menu based on new profile
+	refreshAudioChannelMenu();
 }
 
 IDeckLinkMutableVideoFrame *SignalGenerator::CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*)> fillFrame)
@@ -518,11 +552,15 @@ bail:
 
 void SignalGenerator::startRunning()
 {
-	IDeckLinkOutput*        deckLinkOutput = selectedDevice->GetDeviceOutput();;
-	bool					success = false;
-	BMDVideoOutputFlags		videoOutputFlags = 0;
+	IDeckLinkOutput*			deckLinkOutput		= selectedDevice->GetDeviceOutput();
+	IDeckLinkDisplayMode*		displayMode			= nullptr;
+	IDeckLinkProfileAttributes*	deckLinkAttributes	= nullptr;
+	bool						success				= false;
+	BMDVideoOutputFlags			videoOutputFlags	= 0;
 	QVariant v;
 	
+	deckLinkOutput->SetScreenPreviewCallback(previewView);
+
 	// Determine the audio and video properties for the output stream
 	v = ui->outputSignalPopup->itemData(ui->outputSignalPopup->currentIndex());
 	outputSignal = (OutputSignal)v.value<int>();
@@ -534,16 +572,37 @@ void SignalGenerator::startRunning()
 	audioSampleDepth = v.value<int>();
 	audioSampleRate = bmdAudioSampleRate48kHz;
 	
-	frameWidth = selectedDisplayMode->GetWidth();
-	frameHeight = selectedDisplayMode->GetHeight();
+	// Get the IDeckLinkDisplayMode object associated with the selected display mode
+	if (deckLinkOutput->GetDisplayMode(selectedDisplayMode, &displayMode) != S_OK)
+		goto bail;
+
+	frameWidth = displayMode->GetWidth();
+	frameHeight = displayMode->GetHeight();
 	
-	selectedDisplayMode->GetFrameRate(&frameDuration, &frameTimescale);
+	displayMode->GetFrameRate(&frameDuration, &frameTimescale);
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	framesPerSecond = (frameTimescale + (frameDuration-1))  /  frameDuration;
 	
-	if (selectedDisplayMode->GetDisplayMode() == bmdModeNTSC ||
-			selectedDisplayMode->GetDisplayMode() == bmdModeNTSC2398 ||
-			selectedDisplayMode->GetDisplayMode() == bmdModePAL)
+	// m-rate frame rates with multiple 30-frame counting should implement Drop Frames compensation, refer to SMPTE 12-1
+	if (frameDuration == 1001 && frameTimescale % 30000 == 0)
+		dropFrames = 2 * (frameTimescale / 30000);
+	else
+		dropFrames = 0;
+
+	displayMode->Release();
+
+	// Check whether HFRTC is supported by the selected device
+	if (selectedDevice->GetDeckLinkInstance()->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
+		goto bail;
+
+	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHighFrameRateTimecode, &hfrtcSupported) != S_OK)
+	{
+		hfrtcSupported = false;
+	}
+
+	if (selectedDisplayMode == bmdModeNTSC ||
+			selectedDisplayMode == bmdModeNTSC2398 ||
+			selectedDisplayMode == bmdModePAL)
 	{
 		timeCodeFormat = bmdTimecodeVITC;
 		videoOutputFlags |= bmdVideoOutputVITC;
@@ -556,11 +615,11 @@ void SignalGenerator::startRunning()
 
 	if (timeCode)
 		delete timeCode;
-	timeCode = new Timecode(framesPerSecond);
+	timeCode = new Timecode(framesPerSecond, dropFrames);
 
 
 	// Set the video output mode
-	if (deckLinkOutput->EnableVideoOutput(selectedDisplayMode->GetDisplayMode(), videoOutputFlags) != S_OK)
+	if (deckLinkOutput->EnableVideoOutput(selectedDisplayMode, videoOutputFlags) != S_OK)
 		goto bail;
 	
 	// Set the audio output mode
@@ -602,6 +661,11 @@ void SignalGenerator::startRunning()
 	success = true;
 	
 bail:
+	if (deckLinkAttributes != NULL)
+	{
+		deckLinkAttributes->Release();
+	}
+
 	if(!success)
 	{
 		QMessageBox::critical(this, "Failed to start output", "Failed to start output");
@@ -614,14 +678,19 @@ void SignalGenerator::stopRunning()
 {
 	IDeckLinkOutput* deckLinkOutput = selectedDevice->GetDeviceOutput();
 
-	// Stop the audio and video output streams immediately
-	deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
+	if (running)
+	{
+		// Stop the audio and video output streams immediately
+		deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
 
-	// Wait until IDeckLinkVideoOutputCallback::ScheduledPlaybackHasStopped callback
-	mutex.lock();
-		while (!scheduledPlaybackStopped)
-			stopPlaybackCondition.wait(&mutex);
-	mutex.unlock();
+		// Wait until IDeckLinkVideoOutputCallback::ScheduledPlaybackHasStopped callback
+		mutex.lock();
+			while (!scheduledPlaybackStopped)
+				stopPlaybackCondition.wait(&mutex);
+		mutex.unlock();
+	}
+
+	deckLinkOutput->SetScreenPreviewCallback(nullptr);
 
 	deckLinkOutput->DisableAudioOutput();
 	deckLinkOutput->DisableVideoOutput();
@@ -647,7 +716,15 @@ void SignalGenerator::stopRunning()
 
 void SignalGenerator::scheduleNextFrame(bool prerolling)
 {
-	IDeckLinkMutableVideoFrame *currentFrame;
+	HRESULT							result = S_OK;
+	IDeckLinkMutableVideoFrame*		currentFrame;
+	IDeckLinkOutput*				deckLinkOutput = nullptr;
+	IDeckLinkDisplayMode*			outputDisplayMode = nullptr;
+	bool							setVITC1Timecode = false;
+	bool							setVITC2Timecode = false;
+
+	deckLinkOutput = selectedDevice->GetDeviceOutput();
+
 	if (prerolling == false)
 	{
 		// If not prerolling, make sure that playback is still active
@@ -670,20 +747,112 @@ void SignalGenerator::scheduleNextFrame(bool prerolling)
 			currentFrame = videoFrameBars;
 	}
 	
-	printf("frames: %d\n", timeCode->frames());
-	currentFrame->SetTimecodeFromComponents(timeCodeFormat,
-											timeCode->hours(),
-											timeCode->minutes(),
-											timeCode->seconds(),
-											timeCode->frames(),
-											bmdTimecodeFlagDefault);
+	if (timeCodeFormat == bmdTimecodeVITC)
+	{
+		result = currentFrame->SetTimecodeFromComponents(bmdTimecodeVITC,
+														 timeCode->hours(),
+														 timeCode->minutes(),
+														 timeCode->seconds(),
+														 timeCode->frames(),
+														 bmdTimecodeFlagDefault);
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Could not set VITC timecode on frame - result = %08x\n", result);
+			goto bail;
+		}
+	}
+	else
+	{
+		int frames = timeCode->frames();
 
-	if (selectedDevice->GetDeviceOutput()->ScheduleVideoFrame(currentFrame, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale) != S_OK)
-		goto out;
+		if (hfrtcSupported)
+		{
+			result = currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188HighFrameRate,
+														   timeCode->hours(),
+														   timeCode->minutes(),
+														   timeCode->seconds(),
+														   frames,
+														   bmdTimecodeFlagDefault);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Could not set HFRTC timecode on frame - result = %08x\n", result);
+				goto bail;
+			}
+		}
+
+		result = deckLinkOutput->GetDisplayMode(selectedDisplayMode, &outputDisplayMode);
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Could not get output display mode - result = %08x\n", result);
+			goto bail;			
+		}
+
+		if (outputDisplayMode->GetFieldDominance() != bmdProgressiveFrame)
+		{
+			// An interlaced or PsF frame has both VITC1 and VITC2 set with the same timecode value (SMPTE ST 12-2:2014 7.2)
+			setVITC1Timecode = true;
+			setVITC2Timecode = true;
+		}
+		else if (framesPerSecond <= 30)
+		{
+			// If this isn't a High-P mode, then just use VITC1 (SMPTE ST 12-2:2014 7.2)
+			setVITC1Timecode = true;
+		}
+		else if (framesPerSecond <= 60)
+		{
+			// If this is a High-P mode then use VITC1 on even frames and VITC2 on odd frames. This is done because the
+			// frames field of the RP188 VITC timecode cannot hold values greater than 30 (SMPTE ST 12-2:2014 7.2, 9.2)
+			if ((frames & 1) == 0)
+				setVITC1Timecode = true;
+			else
+				setVITC2Timecode = true;
+
+			frames >>= 1;
+		}
+
+		if (setVITC1Timecode)
+		{
+			result = currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188VITC1,
+															 timeCode->hours(),
+															 timeCode->minutes(),
+															 timeCode->seconds(),
+															 frames,
+															 bmdTimecodeFlagDefault);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Could not set VITC1 timecode on interlaced frame - result = %08x\n", result);
+				goto bail;
+			}
+		}
+
+		if (setVITC2Timecode)
+		{
+			// The VITC2 timecode also has the field mark flag set
+			result = currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188VITC2,
+															 timeCode->hours(),
+															 timeCode->minutes(),
+															 timeCode->seconds(),
+															 frames,
+															 bmdTimecodeFieldMark);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Could not set VITC1 timecode on interlaced frame - result = %08x\n", result);
+				goto bail;
+			}
+		}
+	}
+
+	printf("Output frame: %02d:%02d:%02d:%03d\n", timeCode->hours(), timeCode->minutes(), timeCode->seconds(), timeCode->frames());
+
+	if (deckLinkOutput->ScheduleVideoFrame(currentFrame, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale) != S_OK)
+		goto bail;
 	
+bail:
 	totalFramesScheduled += 1;
-out:	
 	timeCode->update();
+
+	if (outputDisplayMode != nullptr)
+		outputDisplayMode->Release();
 }
 
 void SignalGenerator::writeNextAudioSamples()
@@ -711,18 +880,23 @@ void SignalGenerator::outputDeviceChanged(int selectedDeviceIndex)
 	if (selectedDeviceIndex == -1)
 		return;
 
+	// Release profile callback from existing selected device
+	if ((selectedDevice != NULL) && (selectedDevice->GetProfileManager() != NULL))
+		selectedDevice->GetProfileManager()->SetCallback(NULL);
+
 	QVariant selectedDeviceVariant = ui->outputDevicePopup->itemData(selectedDeviceIndex);
 	
 	selectedDevice = (DeckLinkOutputDevice*)(selectedDeviceVariant.value<void*>());
+
+	// Register profile callback with newly selected device's profile manager
+	if (selectedDevice->GetProfileManager() != NULL)
+		selectedDevice->GetProfileManager()->SetCallback(profileCallback);
 
 	// Update the video mode popup menu
 	refreshDisplayModeMenu();
 	
 	// Update the audio channels popup menu
 	refreshAudioChannelMenu();
-
-	// Enable the interface
-	enableInterface(true);
 }
 
 void SignalGenerator::videoFormatChanged(int videoFormatIndex)
@@ -730,7 +904,7 @@ void SignalGenerator::videoFormatChanged(int videoFormatIndex)
 	if (videoFormatIndex == -1)
 		return;
 
-	selectedDisplayMode = (IDeckLinkDisplayMode*)ui->videoFormatPopup->itemData(videoFormatIndex).value<void*>();
+	selectedDisplayMode = (BMDDisplayMode)ui->videoFormatPopup->itemData(videoFormatIndex).value<uint64_t>();
 
 	// Update pixel format popup menu
 	refreshPixelFormatMenu();

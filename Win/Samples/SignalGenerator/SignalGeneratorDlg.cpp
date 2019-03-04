@@ -33,6 +33,7 @@
 #include "SignalGenerator.h"
 #include "SignalGeneratorDlg.h"
 #include "PreviewWindow.h"
+#include "ProfileCallback.h"
 #include "DeckLinkOutputDevice.h"
 #include "DeckLinkDeviceDiscovery.h"
 #define _USE_MATH_DEFINES
@@ -82,6 +83,10 @@ CSignalGeneratorDlg::CSignalGeneratorDlg(CWnd* pParent /*=NULL*/)
 	m_videoFrameBars = NULL;
 	m_audioBuffer = NULL;
 
+	m_selectedDevice = NULL;
+	m_selectedDisplayMode = NULL;
+	m_selectedVideoOutputFlags = bmdVideoOutputFlagDefault;
+
 	InitializeConditionVariable(&m_stopPlaybackCondition);
 	InitializeCriticalSection(&m_stopPlaybackLock);
 }
@@ -108,6 +113,7 @@ BEGIN_MESSAGE_MAP(CSignalGeneratorDlg, CDialog)
 	ON_CBN_SELCHANGE(IDC_COMBO_DEVICE, &CSignalGeneratorDlg::OnNewDeviceSelected)
 	ON_MESSAGE(WM_ADD_DEVICE_MESSAGE, &CSignalGeneratorDlg::OnAddDevice)
 	ON_MESSAGE(WM_REMOVE_DEVICE_MESSAGE, &CSignalGeneratorDlg::OnRemoveDevice)
+	ON_MESSAGE(WM_UPDATE_PROFILE_MESSAGE, &CSignalGeneratorDlg::OnProfileUpdate)
 	ON_WM_CLOSE()
 	ON_CBN_SELCHANGE(IDC_COMBO_VIDEO_FORMAT, &CSignalGeneratorDlg::OnNewVideoFormatSelected)
 END_MESSAGE_MAP()
@@ -137,8 +143,13 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 		BSTR					modeName;
 		int						newIndex;
 		HRESULT					hr;
-		BMDDisplayModeSupport	displayModeSupport;
-		BMDVideoOutputFlags		videoOutputFlags = bmdVideoOutputDualStream3D;
+		BOOL					supported = FALSE;
+		BMDSupportedVideoModeFlags	flags = bmdSupportedVideoModeDualStream3D;
+
+		// Check that display mode is supported with the active profile
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdSupportedVideoModeDefault, NULL, &supported);
+		if (hr != S_OK || !supported)
+			continue;
 
 		if (deckLinkDisplayMode->GetName(&modeName) != S_OK)
 		{
@@ -158,8 +169,8 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 		}
 
 		// Check Dual Stream 3D support with any pixel format
-		hr = deckLinkOutput->DoesSupportVideoMode(deckLinkDisplayMode->GetDisplayMode(), (BMDPixelFormat)0, videoOutputFlags, &displayModeSupport, NULL);
-		if (hr != S_OK || ! displayModeSupport)
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, flags, NULL, &supported);
+		if (hr != S_OK || ! supported)
 		{
 			SysFreeString(modeName);
 			continue;
@@ -175,6 +186,8 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 	}
 
 	displayModeIterator->Release();
+
+	m_startButton.EnableWindow(m_videoFormatCombo.GetCount() > 0);
 }
 
 
@@ -191,10 +204,11 @@ void CSignalGeneratorDlg::RefreshPixelFormatMenu(void)
 	{
 		HRESULT					hr;
 		int						newIndex;
-		BMDDisplayModeSupport	displayModeSupport;
+		BOOL					supported;
+		BMDSupportedVideoModeFlags	flags = (m_selectedVideoOutputFlags == bmdVideoOutputDualStream3D) ? bmdSupportedVideoModeDualStream3D : bmdSupportedVideoModeDefault;
 
-		hr = deckLinkOutput->DoesSupportVideoMode(m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, m_selectedVideoOutputFlags, &displayModeSupport, NULL);
-		if (hr != S_OK || !displayModeSupport)
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, flags, NULL, &supported);
+		if (hr != S_OK || ! supported)
 			continue;
 
 		newIndex = m_pixelFormatCombo.AddString(pixelFormat.second);
@@ -208,13 +222,13 @@ void CSignalGeneratorDlg::RefreshPixelFormatMenu(void)
 void CSignalGeneratorDlg::RefreshAudioChannelMenu(void)
 {
 	IDeckLink*				deckLink;
-	IDeckLinkAttributes*	deckLinkAttributes = NULL;
+	IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
 	LONGLONG				maxAudioChannels;
 
 	deckLink = m_selectedDevice->GetDeckLinkInstance();
 
 	// Get DeckLink attributes to determine number of audio channels
-	if (deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes) != S_OK)
+	if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
 		goto bail;
 
 	// Get max number of audio channels supported by DeckLink device
@@ -269,7 +283,7 @@ BOOL CSignalGeneratorDlg::OnInitDialog()
 	m_pixelFormatCombo.SetCurSel(0);
 
 	//
-	// Create and initialise DeckLink device discovery and preview objects
+	// Create and enable DeckLink device discovery callback interface object
 	m_deckLinkDiscovery = new DeckLinkDeviceDiscovery(this);
 	if (m_deckLinkDiscovery != NULL)
 	{
@@ -280,13 +294,21 @@ BOOL CSignalGeneratorDlg::OnInitDialog()
 		}
 	}
 
+	// Create and initialize preview helper
 	m_previewWindow = new PreviewWindow();
 	if (m_previewWindow->init(&m_previewBox) == false)
 	{
 		MessageBox(_T("This application was unable to initialise the preview window"), _T("Error"));
 	}
 
-bail: 
+	// Create profile callback interface object
+	m_profileCallback = new ProfileCallback(this);
+	if (m_profileCallback == NULL)
+	{
+		MessageBox(_T("This application was unable to create profile callback class"), _T("Error"));
+	}
+
+bail:
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -317,16 +339,29 @@ void CSignalGeneratorDlg::OnNewDeviceSelected()
 	if (selectedDeviceIndex < 0)
 		return;
 
+	// Release profile callback from existing selected device
+	if (m_selectedDevice != NULL)
+	{
+		IDeckLinkProfileManager* profileManager = m_selectedDevice->GetDeviceProfileManager();
+		if (profileManager != NULL)
+			profileManager->SetCallback(NULL);
+	}
+	
 	m_selectedDevice = (DeckLinkOutputDevice*)m_deviceListCombo.GetItemDataPtr(selectedDeviceIndex);
+
+	// Register profile callback with newly selected device's profile manager
+	if (m_selectedDevice != NULL)
+	{
+		IDeckLinkProfileManager* profileManager = m_selectedDevice->GetDeviceProfileManager();
+		if (profileManager != NULL)
+			profileManager->SetCallback(m_profileCallback);
+	}
 
 	// Update the video mode popup menu
 	RefreshDisplayModeMenu();
 
 	// Update available audio channels
 	RefreshAudioChannelMenu();
-
-	// Enable the interface
-	EnableInterface(true);
 }
 
 
@@ -372,9 +407,6 @@ void CSignalGeneratorDlg::AddDevice(IDeckLink* deckLink)
 		// We have added our first item, refresh and enable UI
 		m_deviceListCombo.SetCurSel(0);
 		OnNewDeviceSelected();
-
-		m_startButton.EnableWindow(TRUE);
-		EnableInterface(true);
 	}
 }
 
@@ -407,7 +439,7 @@ void CSignalGeneratorDlg::RemoveDevice(IDeckLink* deckLink)
 	{
 		// We have removed the last device, disable the interface.
 		m_startButton.EnableWindow(FALSE);
-		EnableInterface(false);
+		EnableInterface(FALSE);
 		m_selectedDevice = NULL;
 	}
 	else if (m_selectedDevice == deviceToRemove)
@@ -416,8 +448,6 @@ void CSignalGeneratorDlg::RemoveDevice(IDeckLink* deckLink)
 		// Select the first available device in the list and reset the UI.
 		m_deviceListCombo.SetCurSel(0);
 		OnNewDeviceSelected();
-
-		m_startButton.EnableWindow(TRUE);
 	}
 
 	// Release DeckLinkDevice instance
@@ -757,6 +787,13 @@ void	CSignalGeneratorDlg::ScheduledPlaybackStopped()
 	WakeConditionVariable(&m_stopPlaybackCondition);
 }
 
+void	CSignalGeneratorDlg::HaltStreams()
+{
+	// Profile is changing, stop playback if running
+	if (m_running)
+		StopRunning();
+}
+
 LRESULT CSignalGeneratorDlg::OnAddDevice(WPARAM wParam, LPARAM lParam)
 {
 	// A new device has been connected
@@ -768,6 +805,17 @@ LRESULT	CSignalGeneratorDlg::OnRemoveDevice(WPARAM wParam, LPARAM lParam)
 {
 	// An existing device has been disconnected
 	RemoveDevice((IDeckLink*)wParam);
+	return 0;
+}
+
+LRESULT	CSignalGeneratorDlg::OnProfileUpdate(WPARAM wParam, LPARAM lParam)
+{
+	// Update display mode menu with new profile
+	RefreshDisplayModeMenu();
+
+	// Update available audio channels with new profile
+	RefreshAudioChannelMenu();
+
 	return 0;
 }
 
@@ -805,6 +853,12 @@ void CSignalGeneratorDlg::OnClose()
 	if (m_running)
 		StopRunning();
 
+	// Disable profile callback
+	if ((m_selectedDevice != NULL) && (m_selectedDevice->GetDeviceProfileManager() != NULL))
+	{
+		m_selectedDevice->GetDeviceProfileManager()->SetCallback(NULL);
+	}
+
 	// Disable DeckLink device discovery
 	m_deckLinkDiscovery->disable();
 
@@ -822,6 +876,12 @@ void CSignalGeneratorDlg::OnClose()
 		IDeckLinkDisplayMode* deckLinkDisplayMode = (IDeckLinkDisplayMode*)m_videoFormatCombo.GetItemDataPtr(0);
 		deckLinkDisplayMode->Release();
 		m_videoFormatCombo.DeleteString(0);
+	}
+
+	// Release Profile Callback
+	if (m_profileCallback != NULL)
+	{
+		m_profileCallback->Release();
 	}
 
 	// Release PreviewWindow instance
@@ -938,5 +998,4 @@ void	FillBlack (IDeckLinkVideoFrame* theFrame, bool /* unused */ )
 	while (wordsRemaining-- > 0)
 		*(nextWord++) = 0x10801080;
 }
-
 

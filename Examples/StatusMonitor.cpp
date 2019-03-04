@@ -99,17 +99,6 @@ static FourCCNameMapping kPixelFormatMappings[] =
 	{ 0, NULL }
 };
 
-// Duplex mode mappings
-static FourCCNameMapping kDuplexModeMappings[] =
-{
-	{ bmdDuplexStatusFullDuplex,		"full-duplex" },
-	{ bmdDuplexStatusHalfDuplex,		"half-duplex" },
-	{ bmdDuplexStatusSimplex,			"simplex" },
-	{ bmdDuplexStatusInactive,			"inactive" },
-
-	{ 0, NULL }
-};
-
 static const char* getFourCCName(FourCCNameMapping* mappings, INT32_UNSIGNED fourcc)
 {
 	while (mappings->name != NULL)
@@ -154,7 +143,6 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 		case bmdDeckLinkStatusPCIExpressLinkSpeed:
 		case bmdDeckLinkStatusLastVideoOutputPixelFormat:
 		case bmdDeckLinkStatusReferenceSignalMode:
-		case bmdDeckLinkStatusDuplexMode:
 		case bmdDeckLinkStatusBusy:
 		case bmdDeckLinkStatusDeviceTemperature:
 			result = deckLinkStatus->GetInt(statusId, &intVal);
@@ -260,11 +248,6 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 		case bmdDeckLinkStatusReferenceSignalMode:
 			printf("%-40s %s\n", "Reference Signal Mode:",
 				getFourCCName(kDisplayModeMappings, (BMDDisplayMode)intVal));
-			break;
-
-		case bmdDeckLinkStatusDuplexMode:
-			printf("%-40s %s\n", "Duplex Mode:",
-				   getFourCCName(kDuplexModeMappings, (BMDDuplexStatus)intVal));
 			break;
 
 		case bmdDeckLinkStatusBusy:
@@ -388,7 +371,6 @@ int main(int argc, const char * argv[])
 
 	// Print general status values
 	printStatus(deckLinkStatus, bmdDeckLinkStatusBusy);
-	printStatus(deckLinkStatus, bmdDeckLinkStatusDuplexMode);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusPCIExpressLinkWidth);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusPCIExpressLinkSpeed);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusDeviceTemperature);

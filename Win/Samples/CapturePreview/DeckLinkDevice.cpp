@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2013 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -33,8 +33,10 @@ using namespace std;
 
 
 DeckLinkDevice::DeckLinkDevice(CCapturePreviewDlg* ui, IDeckLink* device)
-: m_uiDelegate(ui), m_deckLink(device), m_deckLinkInput(NULL), m_supportsFormatDetection(false),
-m_refCount(1), m_currentlyCapturing(false), m_applyDetectedInputMode(false)
+	: m_uiDelegate(ui), m_refCount(1), m_deckLink(device), m_deckLinkInput(NULL), 
+	m_deckLinkConfig(NULL),	m_deckLinkHDMIInputEDID(NULL), m_deckLinkProfileManager(NULL), 
+	m_deckLinkAttributes(NULL), m_supportsFormatDetection(false), 
+	m_currentlyCapturing(false), m_applyDetectedInputMode(false)
 {
 	m_deckLink->AddRef();
 }
@@ -47,16 +49,28 @@ DeckLinkDevice::~DeckLinkDevice()
 		m_deckLinkHDMIInputEDID = NULL;
 	}
 
+	if (m_deckLinkProfileManager)
+	{
+		m_deckLinkProfileManager->Release();
+		m_deckLinkProfileManager = NULL;
+	}
+
+	if (m_deckLinkAttributes)
+	{
+		m_deckLinkAttributes->Release();
+		m_deckLinkAttributes = NULL;
+	}
+
+	if (m_deckLinkConfig)
+	{
+		m_deckLinkConfig->Release();
+		m_deckLinkConfig = NULL;
+	}
+
 	if (m_deckLinkInput != NULL)
 	{
 		m_deckLinkInput->Release();
 		m_deckLinkInput = NULL;
-	}
-
-	while(! m_modeList.empty())
-	{
-		m_modeList.back()->Release();
-		m_modeList.pop_back();
 	}
 
 	if (m_deckLink != NULL)
@@ -120,23 +134,24 @@ ULONG STDMETHODCALLTYPE DeckLinkDevice::Release(void)
 
 bool		DeckLinkDevice::Init()
 {
-	IDeckLinkAttributes*            deckLinkAttributes = NULL;
-	IDeckLinkDisplayModeIterator*   displayModeIterator = NULL;
-	IDeckLinkDisplayMode*           displayMode = NULL;
 	BSTR							deviceNameBSTR = NULL;
 
 	// Get input interface
 	if (m_deckLink->QueryInterface(IID_IDeckLinkInput, (void**) &m_deckLinkInput) != S_OK)
 		return false;
 
-	// Check if input mode detection is supported.
-	if (m_deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**) &deckLinkAttributes) == S_OK)
-	{
-		if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &m_supportsFormatDetection) != S_OK)
-			m_supportsFormatDetection = false;
+	// Get attributes interface
+	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&m_deckLinkAttributes) != S_OK)
+		return false;
 
-		deckLinkAttributes->Release();
-	}
+	// Check if input mode detection is supported.
+	if (m_deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &m_supportsFormatDetection) != S_OK)
+		m_supportsFormatDetection = false;
+
+	// Get configuration interface to allow changing of input connector
+	// We hold onto IDeckLinkConfiguration for lifetime of DeckLinkDevice to retain input connector setting
+	if (m_deckLink->QueryInterface(IID_IDeckLinkConfiguration, (void**)&m_deckLinkConfig) != S_OK)
+		return false;
 
 	// Enable all EDID functionality if possible
 	if (m_deckLink->QueryInterface(IID_IDeckLinkHDMIInputEDID, (void**)&m_deckLinkHDMIInputEDID) == S_OK && m_deckLinkHDMIInputEDID)
@@ -144,15 +159,6 @@ bool		DeckLinkDevice::Init()
 		int64_t allKnownRanges = bmdDynamicRangeSDR | bmdDynamicRangeHDRStaticPQ | bmdDynamicRangeHDRStaticHLG;
 		m_deckLinkHDMIInputEDID->SetInt(bmdDeckLinkHDMIInputEDIDDynamicRange, allKnownRanges);
 		m_deckLinkHDMIInputEDID->WriteToEDID();
-	}
-
-	// Retrieve and cache mode list
-	if (m_deckLinkInput->GetDisplayModeIterator(&displayModeIterator) == S_OK)
-	{
-		while (displayModeIterator->Next(&displayMode) == S_OK)
-			m_modeList.push_back(displayMode);
-
-		displayModeIterator->Release();
 	}
 
 	// Get device name
@@ -166,30 +172,17 @@ bool		DeckLinkDevice::Init()
 		m_deviceName = _T("DeckLink");
 	}
 
+	// Get the profile manager interface
+	// Will return S_OK when the device has > 1 profiles
+	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileManager, (void**)&m_deckLinkProfileManager) != S_OK)
+	{
+		m_deckLinkProfileManager = NULL;
+	}
+
 	return true;
 }
 
-void		DeckLinkDevice::GetDisplayModeNames(vector<CString>& modeNames)
-{
-	unsigned int	modeIndex;
-	BSTR			modeNameBstr;
-
-	for (modeIndex = 0; modeIndex < m_modeList.size(); modeIndex++)
-	{			
-		if (m_modeList[modeIndex]->GetName(&modeNameBstr) == S_OK)
-		{
-			CString		modeName(modeNameBstr);
-			modeNames.push_back(modeName);
-			SysFreeString(modeNameBstr);
-		}
-		else 
-		{
-			modeNames.push_back(_T("Unknown mode"));
-		}
-	}
-}
-
-bool		DeckLinkDevice::StartCapture(unsigned int videoModeIndex, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode)
+bool		DeckLinkDevice::StartCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode)
 {
 	BMDVideoInputFlags		videoInputFlags = bmdVideoInputFlagDefault;
 
@@ -199,13 +192,6 @@ bool		DeckLinkDevice::StartCapture(unsigned int videoModeIndex, IDeckLinkScreenP
 	if (m_supportsFormatDetection == TRUE)
 		videoInputFlags |=  bmdVideoInputEnableFormatDetection;
 
-	// Get the IDeckLinkDisplayMode from the given index
-	if ((videoModeIndex < 0) || (videoModeIndex >= m_modeList.size()))
-	{
-		m_uiDelegate->ShowErrorMessage(_T("An invalid display mode was selected."), _T("Error starting the capture"));
-		return false;
-	}
-
 	// Set the screen preview
 	m_deckLinkInput->SetScreenPreviewCallback(screenPreviewCallback);
 
@@ -213,7 +199,7 @@ bool		DeckLinkDevice::StartCapture(unsigned int videoModeIndex, IDeckLinkScreenP
 	m_deckLinkInput->SetCallback(this);
 
 	// Set the video input mode
-	if (m_deckLinkInput->EnableVideoInput(m_modeList[videoModeIndex]->GetDisplayMode(), bmdFormat8BitYUV, videoInputFlags) != S_OK)
+	if (m_deckLinkInput->EnableVideoInput(displayMode, bmdFormat8BitYUV, videoInputFlags) != S_OK)
 	{
 		m_uiDelegate->ShowErrorMessage(_T("This application was unable to select the chosen video mode. Perhaps, the selected device is currently in-use."), _T("Error starting the capture"));
 		return false;
@@ -251,7 +237,6 @@ void		DeckLinkDevice::StopCapture()
 
 HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {	
-	unsigned int	modeIndex = 0;
 	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
 
 	// Restart capture with the new video mode if told to
@@ -280,15 +265,8 @@ HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatCh
 		goto bail;
 	}		
 
-	// Find the index of the new mode in the mode list so we can update the UI
-	while (modeIndex < m_modeList.size()) {
-		if (m_modeList[modeIndex]->GetDisplayMode() == newMode->GetDisplayMode())
-		{
-			PostMessage(m_uiDelegate->GetSafeHwnd(), WM_SELECT_VIDEO_MODE_MESSAGE, modeIndex, 0);
-			break;
-		}
-		modeIndex++;
-	}
+	// Update the UI with detected display mode
+	PostMessage(m_uiDelegate->GetSafeHwnd(), WM_DETECT_VIDEO_MODE_MESSAGE, 0, newMode->GetDisplayMode());
 
 bail:
 	return S_OK;
@@ -308,6 +286,7 @@ HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFra
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC1, &ancillaryData.rp188vitc1Timecode, &ancillaryData.rp188vitc1UserBits);
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC, &ancillaryData.rp188ltcTimecode, &ancillaryData.rp188ltcUserBits);
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2, &ancillaryData.rp188vitc2Timecode, &ancillaryData.rp188vitc2UserBits);
+	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188HighFrameRate, &ancillaryData.rp188hfrtcTimecode, &ancillaryData.rp188hfrtcUserBits);
 	GetHDRMetadataFromFrame(videoFrame, hdrMetadata);
 
 	m_uiDelegate->UpdateFrameData(ancillaryData, hdrMetadata);
@@ -366,6 +345,7 @@ void DeckLinkDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFram
 	hdrMetadata.minDisplayMasteringLuminance = _T("");
 	hdrMetadata.maximumContentLightLevel = _T("");
 	hdrMetadata.maximumFrameAverageLightLevel = _T("");
+	hdrMetadata.colorspace = _T("");
 
 	if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
 	{
@@ -432,6 +412,22 @@ void DeckLinkDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFram
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
 				hdrMetadata.maximumFrameAverageLightLevel.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataColorspace, &intValue) == S_OK)
+			{
+				switch (intValue)
+				{
+				case bmdColorspaceRec601:
+					hdrMetadata.colorspace = _T("Rec.601");
+					break;
+				case bmdColorspaceRec709:
+					hdrMetadata.colorspace = _T("Rec.709");
+					break;
+				case bmdColorspaceRec2020:
+					hdrMetadata.colorspace = _T("Rec.2020");
+					break;
+				}
+			}
 
 			metadataExtensions->Release();
 		}

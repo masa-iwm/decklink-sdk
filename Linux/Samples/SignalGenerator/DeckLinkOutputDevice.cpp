@@ -32,13 +32,19 @@
 #include "DeckLinkOutputDevice.h"
 
 DeckLinkOutputDevice::DeckLinkOutputDevice(SignalGenerator* owner, IDeckLink* deckLink) 
-	: m_refCount(1), m_uiDelegate(owner), m_deckLink(deckLink)
+	: m_refCount(1), m_uiDelegate(owner), m_deckLink(deckLink), m_deckLinkProfileManager(NULL)
 {
 	m_deckLink->AddRef();
 }
 
 DeckLinkOutputDevice::~DeckLinkOutputDevice()
 {
+	if (m_deckLinkProfileManager)
+	{
+		m_deckLinkProfileManager->Release();
+		m_deckLinkProfileManager = NULL;
+	}
+
 	if (m_deckLinkOutput)
 	{
 		m_deckLinkOutput->SetScheduledFrameCompletionCallback(NULL);
@@ -75,6 +81,13 @@ bool DeckLinkOutputDevice::Init()
 	// Provide the delegate to the audio and video output interfaces
 	m_deckLinkOutput->SetScheduledFrameCompletionCallback(this);
 	m_deckLinkOutput->SetAudioCallback(this);
+
+	// Get the profile manager interface
+	// Will return S_OK when the device has > 1 profiles
+	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileManager, (void**) &m_deckLinkProfileManager) != S_OK)
+	{
+		m_deckLinkProfileManager = NULL;
+	}
 
 	return true;
 }

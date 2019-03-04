@@ -84,7 +84,7 @@ namespace CapturePreviewCSharp
             get
             {
                 int flag;
-                var deckLinkAttributes = (IDeckLinkAttributes)m_deckLink;
+                var deckLinkAttributes = (IDeckLinkProfileAttributes)m_deckLink;
                 deckLinkAttributes.GetFlag(_BMDDeckLinkAttributeID.BMDDeckLinkSupportsInputFormatDetection, out flag);
                 return flag != 0;
             }

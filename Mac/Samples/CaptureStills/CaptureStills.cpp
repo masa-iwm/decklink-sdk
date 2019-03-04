@@ -248,14 +248,14 @@ void DisplayUsage(DeckLinkInputDevice* selectedDeckLinkInput, const std::vector<
 		for (unsigned int i = 0; i < kSupportedPixelFormats.size(); i++)
 		{
 			// Check whether pixel format is supported for display mode
-			BMDDisplayModeSupport displayModeSupported;
-			result = selectedDeckLinkInput->GetDeckLinkInput()->DoesSupportVideoMode(displayModes[selectedDisplayModeIndex]->GetDisplayMode(), 
+			dlbool_t displayModeSupported;
+			result = selectedDeckLinkInput->GetDeckLinkInput()->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
+																					 displayModes[selectedDisplayModeIndex]->GetDisplayMode(),
 																					 std::get<kPixelFormatValue>(kSupportedPixelFormats[i]),
-																					 bmdVideoInputFlagDefault, 
-																					 &displayModeSupported, 
-																					 NULL);
+																					 bmdSupportedVideoModeDefault,
+																					 &displayModeSupported);
 
-			if ((result == S_OK) && (displayModeSupported != bmdDisplayModeNotSupported))
+			if ((result == S_OK) && (displayModeSupported))
 			{
 				fprintf(stderr,
 					"        %2d:  %s%s\n",
@@ -377,11 +377,11 @@ int main(int argc, char* argv[])
 		if (idx++ == deckLinkIndex)
 		{
 			// Check that selected device supports capture
-			IDeckLinkAttributes*	deckLinkAttributes = NULL;
-			int64_t					ioSupportAttribute = 0;
-			dlbool_t				formatDetectionSupportAttribute;
+			IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
+			int64_t						ioSupportAttribute = 0;
+			dlbool_t					formatDetectionSupportAttribute;
 
-			result = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+			result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 
 			if (result != S_OK)
 			{
@@ -452,7 +452,7 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			BMDDisplayModeSupport	displayModeSupported;
+			dlbool_t				displayModeSupported;
 			dlstring_t				displayModeNameStr;
 			IDeckLinkDisplayMode*	displayMode = selectedDeckLinkInput->GetDisplayModeList()[displayModeIndex];
 
@@ -466,12 +466,12 @@ int main(int argc, char* argv[])
 			selectedDisplayMode = displayMode->GetDisplayMode();
 
 			// Check display mode is supported with given options
-			result = selectedDeckLinkInput->GetDeckLinkInput()->DoesSupportVideoMode(selectedDisplayMode, 
+			result = selectedDeckLinkInput->GetDeckLinkInput()->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
+																					 selectedDisplayMode,
 																					 std::get<kPixelFormatValue>(kSupportedPixelFormats[pixelFormatIndex]),
-																					 bmdVideoOutputFlagDefault, 
-																					 &displayModeSupported, 
-																					 NULL);
-			if ((result != S_OK) || (displayModeSupported == bmdDisplayModeNotSupported))
+																					 bmdSupportedVideoModeDefault,
+																					 &displayModeSupported);
+			if ((result != S_OK) || (!displayModeSupported))
 			{
 				fprintf(stderr, "Display mode %s with pixel format %s is not supported by device\n", 
 					selectedDisplayModeName.c_str(),

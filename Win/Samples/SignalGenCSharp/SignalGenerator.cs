@@ -443,7 +443,7 @@ namespace SignalGenCSharp
             {
                 long maxAudioChannels;
 
-                var deckLinkAttributes = (IDeckLinkAttributes)m_selectedDevice.deckLink;
+                var deckLinkAttributes = (IDeckLinkProfileAttributes)m_selectedDevice.deckLink;
                 deckLinkAttributes.GetInt(_BMDDeckLinkAttributeID.BMDDeckLinkMaximumAudioChannels, out maxAudioChannels);
 
                 comboBoxAudioChannels.BeginUpdate();

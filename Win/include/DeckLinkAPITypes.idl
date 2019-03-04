@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -60,6 +60,7 @@ cpp_quote("#endif")
 /* Enum BMDVideoConnection - Video connection types */
 
 typedef [v1_enum] enum	_BMDVideoConnection {
+    bmdVideoConnectionUnspecified                                = 0,
     bmdVideoConnectionSDI                                        = 1 << 0,
     bmdVideoConnectionHDMI                                       = 1 << 1,
     bmdVideoConnectionOpticalSDI                                 = 1 << 2,

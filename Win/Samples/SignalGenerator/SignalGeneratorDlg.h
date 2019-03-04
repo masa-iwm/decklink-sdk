@@ -37,6 +37,7 @@
 // Custom Messages
 #define WM_ADD_DEVICE_MESSAGE					(WM_APP + 1)
 #define WM_REMOVE_DEVICE_MESSAGE				(WM_APP + 2)
+#define WM_UPDATE_PROFILE_MESSAGE				(WM_APP + 3)
 
 
 enum OutputSignal
@@ -49,6 +50,7 @@ enum OutputSignal
 class DeckLinkDeviceDiscovery;
 class DeckLinkOutputDevice;
 class PreviewWindow;
+class ProfileCallback;
 
 // CSignalGeneratorDlg dialog
 class CSignalGeneratorDlg : public CDialog
@@ -103,6 +105,7 @@ private:
 	DeckLinkDeviceDiscovery*	m_deckLinkDiscovery;
 	IDeckLinkDisplayMode*		m_selectedDisplayMode;
 	BMDVideoOutputFlags			m_selectedVideoOutputFlags;
+	ProfileCallback*			m_profileCallback;
 
 	bool						m_scheduledPlaybackStopped;
 	CRITICAL_SECTION			m_stopPlaybackLock;
@@ -131,6 +134,7 @@ public:
 	void			ScheduleNextFrame(bool prerolling);
 	void			WriteNextAudioSamples();
 	void			ScheduledPlaybackStopped();
+	void			HaltStreams();
 
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnNewDeviceSelected();
@@ -138,6 +142,7 @@ public:
 
 	afx_msg LRESULT	OnAddDevice(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT	OnRemoveDevice(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT	OnProfileUpdate(WPARAM wParam, LPARAM lParam);
 
 private:
 	SignalGenerator3DVideoFrame* CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*, bool)> fillFrame);

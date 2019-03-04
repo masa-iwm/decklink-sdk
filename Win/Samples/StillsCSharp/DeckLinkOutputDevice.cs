@@ -134,12 +134,19 @@ namespace StillsCSharp
 
         public bool IsVideoModeSupported(IDeckLinkDisplayMode displayMode, _BMDPixelFormat pixelFormat)
         {
-            _BMDDisplayModeSupport displayModeSupport;
-            IDeckLinkDisplayMode resultDisplayMode;
+            _BMDDisplayMode resultDisplayMode;
+            int supported;
 
-            m_deckLinkOutput.DoesSupportVideoMode(displayMode.GetDisplayMode(), pixelFormat, _BMDVideoOutputFlags.bmdVideoOutputFlagDefault, out displayModeSupport, out resultDisplayMode);
+            try
+            {
+                m_deckLinkOutput.DoesSupportVideoMode((_BMDVideoConnection)0, displayMode.GetDisplayMode(), pixelFormat, _BMDSupportedVideoModeFlags.bmdSupportedVideoModeDefault, out resultDisplayMode, out supported);
+            }
+            catch (Exception)
+            {
+                supported = 0;
+            }
 
-            return (displayModeSupport != _BMDDisplayModeSupport.bmdDisplayModeNotSupported);
+            return (supported != 0);
         }
 
         #region callbacks

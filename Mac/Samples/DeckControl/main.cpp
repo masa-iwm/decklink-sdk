@@ -80,7 +80,7 @@ int main (int argc, char* argv[]) {
 		result = deckLink->GetModelName(&deviceNameCFString);
 		if (result == S_OK)
 		{
-			IDeckLinkAttributes*	deckLinkAttributes;
+			IDeckLinkProfileAttributes*	deckLinkAttributes;
 		
 			char			deviceName[64];
 			
@@ -91,10 +91,10 @@ int main (int argc, char* argv[]) {
 			CFStringGetCString(deviceNameCFString, deviceName, sizeof(deviceName), kCFStringEncodingMacRoman);
 			printf("Found Blackmagic device: %s\n", deviceName);
 			
-			attributeResult = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+			attributeResult = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 			if (attributeResult != S_OK)
 			{
-				fprintf(stderr, "Could not obtain the IDeckLinkAttributes interface");
+				fprintf(stderr, "Could not obtain the IDeckLinkProfileAttributes interface");
 			}
 			else
 			{

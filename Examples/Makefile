@@ -28,7 +28,7 @@ CC=g++
 BIN_PATH=Linux/bin
 SDK_PATH=../Linux/include
 PLATFORM_PATH=Linux
-CPPFLAGS=-Wno-multichar -I $(SDK_PATH) -I $(PLATFORM_PATH) -fno-rtti
+CPPFLAGS=-Wno-multichar -I $(SDK_PATH) -I $(PLATFORM_PATH) -fno-rtti -std=c++11
 LDFLAGS=-lm -ldl -lpthread
 
 COMMON_SOURCES= \
@@ -40,7 +40,9 @@ all: \
 	${BIN_PATH}/DeviceNotification \
 	${BIN_PATH}/VancOutput \
 	${BIN_PATH}/RP188VitcOutput \
-	${BIN_PATH}/StatusMonitor
+	${BIN_PATH}/StatusMonitor \
+	${BIN_PATH}/SynchronizedPlayback \
+	${BIN_PATH}/SynchronizedCapture
 
 $(BIN_PATH)/AutomaticModeDetection: AutomaticModeDetection.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
@@ -55,6 +57,12 @@ $(BIN_PATH)/RP188VitcOutput: RP188VitcOutput.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 $(BIN_PATH)/StatusMonitor: StatusMonitor.cpp $(COMMON_SOURCES)
+	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
+
+$(BIN_PATH)/SynchronizedPlayback: SynchronizedPlayback.cpp $(COMMON_SOURCES)
+	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
+
+$(BIN_PATH)/SynchronizedCapture: SynchronizedCapture.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 clean:

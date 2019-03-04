@@ -42,8 +42,11 @@ private:
 	CString								m_deviceName;
 	IDeckLink*							m_deckLink;
 	IDeckLinkInput*						m_deckLinkInput;
+	IDeckLinkConfiguration*				m_deckLinkConfig;
 	IDeckLinkHDMIInputEDID*				m_deckLinkHDMIInputEDID;
-	std::vector<IDeckLinkDisplayMode*>	m_modeList;
+	IDeckLinkProfileManager*			m_deckLinkProfileManager;
+	IDeckLinkProfileAttributes*			m_deckLinkAttributes;
+
 	BOOL								m_supportsFormatDetection;
 	bool								m_currentlyCapturing;
 	bool								m_applyDetectedInputMode;
@@ -59,10 +62,13 @@ public:
 	const CString&						GetDeviceName() { return m_deviceName; };
 	bool								IsCapturing() { return m_currentlyCapturing; };
 	bool								SupportsFormatDetection() { return (m_supportsFormatDetection == TRUE); };
-	void			 					GetDisplayModeNames(std::vector<CString>& modeNames);
-	bool								StartCapture(unsigned int videoModeIndex, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode);
+	bool								StartCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode);
 	void								StopCapture();
 	IDeckLink*							DeckLinkInstance() { return m_deckLink; }
+	IDeckLinkProfileManager*			GetDeviceProfileManager() { return m_deckLinkProfileManager; };
+	IDeckLinkInput*						GetDeckLinkInput() { return m_deckLinkInput; };
+	IDeckLinkConfiguration*				GetDeckLinkConfiguration() { return m_deckLinkConfig; };
+	IDeckLinkProfileAttributes*			GetDeckLinkAttributes() { return m_deckLinkAttributes; };
 
 	// IUnknown interface
 	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);

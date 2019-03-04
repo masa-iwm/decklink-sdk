@@ -9,6 +9,7 @@
 #define IDC_AUTODETECT_FORMAT_CHECK     1002
 #define IDC_START_STOP_BUTTON           1003
 #define IDC_INVALID_INPUT_STATIC        1004
+#define IDC_INPUT_CONNECTION_COMBO      1005
 #define IDC_VITC_TC_F1_STATIC           1007
 #define IDC_VITC_UB_F1_STATIC           1008
 #define IDC_VITC_TC_F2_STATIC           1009
@@ -19,7 +20,6 @@
 #define IDC_RP188_VITC2_TC__STATIC      1014
 #define IDC_RP188_LTC_TC_STATIC         1015
 #define IDC_RP188_LTC_UB_STATIC         1016
-#define IDC_PREVIEW_STATIC              1017
 #define IDC_PREVIEW_BOX                 1017
 #define IDC_HDR_EOTF_STATIC             1018
 #define IDC_HDR_DP_RED_X_STATIC         1019
@@ -34,6 +34,9 @@
 #define IDC_HDR_MIN_DML_STATIC          1028
 #define IDC_HDR_MAX_CLL_STATIC          1029
 #define IDC_HDR_MAX_FALL_STATIC         1030
+#define IDC_COLORSPACE_STATIC           1031
+#define IDC_RP188_HFRTC_TC_STATIC       1032
+#define IDC_RP188_HFRTC_UB_STATIC       1033
 
 // Next default values for new objects
 // 
@@ -41,7 +44,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        129
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1018
+#define _APS_NEXT_CONTROL_VALUE         1035
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -45,7 +45,7 @@ static IDeckLinkDisplayMode		*detectedDisplayMode = NULL;
 
 int	OutputGraphic (IDeckLinkDisplayMode *deckLink);
 void GdiDraw (IDeckLinkVideoFrame* theFrame);
-int	CheckFormatDetect (IDeckLinkAttributes		*deckLinkAttributes);
+int	CheckFormatDetect (IDeckLinkProfileAttributes		*deckLinkAttributes);
 
 DeckLinkKeyerDelegate::DeckLinkKeyerDelegate()
 	: m_refCount(1)
@@ -177,10 +177,9 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	int						numDevices = 0; 
 	HRESULT					result;
-	IDeckLinkAttributes		*deckLinkAttributes = NULL;
+	IDeckLinkProfileAttributes		*deckLinkAttributes = NULL;
 	HRESULT					attributeResult;
 	BOOL					keyingSupported;
-	BOOL					HDkeyingSupported;
 	int						selectedMode = 0;
 
 	printf("GDI Keyer Sample Application\n\n"); 
@@ -218,10 +217,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			_bstr_t deviceName(deviceNameBSTR);		
 
 			printf("Found Blackmagic device: %s\n", (char*)deviceName);
-			attributeResult = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+			attributeResult = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 			if (attributeResult != S_OK)
 			{
-				fprintf(stderr, "Could not obtain the IDeckLinkAttributes interface");
+				fprintf(stderr, "Could not obtain the IDeckLinkProfileAttributes interface");
 				return 1;
 			}
 			else
@@ -232,11 +231,6 @@ int _tmain(int argc, _TCHAR* argv[])
 					IDeckLinkDisplayModeIterator* displayModeIterator = NULL;
 					IDeckLinkDisplayMode* deckLinkDisplayMode = NULL;
 
-					attributeResult = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHDKeying, &HDkeyingSupported);
-					if (attributeResult == S_OK && HDkeyingSupported)
-						printf("HD Mode keying supported.\n");
-					else
-						printf("SD Mode Keying supported.\n");
 					// check if automode detection support - if so, use it for autodetection				
 					if (CheckFormatDetect(deckLinkAttributes) == 0)
 					{
@@ -249,6 +243,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						else
 						{
 							int		index = 0;
+							BOOL	modeSupported;
 							if (deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
 							{
 								fprintf(stderr, "Could not obtain the display mode iterator\n");
@@ -264,21 +259,29 @@ int _tmain(int argc, _TCHAR* argv[])
 									BMDTimeValue	frameRateDuration;
 									BMDTimeScale	frameRateScale;
 
-									// Obtain the display mode's properties
-									modeWidth = deckLinkDisplayMode->GetWidth();
-									modeHeight = deckLinkDisplayMode->GetHeight();
-									deckLinkDisplayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
-									if ((deckLinkDisplayMode->GetWidth() > 720) && !HDkeyingSupported)
-										continue;
-
-									if (deckLinkDisplayMode->GetName(&displayModeBSTR) == S_OK)
+									if (deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(),
+																			 bmdFormat8BitARGB, bmdSupportedVideoModeKeying, nullptr, &modeSupported) != S_OK || !modeSupported)
 									{
-										_bstr_t			modeName(displayModeBSTR, false);
-										// Skip HD modes on cards such as DeckLink SDI (only PAL/NTSC are supported for keying)
-										printf("%d %-20s \t %d x %d \t %g FPS\n", index, (char*)modeName, modeWidth, modeHeight, (double)frameRateScale / (double)frameRateDuration);					
+										// Keying not supported in this mode
 									}
+									else
+									{
+
+										// Obtain the display mode's properties
+										modeWidth = deckLinkDisplayMode->GetWidth();
+										modeHeight = deckLinkDisplayMode->GetHeight();
+										deckLinkDisplayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
+
+										if (deckLinkDisplayMode->GetName(&displayModeBSTR) == S_OK)
+										{
+											_bstr_t			modeName(displayModeBSTR, false);
+											printf("%d %-20s \t %d x %d \t %g FPS\n", index, (char*)modeName, modeWidth, modeHeight, (double)frameRateScale / (double)frameRateDuration);					
+										}
+										index++;
+
+									}
+
 									deckLinkDisplayMode->Release();
-									index++;
 								}
 								displayModeIterator->Release();
 
@@ -297,14 +300,18 @@ int _tmain(int argc, _TCHAR* argv[])
 									{
 										while(displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
 										{
-											if (selectedMode == modeCount)
+											if (deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(),
+																			 		 bmdFormat8BitARGB, bmdSupportedVideoModeKeying, nullptr, &modeSupported) == S_OK && modeSupported)
 											{
-												OutputGraphic(deckLinkDisplayMode);
-												deckLinkDisplayMode->Release();
-												break;
+												if (selectedMode == modeCount)
+												{
+													OutputGraphic(deckLinkDisplayMode);
+													deckLinkDisplayMode->Release();
+													break;
+												}
+												modeCount++;
 											}
 											deckLinkDisplayMode->Release();
-											modeCount++;
 										}										
 										displayModeIterator->Release();
 									}									
@@ -412,7 +419,7 @@ int	OutputGraphic (IDeckLinkDisplayMode* deckLinkDisplayMode)
 	return 0;	
 }
 
-int		CheckFormatDetect (IDeckLinkAttributes		*deckLinkAttributes)
+int		CheckFormatDetect (IDeckLinkProfileAttributes		*deckLinkAttributes)
 {
 	int			result = 0;
 	HRESULT		attributeResult;

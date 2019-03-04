@@ -41,23 +41,25 @@ public:
     // IDeckLinkInputCallback interface
 	virtual HRESULT             VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newDisplayMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags);
 	virtual HRESULT             VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFrame* videoFrame, /* in */ IDeckLinkAudioInputPacket* audioPacket);
-    
+	
     // IUnknown needs only a dummy implementation
 	virtual HRESULT             QueryInterface (REFIID iid, LPVOID *ppv);
 	virtual ULONG               AddRef();
 	virtual ULONG               Release();
     
     NSString*                   getDeviceName() { return (NSString*)deviceName; };
-	NSMutableArray*             getDisplayModeNames();
 	bool                        deviceSupportsFormatDetection() { return supportFormatDetection; };
 	bool                        isCapturing() { return currentlyCapturing; };
-	bool                        startCapture(int videoModeIndex, IDeckLinkScreenPreviewCallback* screenPreviewCallback);
+	bool                        startCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode);
 	void                        stopCapture();
+	BMDVideoConnection          getInputConnections() { return (BMDVideoConnection) supportedInputConnections; };
     
     // public members
     IDeckLink*                              deckLink;
 	IDeckLinkInput*                         deckLinkInput;
+	IDeckLinkConfiguration*					deckLinkConfig;
 	IDeckLinkHDMIInputEDID*                 deckLinkHDMIInputEDID;
+	IDeckLinkProfileManager*				deckLinkProfileManager;
     bool                                    supportFormatDetection;
     bool                                	currentlyCapturing;
     
@@ -68,9 +70,29 @@ private:
     
     
     CapturePreviewAppDelegate*              uiDelegate;
-    std::vector<IDeckLinkDisplayMode*>      modeList;
     CFStringRef                             deviceName;
+	int64_t									supportedInputConnections;
     int32_t                                 refCount;
+};
+
+class ProfileCallback : public IDeckLinkProfileCallback
+{
+private:
+	CapturePreviewAppDelegate*		uiDelegate;
+	int32_t							refCount;
+	
+public:
+	ProfileCallback(CapturePreviewAppDelegate* uiDelegate);
+	virtual ~ProfileCallback() {}
+	
+	// IDeckLinkProfileCallback interface
+	virtual HRESULT		ProfileChanging (IDeckLinkProfile *profileToBeActivated, bool streamsWillBeForcedToStop);
+	virtual HRESULT		ProfileActivated (IDeckLinkProfile *activatedProfile);
+	
+	// IUnknown needs only a dummy implementation
+	virtual HRESULT		QueryInterface (REFIID iid, LPVOID *ppv);
+	virtual ULONG		AddRef ();
+	virtual ULONG		Release ();
 };
 
 class DeckLinkDeviceDiscovery :  public IDeckLinkDeviceNotificationCallback
@@ -89,7 +111,7 @@ public:
     // IDeckLinkDeviceArrivalNotificationCallback interface
     virtual HRESULT     DeckLinkDeviceArrived (/* in */ IDeckLink* deckLinkDevice);
 	virtual HRESULT     DeckLinkDeviceRemoved (/* in */ IDeckLink* deckLinkDevice);
-    
+	
     // IUnknown needs only a dummy implementation
 	virtual HRESULT		QueryInterface (REFIID iid, LPVOID *ppv);
 	virtual ULONG		AddRef ();

@@ -1,8 +1,11 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf600
-\cocoascreenfonts1{\fonttbl\f0\fnil\fcharset0 LucidaGrande-Bold;\f1\fnil\fcharset0 LucidaGrande;\f2\froman\fcharset0 Times-Roman;
-\f3\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;\red21\green21\blue21;\red38\green38\blue38;}
-{\*\expandedcolortbl;;\csgenericrgb\c8235\c8235\c8235;\csgenericrgb\c14902\c14902\c14902;}
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf400
+\cocoascreenfonts1{\fonttbl\f0\fnil\fcharset0 LucidaGrande-Bold;\f1\fnil\fcharset0 LucidaGrande;\f2\fnil\fcharset0 HelveticaNeue;
+\f3\froman\fcharset0 Times-Bold;\f4\froman\fcharset0 Times-Roman;\f5\fswiss\fcharset0 Helvetica;
+\f6\fswiss\fcharset0 Helvetica-Bold;}
+{\colortbl;\red255\green255\blue255;\red21\green21\blue21;\red0\green0\blue0;\red22\green22\blue21;
+\red38\green38\blue38;}
+{\*\expandedcolortbl;;\csgenericrgb\c8235\c8235\c8235;\cssrgb\c0\c0\c0;\cssrgb\c11373\c11373\c10588;
+\csgenericrgb\c14902\c14902\c14902;}
 {\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{none\}.}{\leveltext\leveltemplateid1\'01.;}{\levelnumbers;}\fi-360\li720\lin720 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid2\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li1440\lin1440 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid3\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li2160\lin2160 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid4\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li2880\lin2880 }{\listname ;}\listid1}
 {\list\listtemplateid2\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{none\}.}{\leveltext\leveltemplateid101\'01.;}{\levelnumbers;}\fi-360\li720\lin720 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid102\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li1440\lin1440 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid103\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li2160\lin2160 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid104\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li2880\lin2880 }{\listname ;}\listid2}}
 {\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}}
@@ -10,7 +13,7 @@
 \deftab720
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\tx13563\pardeftab720\partightenfactor0
 
-\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 10.11.4\
+\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 11.0\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\partightenfactor0
 \cf0 \
 
@@ -18,7 +21,558 @@
 \
 \pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 10.11.4\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 11.0\
+\
+	- New Types\
+\
+		- BMDSupportedVideoModeFlags\
+\
+			
+\f1\b0 - Enumerates the possible video modes flags when calling 
+\f0\b DoesSupportVideoMode
+\f1\b0  methods
+\f0\b \
+\
+		- BMDProfileID\
+			\
+			
+\f1\b0 - Enumerates the possible profiles for a device\
+\
+
+\f0\b 		- BMDDuplexMode
+\f1\b0 \
+\
+			- Enumerate the duplex mode corresponding to a profile
+\f0\b \
+\
+	- Updated Types\
+\
+		- BMDDisplayMode\
+\
+\cf2 \expnd0\expndtw0\kerning0
+			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdModeHD1080p4795\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdModeHD1080p48\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdModeHD1080p9590\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdModeHD1080p96\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdModeHD1080p100\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdModeHD1080p11988\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdModeHD1080p120\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode2kDCI4795\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode2kDCI48\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode2kDCI9590\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode2kDCI96\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode2kDCI100\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode2kDCI11988\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode2kDCI120\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4K2160p4795\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4K2160p48\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4K2160p9590\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4K2160p96\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4K2160p100\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4K2160p11988\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4K2160p120\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4kDCI4795\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4kDCI48\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4kDCI9590\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4kDCI96\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4kDCI100\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4kDCI11988\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode4kDCI120\
+\cf2 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode8K4320p4795\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode8K4320p48\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode8kDCI4795\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 			
+\f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
+\f0\b \expnd0\expndtw0\kerning0
+\CocoaLigature1 bmdMode8kDCI48\kerning1\expnd0\expndtw0 \CocoaLigature0 \
+\CocoaLigature1 \
+		- BMDDeckLinkAttributeID\
+\
+			- 
+\f1\b0 added
+\f0\b  BMDDeckLinkSupportsHighFrameRateTimecode\
+				
+\f1\b0 - Flag to determine whether if the device supports ATC_HFRTC timecode 
+\f0\b \
+\
+			- 
+\f1\b0 added
+\f0\b  BMDDeckLinkProfileID\
+				
+\f1\b0 - The identifier of the profile corresponding to the 
+\f0\b IDeckLinkProfileAttributes 
+\f1\b0 interface
+\f0\b \
+\
+			- 
+\f1\b0 added
+\f0\b  BMDDeckLinkSupportsSynchronizeToCaptureGroup\
+
+\f1\b0 				- Flag to determine whether device supports grouping of inputs for synchronized capture\
+
+\f0\b \
+			- 
+\f1\b0 added
+\f0\b  BMDDeckLinkSupportsSynchronizeToPlaybackGroup\
+
+\f1\b0 				- Flag to determine whether device supports grouping of outputs for synchronized playback \
+\
+\cf3 \expnd0\expndtw0\kerning0
+			
+\f0\b - 
+\f1\b0 added
+\f0\b  BMDDeckLinkDuplex
+\f1\b0 \
+				- The duplex mode \cf0 \kerning1\expnd0\expndtw0 for the profile corresponding to the 
+\f0\b IDeckLinkProfileAttributes 
+\f1\b0 interface\
+
+\f0\b \
+			- 
+\f1\b0 deprecated
+\f0\b  BMDDeckLinkPairedDevicePersistentID\
+		
+\f1\b0 		- Paired devices are determined by profile group
+\f0\b \
+			\
+			- 
+\f1\b0 deprecated
+\f0\b  BMDDeckLinkSupportsDuplexModeConfiguration\
+				
+\f1\b0 - Support of duplex mode can be determined using 
+\f0\b IDeckLinkProfileIterator
+\f1\b0 \
+
+\f0\b \
+
+\f1\b0 			- deprecated 
+\f0\b BMDDeckLinkSupportsHDKeying\
+				- 
+\f1\b0 Keying support for a particular video mode should be determined with 
+\f0\b IDeckLinkOutput::DoesSupportVideoMode 
+\f1\b0 with flag 
+\f0\b \cf3 \expnd0\expndtw0\kerning0
+bmdSupportedVideoModeKeying\
+\
+			- 
+\f1\b0 deprecated
+\f0\b  BMDDeckLinkSupportsFullDuplex\
+				
+\f1\b0 - Full duplex support can be determined by 
+\f0\b BMDDeckLinkDuplex
+\f1\b0  profile attribute\
+\
+
+\f0\b \cf0 \kerning1\expnd0\expndtw0 		- BMDDeckLinkConfigurationID\
+			\
+			- 
+\f1\b0 added
+\f0\b  bmdDeckLinkConfigCaptureGroup\
+			
+\f1\b0 	- Provides group identifier to synchronize the capture from multiple devices 
+\f0\b \
+\
+			- 
+\f1\b0 added
+\f0\b  bmdDeckLinkConfigPlaybackGroup\
+			
+\f1\b0 	- Provides group identifier to synchronize the playback on multiple devices 
+\f0\b \
+\
+			- 
+\f1\b0 deprecated
+\f0\b  bmdDeckLinkConfigDuplexMode\
+			
+\f1\b0 	- Duplex mode is now configured by activating profile
+\f0\b \
+\
+		- BMDPixelFormat\
+	\
+			- 
+\f1\b0 added 
+\f0\b bmdFormatUnspecified\
+				
+\f1\b0 - Provides support for unspecified Pixel Format for 
+\f0\b DoesSupportVideoMode
+\f1\b0  methods
+\f0\b \
+\
+		- BMDTimecodeFormat\
+\
+			- 
+\f1\b0 added 
+\f0\b bmdTimecodeRP188HighFrameRate\
+				
+\f1\b0 - Provides support for ATC_HFRTC timecode as specified in SMPTE ST 12-3
+\f0\b \
+\
+		- BMDVideoConnection\
+\
+			- 
+\f1\b0 added 
+\f0\b\fs26 bmdVideoConnectionUnspecified
+\fs24 \
+				
+\f1\b0 - Provides support for unspecified video connection for 
+\f0\b DoesSupportVideoMode
+\f1\b0  methods
+\f0\b \
+\
+		- BMDVideoInputFlags\
+\
+			- 
+\f1\b0 added 
+\f0\b\fs26 bmdVideoInputSynchronizeToCaptureGroup
+\f2\b0 \
+		
+\f1 		- Enable an input to be synchronized with other inputs in the same capture group
+\f0\b\fs24 \
+\
+		- BMDVideoOutputFlags\
+\
+			- 
+\f1\b0 added 
+\f0\b\fs26 bmdVideoOutputSynchronizeToPlaybackGroup
+\f2\b0 \
+		
+\f1 		- Enable an output to be synchronized with other outputs in the same playback group\
+\
+		
+\f0\b - BMDDeckLinkStatusID
+\f1\b0 \
+			\
+			- deprecated 
+\f0\b bmdDeckLinkStatusDuplexMode
+\f1\b0 \
+				- The current duplex mode can be determined by querying attribute 
+\f0\b\fs24 \cf3 \expnd0\expndtw0\kerning0
+BMDDeckLinkDuplex
+\f1\b0  for the active profile
+\f0\b \cf0 \kerning1\expnd0\expndtw0 \
+\
+	- Deprecated Types\
+		\
+		- BMDDuplexMode\
+			
+\f1\b0 - Duplex mode is set by activating profile.
+\f0\b 		\
+\
+		- BMDDuplexStatus\
+			
+\f1\b0 - Duplex status 
+\fs26 can be determined by querying attribute 
+\f0\b\fs24 \cf3 \expnd0\expndtw0\kerning0
+BMDDeckLinkDuplex
+\f1\b0  for the active profile
+\f0\b \cf0 \kerning1\expnd0\expndtw0 \
+\
+		- BMDDisplayModeSupport\
+			
+\f1\b0 - 
+\f0\b DoesSupportVideoMode
+\f1\b0  methods instead return boolean\
+
+\f0\b \
+	- New Interfaces\
+\
+		- IDeckLinkProfileManager\
+	\
+
+\f1\b0 			- New interface to manage DeckLink devices that have multiple profiles\
+
+\f0\b \
+		- IDeckLinkProfileIterator\
+	\
+
+\f1\b0 			- \expnd0\expndtw0\kerning0
+New interface representing an iterator that enumerates the available profiles for a device\
+\
+		- 
+\f0\b IDeckLinkProfile\
+			\
+
+\f1\b0 			- New interface representing a device profile\
+\
+
+\f0\b 		- IDeckLinkProfileCallback\
+\
+
+\f1\b0 			- New interface providing callbacks to help manage change in profiles\
+\
+
+\f0\b 		- IDeckLinkProfileAttributes\
+			\
+
+\f1\b0 			- New interface representing the device attributes for a profile (replaces 
+\f0\b IDeckLinkAttributes
+\f1\b0  interface)\
+
+\f0\b \
+\kerning1\expnd0\expndtw0 	- Updated Interfaces\
+\
+		- IDeckLink\
+			\
+		
+\f1\b0 	- QueryInterface supports 
+\f0\b IDeckLinkProfileAttributes
+\f1\b0 , 
+\f0\b IDeckLInkProfile
+\f1\b0  and 
+\f0\b IDeckLinkProfileManager
+\f1\b0  interfaces
+\f0\b \
+\
+		- IDeckLinkOutput\
+	\
+
+\f1\b0 			- The 
+\f0\b DoesSupportVideoMode
+\f1\b0  method parameter list has been modified  \
+			- New 
+\f0\b GetDisplayMode
+\f1\b0  method to return 
+\f0\b IDeckLinkDisplayMode
+\f1\b0  interface
+\f0\b \
+\
+		- IDeckLinkInput\
+\
+
+\f1\b0 			- The 
+\f0\b DoesSupportVideoMode
+\f1\b0  method parameter list has been modified  \
+			- New 
+\f0\b GetDisplayMode
+\f1\b0  method to return 
+\f0\b IDeckLinkDisplayMode
+\f1\b0  interface
+\f0\b \
+\
+		- IDeckLinkEncoderInput\
+\
+
+\f1\b0 			- The 
+\f0\b DoesSupportVideoMode
+\f1\b0  method parameter list has been modified  \
+			- New 
+\f0\b GetDisplayMode
+\f1\b0  method to return 
+\f0\b IDeckLinkDisplayMode
+\f1\b0  interface\
+
+\f0\b \
+	- Deprecated Interfaces\
+\
+		- IDeckLinkAttributes\
+			\
+
+\f1\b0 			- Replaced by 
+\f0\b IDeckLinkProfileAttributes
+\f1\b0  interface
+\f0\b \
+\
+	- New Samples\
+\
+		- CapturePreview\
+\
+
+\f1\b0 			- Added Linux sample to demonstrate OpenGL preview with Qt OpenGL widget
+\f0\b \
+\
+
+\f1\b0 		- 
+\f0\b SignalGenHDR\
+
+\f1\b0 \
+			- Demonstrates how to create custom video frame that sub-classes the 
+\f0\b \cf4 \expnd0\expndtw0\kerning0
+IDeckLinkVideoFrameMetadataExtensions
+\f1\b0  interface\cf0 \kerning1\expnd0\expndtw0  to output HDR metadata.\
+\
+		- 
+\f0\b ActivateProfile\
+
+\f1\b0 \
+			- Demonstrates how to set the active profile for a device.\
+\
+
+\f0\b 	- New Examples\
+\
+		- SynchronizedCapture\
+\
+
+\f1\b0 			-  Demonstrates synchronized capture across multiple inputs with synchronized clocks.
+\f0\b \
+\
+		- SynchronizedPlayback\
+\
+
+\f1\b0 			-  Demonstrates synchronized playback across multiple outputs with common reference.\
+
+\f0\b \
+	- Updated Samples\
+		\
+		- CapturePreview\
+\
+
+\f1\b0 			- Added support for 
+\f0\b IDeckLinkProfileCallback
+\f1\b0  to notify capture when profile changes\
+			- Added support for ATC_HFRTC timecode\
+			- Added combo-box to select video input connection 
+\f0\b \
+\
+		- SignalGenerator\
+\
+	
+\f1\b0 		- Added support for IDeckLinkProfileCallback to notify capture when profile changes
+\f0\b \
+\
+		- RP188VitcOutput\
+			\
+
+\f1\b0 			- Added support for ATC_HFRTC timecode\
+\
+		- 
+\f0\b DeviceList\
+\
+			
+\f1\b0 - Video modes table split to display support for different connections, link-widths and fill/key 
+\f0\b \
+		 \
+
+\f1\b0 		- 
+\f0\b All Windows C++ samples\
+			\
+			- 
+\f1\b0 Windows C++ samples are pre-built as 64-bit applications.\
+\
+
+\f0\b \
+Changes in Blackmagic DeckLink SDK 10.11.4\
 \
 	- New Types\
 		\
@@ -113,13 +667,11 @@ BMDColorspace \
 			\
 			
 \f1\b0 - Enumerates the colorspace for a video frame\
-\pard\pardeftab720\partightenfactor0
 \cf0 \uc0\u8232 \kerning1\expnd0\expndtw0 	- 
 \f0\b Updated Types\
 \
 		- BMDDisplayMode\
 \
-\pard\pardeftab720\partightenfactor0
 \cf2 \expnd0\expndtw0\kerning0
 			
 \f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
@@ -253,24 +805,22 @@ BMDColorspace \
 \
 		- \cf2 \expnd0\expndtw0\kerning0
 BMDDeckLinkAttributeID
-\f2\fs26\fsmilli13333  
+\f3\fs26\fsmilli13333  
 \f0\fs24 \cf0 \kerning1\expnd0\expndtw0 \
 \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \cf0 \expnd0\expndtw0\kerning0
+\f1\b0 \expnd0\expndtw0\kerning0
 			- added 
 \f0\b \kerning1\expnd0\expndtw0 BMDDeckLinkSupportsColorspaceMetadata\cf2 \expnd0\expndtw0\kerning0
  \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \cf2 				- Identifies whether the device supports transport of colorspace metadata \
+\f1\b0 				- Identifies whether the device supports transport of colorspace metadata \
 
 \f0\b \cf0 \kerning1\expnd0\expndtw0 \
 \pard\pardeftab720\partightenfactor0
 \ls1\ilvl0\cf0 		- \cf2 \expnd0\expndtw0\kerning0
 BMDDisplayModeFlags 
-\f2\b0 \cf0 \uc0\u8232 \
+\f4\b0 \cf0 \uc0\u8232 \
 \pard\pardeftab720\partightenfactor0
 \ls1\ilvl2
 \f1 \cf0 			- added 
@@ -298,13 +848,12 @@ BMDDeckLinkFrameMetadataID \cf0 \uc0\u8232 \
 \f0\b \cf0 \kerning1\expnd0\expndtw0 \
 		- \cf2 \expnd0\expndtw0\kerning0
 BMDDeckLinkConfigurationID
-\f2\fs26\fsmilli13333  
-\b0\fs24 \cf0 \
+\f3\fs26\fsmilli13333  
+\f4\b0\fs24 \cf0 \
 
 \f0\b \kerning1\expnd0\expndtw0 \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \cf0 \expnd0\expndtw0\kerning0
+\f1\b0 \expnd0\expndtw0\kerning0
 			- added 
 \f0\b \kerning1\expnd0\expndtw0 bmdDeckLinkConfigRec2020Output
 \f1\b0 \cf2 \expnd0\expndtw0\kerning0
@@ -318,23 +867,22 @@ BMDDeckLinkConfigurationID
 				- Quad-link SDI is output in \cf0 \kerning1\expnd0\expndtw0 Square Division Quad Split mode\cf2 \expnd0\expndtw0\kerning0
  instead of interleaved
 \f0\b \cf0 \kerning1\expnd0\expndtw0 \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \cf0 \
+\f1\b0 \
 	- 
 \f0\b Updated Interfaces\
 \
-		- \cf3 \expnd0\expndtw0\kerning0
+		- \cf5 \expnd0\expndtw0\kerning0
 IDeckLinkAttributes\cf0 \kerning1\expnd0\expndtw0 \
 			\
 
 \f1\b0 			- 
 \f0\b GetFlags
 \f1\b0  for attributes 
-\f0\b \cf3 \expnd0\expndtw0\kerning0
+\f0\b \cf5 \expnd0\expndtw0\kerning0
 BMDDeckLinkHasAnalogVideoOutputGain
 \f1\b0  \cf0 \kerning1\expnd0\expndtw0 and 
-\f0\b \cf3 \expnd0\expndtw0\kerning0
+\f0\b \cf5 \expnd0\expndtw0\kerning0
 BMDDeckLinkCanOnlyAdjustOverallVideoOutputGain 
 \f1\b0 no longer returns E_NOTIMPL\
 \cf0 \kerning1\expnd0\expndtw0 \
@@ -412,7 +960,7 @@ BMDAncillaryPacketFormat \
 			- 
 \f1\b0 added
 \f0\b  bmdFrameCapturedAsPsF
-\f2\fs26\fsmilli13333 \cf2 \expnd0\expndtw0\kerning0
+\f3\fs26\fsmilli13333 \cf2 \expnd0\expndtw0\kerning0
  \
 
 \f1\b0\fs24 				- Frame captured as progressive segmented frame\
@@ -423,29 +971,23 @@ BMDAncillaryPacketFormat \
 			- 
 \f1\b0 added
 \f0\b  BMDDeckLinkDeviceHandle \
-\pard\pardeftab720\partightenfactor0
 
 \f1\b0 \cf0 				- \cf2 String representing an unique identifier for the device.\uc0\u8232 \cf0 \
-\pard\pardeftab720\partightenfactor0
 
-\f0\b \cf0 		- BMDDeckLinkStatusID\
-\pard\pardeftab720\partightenfactor0
+\f0\b 		- BMDDeckLinkStatusID\
 
-\f1\b0 \cf0 \
+\f1\b0 \
 			- added 
 \f0\b \cf2 bmdDeckLinkStatusInterchangeablePanelType \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \cf2 				- Integer representing the interchangeable panel installed (
+\f1\b0 				- Integer representing the interchangeable panel installed (
 \f0\b BMDPanelType
 \f1\b0 )\
-\pard\pardeftab720\partightenfactor0
 \cf0 \
 			- added 
 \f0\b \cf2 bmdDeckLinkStatusReceivedEDID \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \cf2 				- Bytes representing the received EDID from a connected HDMI sink\cf0 \
+\f1\b0 				- Bytes representing the received EDID from a connected HDMI sink\cf0 \
 \
 			- added 
 \f0\b \cf2 bmdDeckLinkStatusDeviceTemperature \
@@ -1602,7 +2144,7 @@ Changes in Blackmagic DeckLink SDK 10.3\
 \f0\b  BMDPixelFormat\
 \pard\pardeftab720\partightenfactor0
 
-\f3\b0 \cf0 \
+\f5\b0 \cf0 \
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b \cf0 \CocoaLigature0 					- 
@@ -1780,7 +2322,7 @@ Changes in Blackmagic DeckLink SDK 9.8\
 \f0\b  BMDPixelFormat\
 \pard\pardeftab720\partightenfactor0
 
-\f3\b0 \cf0 \
+\f5\b0 \cf0 \
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b \cf0 \CocoaLigature0 					- 
@@ -1800,7 +2342,7 @@ Changes in Blackmagic DeckLink SDK 9.8\
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 \cf0 \CocoaLigature0 					- 
 \f1\b0 added 
-\f3\b \CocoaLigature1 bmdDeckLinkConfigUseDedicatedLTCInput
+\f6\b \CocoaLigature1 bmdDeckLinkConfigUseDedicatedLTCInput
 \f1\b0 \
 \pard\pardeftab720\partightenfactor0
 
@@ -1897,7 +2439,7 @@ Changes in Blackmagic DeckLink SDK 9.6.4\
 \f0\b Added Interfaces\
 \pard\pardeftab720\partightenfactor0
 
-\f3\b0 \cf0 \
+\f5\b0 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \f1 \cf0 		- 
@@ -1982,7 +2524,7 @@ Changes in Blackmagic DeckLink SDK 9.5\
 
 \f1\b0 \
 	- 
-\f3 Custom allocators for both capture and playback now allow full control over all video frame memory allocations
+\f5 Custom allocators for both capture and playback now allow full control over all video frame memory allocations
 \f1 \
 \
 	- 
@@ -2408,7 +2950,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 
 \f1\b0 \
 				- frame packing is only supported on HDMI 1.4a
-\f3 \
+\f5 \
 
 \f1 \
 
@@ -2547,7 +3089,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \f0\b \
 
 \f1\b0 			- new\'a0enumeration of the\'a0dual preview formats available for the DeckLink GL screen preview helper.\'a0
-\f3 \
+\f5 \
 
 \f1 \
 
@@ -2557,7 +3099,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \f0\b \
 
 \f1\b0 			- new\'a0enumeration\'a0of the standard modes where two frames are packed into one
-\f3 \
+\f5 \
 
 \f0\b \
 		-\'a0BMDAudioOutputAnalogAES
@@ -3102,6 +3644,6 @@ Some applications may use third party code under license. For details please ref
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\pardirnatural\partightenfactor0
 
 \fs18 \cf0 \
-\'a9 2018 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
+\'a9 2019 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
 \
-Updated October 23, 2018.}
+Updated February 20, 2019.}

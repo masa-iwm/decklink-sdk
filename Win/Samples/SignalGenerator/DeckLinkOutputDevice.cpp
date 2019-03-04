@@ -33,13 +33,20 @@
 #include "DeckLinkOutputDevice.h"
 
 DeckLinkOutputDevice::DeckLinkOutputDevice(CSignalGeneratorDlg* owner, IDeckLink* deckLink) 
-	: m_uiDelegate(owner), m_deckLink(deckLink), m_refCount(1)
+	: m_uiDelegate(owner), m_deckLink(deckLink), m_deckLinkOutput(NULL),
+	m_deckLinkProfileManager(NULL), m_refCount(1)
 {
 	m_deckLink->AddRef();
 }
 
 DeckLinkOutputDevice::~DeckLinkOutputDevice()
 {
+	if (m_deckLinkProfileManager)
+	{
+		m_deckLinkProfileManager->Release();
+		m_deckLinkProfileManager = NULL;
+	}
+
 	if (m_deckLinkOutput)
 	{
 		m_deckLinkOutput->Release();
@@ -74,6 +81,13 @@ bool DeckLinkOutputDevice::Init()
 		m_deviceName = _T("DeckLink");
 	}
 
+	// Get the profile manager interface
+	// Will return S_OK when the device has > 1 profiles
+	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileManager, (void**)&m_deckLinkProfileManager) != S_OK)
+	{
+		m_deckLinkProfileManager = NULL;
+	}
+
 	return true;
 }
 
@@ -106,12 +120,12 @@ HRESULT	DeckLinkOutputDevice::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG DeckLinkOutputDevice::AddRef(void)
 {
-	return _InterlockedIncrement((volatile long *)&m_refCount);
+	return InterlockedIncrement((volatile long *)&m_refCount);
 }
 
 ULONG DeckLinkOutputDevice::Release(void)
 {
-	ULONG newRefValue = _InterlockedDecrement((volatile long*)&m_refCount);
+	ULONG newRefValue = InterlockedDecrement((volatile long*)&m_refCount);
 	if (newRefValue == 0)
 		delete this;
 	return newRefValue;

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2013 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -30,14 +30,16 @@
 
 #pragma once
 
+#include "resource.h"
 #include "DeckLinkAPI_h.h"
 
 // Custom messages
 #define WM_REFRESH_INPUT_STREAM_DATA_MESSAGE	(WM_APP + 1)
-#define WM_SELECT_VIDEO_MODE_MESSAGE			(WM_APP + 2)
+#define WM_DETECT_VIDEO_MODE_MESSAGE			(WM_APP + 2)
 #define WM_ADD_DEVICE_MESSAGE					(WM_APP + 3)
 #define WM_REMOVE_DEVICE_MESSAGE				(WM_APP + 4)
 #define WM_ERROR_RESTARTING_CAPTURE_MESSAGE		(WM_APP + 5)
+#define WM_UPDATE_PROFILE_MESSAGE				(WM_APP + 6)
 
 typedef struct {
 	// VITC timecodes and user bits for field 1 & 2
@@ -46,13 +48,15 @@ typedef struct {
 	CString	vitcF2Timecode;
 	CString	vitcF2UserBits;
 
-	// RP188 timecodes and user bits (VITC1, VITC2 and LTC)
+	// RP188 timecodes and user bits (VITC1, VITC2, LTC and HFRTC)
 	CString	rp188vitc1Timecode;
 	CString	rp188vitc1UserBits;
 	CString	rp188vitc2Timecode;
 	CString	rp188vitc2UserBits;
 	CString	rp188ltcTimecode;
 	CString	rp188ltcUserBits;
+	CString	rp188hfrtcTimecode;
+	CString	rp188hfrtcUserBits;
 } AncillaryDataStruct;
 
 
@@ -70,12 +74,14 @@ typedef struct {
 	CString minDisplayMasteringLuminance;
 	CString maximumContentLightLevel;
 	CString maximumFrameAverageLightLevel;
+	CString colorspace;
 } HDRMetadataStruct;
 
 // Forward declarations
 class DeckLinkDevice;
 class DeckLinkDeviceDiscovery;
 class PreviewWindow;
+class ProfileCallback;
 
 class CCapturePreviewDlg : public CDialog
 {
@@ -87,23 +93,29 @@ public:
 	
 	// UI-related handlers
 	afx_msg void			OnNewDeviceSelected();
+	afx_msg void			OnInputConnectionSelected();
 	afx_msg void			OnStartStopBnClicked();
 	afx_msg void			OnClose();
 
 	// Custom message handlers
 	afx_msg LRESULT			OnRefreshInputStreamData(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT			OnSelectVideoMode(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT			OnDetectVideoMode(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT			OnAddDevice(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT			OnRemoveDevice(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT			OnErrorRestartingCapture(WPARAM wParam, LPARAM lParam);
-	
+	afx_msg LRESULT			OnProfileUpdate(WPARAM wParam, LPARAM lParam);
+
 	// DeckLinkDevice delegate methods
 	void					ShowErrorMessage(TCHAR* msg, TCHAR* title);
 	void					UpdateFrameData(AncillaryDataStruct& ancillaryData, HDRMetadataStruct& hdrMetadata);
 
+	// ProfileCallback delegate methods
+	void					HaltStreams();
+
 protected:
 	// Internal helper methods
 	void					EnableInterface(bool enabled);
+	void					RefreshInputConnectionList();
 	void					RefreshVideoModeList();
 	void					StartCapture();
 	void					StopCapture();
@@ -112,6 +124,7 @@ protected:
 
 	// UI elements
 	CComboBox				m_deviceListCombo;
+	CComboBox				m_inputConnectionCombo;
 	CButton					m_applyDetectedInputModeCheckbox;
 	CComboBox				m_modeListCombo;
 	CButton					m_startStopButton;
@@ -128,6 +141,8 @@ protected:
 	CStatic					m_rp188Vitc2Ub;
 	CStatic					m_rp188LtcTc;
 	CStatic					m_rp188LtcUb;
+	CStatic					m_rp188HfrtcTc;
+	CStatic					m_rp188HfrtcUb;
 
 	CStatic					m_hdrEotf;
 	CStatic					m_hdrDpRedX;
@@ -142,6 +157,7 @@ protected:
 	CStatic					m_hdrMinDml;
 	CStatic					m_hdrMaxCll;
 	CStatic					m_hdrMaxFall;
+	CStatic					m_colorspace;
 
 	CStatic					m_previewBox;
 	PreviewWindow*			m_previewWindow;
@@ -151,7 +167,9 @@ protected:
 	HDRMetadataStruct			m_hdrMetadata;
 	CCriticalSection			m_critSec; // to synchronise access to the above structures
 	DeckLinkDevice*				m_selectedDevice;
+	BMDVideoConnection			m_selectedInputConnection;
 	DeckLinkDeviceDiscovery*	m_deckLinkDiscovery;
+	ProfileCallback*            m_profileCallback;
 
 	//
 	virtual void			DoDataExchange(CDataExchange* pDX);	// DDX/DDV support

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2009 Blackmagic Design
+** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -26,39 +26,100 @@
 */
 #include "DeckLinkAPI.h"
 #include <stdio.h>
-#include <stdlib.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <list>
+#include <map>
+#include <string>
+#include "platform.h"
 
 // List of known pixel formats and their matching display names
-const BMDPixelFormat	gKnownPixelFormats[]		= {bmdFormat8BitYUV, bmdFormat10BitYUV, bmdFormat8BitARGB, bmdFormat8BitBGRA, bmdFormat10BitRGB, bmdFormat12BitRGB, bmdFormat12BitRGBLE, bmdFormat10BitRGBXLE, bmdFormat10BitRGBX, 0};
-const char *			gKnownPixelFormatNames[]	= {" 8-bit YUV", "10-bit YUV", "8-bit ARGB", "8-bit BGRA", "10-bit RGB", "12-bit RGB", "12-bit RGBLE", "10-bit RGBXLE", "10-bit RGBX", NULL};
+static const std::list<std::pair<BMDPixelFormat, std::string>> gPixelFormats =
+{
+	{ bmdFormat8BitYUV,     "8-bit YUV" },
+	{ bmdFormat10BitYUV,    "10-bit YUV" },
+	{ bmdFormat8BitARGB,    "8-bit ARGB" },
+	{ bmdFormat8BitBGRA,    "8-bit BGRA" },
+	{ bmdFormat10BitRGB,    "10-bit RGB" },
+	{ bmdFormat12BitRGB,    "12-bit RGB" },
+	{ bmdFormat12BitRGBLE,  "12-bit RGBLE" },
+	{ bmdFormat10BitRGBXLE, "10-bit RGBXLE" },
+	{ bmdFormat10BitRGBX,   "10-bit RGBX" },
+};
 
-void	print_attributes (IDeckLink* deckLink);
+static const std::list<std::pair<BMDVideoConnection, std::string>> gConnections =
+{
+	{ bmdVideoConnectionSDI,        "SDI" },
+	{ bmdVideoConnectionHDMI,       "HDMI" },
+	{ bmdVideoConnectionOpticalSDI, "Optical SDI" },
+	{ bmdVideoConnectionComponent,  "Component" },
+	{ bmdVideoConnectionComposite,  "Composite" },
+	{ bmdVideoConnectionSVideo,     "S-Video" },
+};
+
+static const std::list<std::pair<BMDSupportedVideoModeFlags, std::string>> gSDILinks =
+{
+	{ bmdSupportedVideoModeSDISingleLink,	"Single-Link" },
+	{ bmdSupportedVideoModeSDIDualLink,		"Dual-Link" },
+	{ bmdSupportedVideoModeSDIQuadLink,		"Quad-Link" },
+};
+
+static const std::map<uint32_t, const char*> gDuplexModes =
+{
+	{ bmdDuplexInactive, 	"Inactive" },
+	{ bmdDuplexFull, 		"Full" },
+	{ bmdDuplexSimplex, 	"Simplex" },
+	{ bmdDuplexHalf, 		"Half" },
+};
+
+void	print_attributes (IDeckLink* deckLink, bool showConnectorAttributes);
+void	mode_name(IDeckLinkDisplayMode *displayMode, std::string& modeName);
+void	print_output_mode(IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode *displayMode);
+void	print_output_modes_for_setup (IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags);
 void	print_output_modes (IDeckLink* deckLink);
+void	print_input_mode(IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode* displayMode, const char* nameSuffix);
+void	print_input_modes_for_setup (IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, const char* nameSuffix);
 void	print_input_modes (IDeckLink* deckLink);
-void	print_capabilities (IDeckLink* deckLink);
 
 
 int		main (int argc, char** argv)
 {
-	IDeckLinkIterator*		deckLinkIterator;
-	IDeckLink*				deckLink;
-	int						numDevices = 0;
-	HRESULT					result;
+	IDeckLinkIterator*			deckLinkIterator;
+	IDeckLinkAPIInformation*	deckLinkAPIInformation;
+	IDeckLink*					deckLink;
+	IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
+	int							numDevices = 0;
+	HRESULT						result;
 	
 	// Create an IDeckLinkIterator object to enumerate all DeckLink cards in the system
-	deckLinkIterator = CreateDeckLinkIteratorInstance();
-	if (deckLinkIterator == NULL)
+	result = GetDeckLinkIterator(&deckLinkIterator);
+	if (result != S_OK)
 	{
 		fprintf(stderr, "A DeckLink iterator could not be created.  The DeckLink drivers may not be installed.\n");
 		return 1;
 	}
 	
+	// We can get the version of the API like this:
+	result = deckLinkIterator->QueryInterface(IID_IDeckLinkAPIInformation, (void**)&deckLinkAPIInformation);
+	if (result == S_OK)
+	{
+		int64_t			deckLinkVersion;
+		int				dlVerMajor, dlVerMinor, dlVerPoint;
+		
+		// We can also use the BMDDeckLinkAPIVersion flag with GetString
+		deckLinkAPIInformation->GetInt(BMDDeckLinkAPIVersion, &deckLinkVersion);
+		
+		dlVerMajor = (deckLinkVersion & 0xFF000000) >> 24;
+		dlVerMinor = (deckLinkVersion & 0x00FF0000) >> 16;
+		dlVerPoint = (deckLinkVersion & 0x0000FF00) >> 8;
+		
+		printf("DeckLinkAPI version: %d.%d.%d\n", dlVerMajor, dlVerMinor, dlVerPoint);
+		
+		deckLinkAPIInformation->Release();
+	}
+	
 	// Enumerate all cards in this system
 	while (deckLinkIterator->Next(&deckLink) == S_OK)
 	{
-		char *		deviceNameString = NULL;
+		dlstring_t deviceNameString;
 		
 		// Increment the total number of DeckLink cards found
 		numDevices++;
@@ -66,29 +127,50 @@ int		main (int argc, char** argv)
 			printf("\n\n");
 		
 		// *** Print the model name of the DeckLink card
-		result = deckLink->GetModelName((const char **) &deviceNameString);
+		result = deckLink->GetModelName(&deviceNameString);
 		if (result == S_OK)
 		{
-			printf("=============== %s ===============\n\n", deviceNameString);
-			free(deviceNameString);
+			std::string deviceName = DlToStdString(deviceNameString);
+			printf("=============== %s ===============\n\n", deviceName.c_str());
+			DeleteString(deviceNameString);
+		}
+		
+		// Products with multiple subdevices might not be usable if a subdevice is inactive for the current profile
+		bool showIOinfo = true;
+		result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Could not obtain the IDeckLinkProfileAttributes interface - result = %08x\n", result);
+			continue;
 		}
 
-		print_attributes(deckLink);
+		int64_t duplexMode;
+		if (deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &duplexMode) == S_OK && duplexMode == bmdDuplexInactive)
+		{
+			printf("Sub-device has no active connectors for current profile\n\n");
+			showIOinfo = false;
+		}
+
+		deckLinkAttributes->Release();
 		
-		// ** List the video output display modes supported by the card
-		print_output_modes(deckLink);
+		print_attributes(deckLink, showIOinfo);
 		
-		// ** List the video input display modes supported by the card
-		print_input_modes(deckLink);
+		if (showIOinfo)
+		{
 		
-		// ** List the input and output capabilities of the card
-		print_capabilities(deckLink);
+			// ** List the video output display modes supported by the card
+			print_output_modes(deckLink);
+			
+			// ** List the video input display modes supported by the card
+			print_input_modes(deckLink);
+			
+		}
 		
 		// Release the IDeckLink instance when we've finished with it to prevent leaks
 		deckLink->Release();
 	}
 	
-	deckLinkIterator->Release();
+	deckLinkIterator->Release();	
 
 	// If no DeckLink cards were found in the system, inform the user
 	if (numDevices == 0)
@@ -98,49 +180,43 @@ int		main (int argc, char** argv)
 	return 0;
 }
 
-void	print_attributes (IDeckLink* deckLink)
+void	print_attributes (IDeckLink* deckLink, bool showConnectorAttributes)
 {
-	IDeckLinkAttributes*				deckLinkAttributes = NULL;
-	bool								supported;
+	IDeckLinkProfileAttributes*			deckLinkAttributes = NULL;
+	dlbool_t							supported;
 	int64_t								value;
-	char *								serialPortName = NULL;
 	HRESULT								result;
 	
 	// Query the DeckLink for its attributes interface
-	result = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+	result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 	if (result != S_OK)
 	{
-		fprintf(stderr, "Could not obtain the IDeckLinkAttributes interface - result = %08x\n", result);
+		fprintf(stderr, "Could not obtain the IDeckLinkProfileAttributes interface - result = %08x\n", result);
 		goto bail;
 	}
 	
 	// List attributes and their value
 	printf("Attribute list:\n");
 	
-	result = deckLinkAttributes->GetFlag(BMDDeckLinkHasSerialPort, &supported);
+	result = deckLinkAttributes->GetInt(BMDDeckLinkDeviceInterface, &value);
 	if (result == S_OK)
 	{
-		printf(" %-40s %s\n", "Serial port present ?", (supported == true) ? "Yes" : "No");
-	
-		if (supported)
-		{	
-			result = deckLinkAttributes->GetString(BMDDeckLinkSerialPortDeviceName, (const char **) &serialPortName);
-			if (result == S_OK)
-			{
-				printf(" %-40s %s\n", "Serial port name: ", serialPortName);
-				free(serialPortName);
-
-			}
-			else
-			{
-				fprintf(stderr, "Could not query the serial port presence attribute- result = %08x\n", result);
-			}
+		switch(value)
+		{
+			case bmdDeviceInterfacePCI:
+				printf(" %-40s %s\n", "Device Interface:",  "PCI");
+				break;
+			case bmdDeviceInterfaceUSB:
+				printf(" %-40s %s\n", "Device Interface:",  "USB");
+				break;
+			case bmdDeviceInterfaceThunderbolt:
+				printf(" %-40s %s\n", "Device Interface",  "Thunderbolt");
+				break;
 		}
-		
 	}
 	else
 	{
-		fprintf(stderr, "Could not query the serial port presence attribute- result = %08x\n", result);
+		fprintf(stderr, "Could not query the device interface attribute- result = %08x\n", result);
 	}
 
 	result = deckLinkAttributes->GetInt(BMDDeckLinkPersistentID, &value);
@@ -163,62 +239,92 @@ void	print_attributes (IDeckLink* deckLink)
 		printf(" %-40s %s\n", "Device Topological ID:",  "Not Supported on this device");
 	}
 
-    result = deckLinkAttributes->GetInt(BMDDeckLinkNumberOfSubDevices, &value);
-    if (result == S_OK)
-    {
-        printf(" %-40s %" PRId64 "\n", "Number of sub-devices:",  value);
-        if (value != 0)
-        {
-            result = deckLinkAttributes->GetInt(BMDDeckLinkSubDeviceIndex, &value);
-            if (result == S_OK)
-            {
-                printf(" %-40s %" PRId64 "\n", "Sub-device index:",  value);
-            }
-            else
-            {
-                fprintf(stderr, "Could not query the sub-device index attribute- result = %08x\n", result);
-            }
-        }
-    }
-    else
-    {
-        fprintf(stderr, "Could not query the number of sub-device attribute- result = %08x\n", result);
-    }
+	result = deckLinkAttributes->GetInt(BMDDeckLinkNumberOfSubDevices, &value);
+	if (result == S_OK)
+	{
+		printf(" %-40s %lld\n", "Number of sub-devices:",  value);
+		if (value != 0)
+		{
+			result = deckLinkAttributes->GetInt(BMDDeckLinkSubDeviceIndex, &value);
+			if (result == S_OK)
+			{
+				printf(" %-40s %lld\n", "Sub-device index:",  value);
+			}
+			else
+			{
+				fprintf(stderr, "Could not query the sub-device index attribute- result = %08x\n", result);
+			}
+		}
+	}
+	else
+	{
+		fprintf(stderr, "Could not query the number of sub-device attribute- result = %08x\n", result);
+	}
+	
+	if (! showConnectorAttributes)
+		goto bail;
+	
+	result = deckLinkAttributes->GetFlag(BMDDeckLinkHasSerialPort, &supported);
+	if (result == S_OK)
+	{
+		printf(" %-40s %s\n", "Serial port present:",  supported ? "Yes" : "No");
+		if (supported)
+		{
+			dlstring_t name;
+			result = deckLinkAttributes->GetString(BMDDeckLinkSerialPortDeviceName, &name);
+			if (result == S_OK)
+			{
+				std::string	portName = DlToStdString(name);
+				printf(" %-40s %s\n", "Serial port name:",  portName.c_str());
+				
+				DeleteString(name);
+			}
+			else
+			{
+				fprintf(stderr, "Could not query the serial port name attribute- result = %08x\n", result);
+			}
+		}
+		
+	}
+	else
+	{
+		fprintf(stderr, "Could not query the serial port presence attribute- result = %08x\n", result);
+	}
 	
 	result = deckLinkAttributes->GetInt(BMDDeckLinkMaximumAudioChannels, &value);
 	if (result == S_OK)
 	{
-		printf(" %-40s %" PRId64 "\n", "Number of audio channels:",  value);
+		printf(" %-40s %lld\n", "Number of audio channels:",  value);
 	}
 	else
 	{
 		fprintf(stderr, "Could not query the number of supported audio channels attribute- result = %08x\n", result);
 	}
-	
+
 	result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &supported);
 	if (result == S_OK)
 	{
-		printf(" %-40s %s\n", "Input mode detection supported ?", (supported == true) ? "Yes" : "No");
+		printf(" %-40s %s\n", "Input mode detection supported ?", supported ? "Yes" : "No");
 	}
 	else
 	{
 		fprintf(stderr, "Could not query the input mode detection attribute- result = %08x\n", result);
 	}
 
-	result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsFullDuplex, &supported);
+	result = deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &value);
 	if (result == S_OK)
 	{
-		printf(" %-40s %s\n", "Full duplex operation supported ?", (supported == true) ? "Yes" : "No");
+		printf(" %-40s %s\n", "Duplex Mode:", gDuplexModes.at(value));
 	}
 	else
 	{
-		fprintf(stderr, "Could not query the full duplex operation supported attribute- result = %08x\n", result);
+		fprintf(stderr, "Could not query the of sub-device duplex attribute- result = %08x\n", result);
 	}
-
+	
 	result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &supported);
 	if (result == S_OK)
 	{
-		printf(" %-40s %s\n", "Internal keying supported ?", (supported == true) ? "Yes" : "No");
+		printf(" %-40s %s\n", "Internal keying supported ?", supported ? "Yes" : "No");
 	}
 	else
 	{
@@ -228,38 +334,141 @@ void	print_attributes (IDeckLink* deckLink)
 	result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsExternalKeying, &supported);
 	if (result == S_OK)
 	{
-		printf(" %-40s %s\n", "External keying supported ?", (supported == true) ? "Yes" : "No");
+		printf(" %-40s %s\n", "External keying supported ?", supported ? "Yes" : "No");
 	}
 	else
 	{
 		fprintf(stderr, "Could not query the external keying attribute- result = %08x\n", result);
 	}
 	
-	result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHDKeying, &supported);
-	if (result == S_OK)
-	{
-		printf(" %-40s %s\n", "HD-mode keying supported ?", (supported == true) ? "Yes" : "No");
-	}
-	else
-	{
-		fprintf(stderr, "Could not query the HD-mode keying attribute- result = %08x\n", result);
-	}
-	
 bail:
 	printf("\n");
 	if(deckLinkAttributes != NULL)
 		deckLinkAttributes->Release();
+}
+
+void mode_name(IDeckLinkDisplayMode *displayMode, std::string& modeName)
+{
+	HRESULT					result;
+	dlstring_t				displayModeString;
+
+	result = displayMode->GetName(&displayModeString);
+	if (result != S_OK)
+	{
+		modeName.clear();
+		return;
+	}
+
+	modeName = DlToStdString(displayModeString);
+	DeleteString(displayModeString);
+}
+
+void print_output_mode(IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode *displayMode)
+{
+	std::string				modeName;
+	int						modeWidth;
+	int						modeHeight;
+	BMDTimeValue			frameRateDuration;
+	BMDTimeScale			frameRateScale;
+	bool					printedMode = false;
+	int						unsupportedCount = 0;
+	BMDDisplayMode			requestedMode = displayMode->GetDisplayMode();
+	BMDDisplayMode			actualMode = requestedMode;
+
+	// Print the supported pixel formats for this display mode
+	for (auto pixelFormat: gPixelFormats)
+	{
+		dlbool_t supported;
+		if (deckLinkOutput->DoesSupportVideoMode(connection, requestedMode, pixelFormat.first, flags, &actualMode, &supported) == S_OK && supported)
+		{
+			if (! printedMode)
+			{
+				// Mode properties
+				mode_name(displayMode, modeName);
+				displayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
+				bool requested3D = (flags & bmdSupportedVideoModeDualStream3D) != 0;
+				bool converted = actualMode != requestedMode;
+				modeWidth = displayMode->GetWidth();
+				modeHeight = displayMode->GetHeight();
+				
+				std::string tag;
+				if (requested3D)
+					tag = "3D";
+				if (converted)
+					tag += "*";
+				
+				printf(" %-20s %-12s \t %4d x %4d \t %7g FPS\t", modeName.c_str(), tag.c_str(), modeWidth, modeHeight, (double)frameRateScale / (double)frameRateDuration);
+				
+				// Show pixel formats already found to be unsupported
+				while (unsupportedCount--)
+				{
+					printf("%-15s", "------");
+				}
+				
+				printedMode = true;
+			}
+			
+			printf("%-15s", pixelFormat.second.c_str());
+		}
+		else
+		{
+			if (printedMode)
+				printf("%-15s", "------");
+			else
+				unsupportedCount++;
+		}
+	}
 	
+	if (printedMode)
+	{
+		
+		if (actualMode != requestedMode)
+		{
+			// Append converted-to mode
+			if (deckLinkOutput->GetDisplayMode(actualMode, &displayMode) == S_OK)
+			{
+				mode_name(displayMode, modeName);
+				displayMode->Release();
+				printf("* Converted to %s", modeName.c_str());
+			}
+		}
+		
+		printf("\n");
+	}
+}
+
+void	print_output_modes_for_setup (IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags)
+{
+	IDeckLinkDisplayModeIterator*	displayModeIterator = NULL;
+	IDeckLinkDisplayMode*			displayMode = NULL;
+	HRESULT							result;
+	
+	// Obtain an IDeckLinkDisplayModeIterator to enumerate the display modes supported on output
+	result = deckLinkOutput->GetDisplayModeIterator(&displayModeIterator);
+	if (result != S_OK)
+	{
+		fprintf(stderr, "Could not obtain the video output display mode iterator - result = %08x\n", result);
+		return;
+	}
+	
+	while (displayModeIterator->Next(&displayMode) == S_OK)
+	{
+		print_output_mode(deckLinkOutput, connection, flags, displayMode);
+		displayMode->Release();
+	}
+	
+	displayModeIterator->Release();
 }
 
 void	print_output_modes (IDeckLink* deckLink)
 {
 	IDeckLinkOutput*					deckLinkOutput = NULL;
-	IDeckLinkDisplayModeIterator*		displayModeIterator = NULL;
-	IDeckLinkDisplayMode*				displayMode = NULL;
-	HRESULT								result;	
-	
-	// Query the DeckLink for its configuration interface
+	IDeckLinkProfileAttributes*			deckLinkAttributes = NULL;
+	HRESULT								result;
+	int64_t								ports;
+	dlbool_t							keyingSupported;
+
+	// Query the DeckLink for its output interface
 	result = deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput);
 	if (result != S_OK)
 	{
@@ -267,80 +476,165 @@ void	print_output_modes (IDeckLink* deckLink)
 		goto bail;
 	}
 	
-	// Obtain an IDeckLinkDisplayModeIterator to enumerate the display modes supported on output
-	result = deckLinkOutput->GetDisplayModeIterator(&displayModeIterator);
+	result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 	if (result != S_OK)
 	{
-		fprintf(stderr, "Could not obtain the video output display mode iterator - result = %08x\n", result);
+		fprintf(stderr, "Could not obtain the IDeckLinkAttributes interface - result = %08x\n", result);
 		goto bail;
 	}
-	
+
+	result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &keyingSupported);
+
+	if (result != S_OK || !keyingSupported)
+		result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsExternalKeying, &keyingSupported);
+
 	// List all supported output display modes
-	printf("Supported video output display modes and pixel formats:\n");
+	printf("Supported video output display modes:\n\n");
+
+	result = deckLinkAttributes->GetInt(BMDDeckLinkVideoOutputConnections, &ports);
+
+	if (result != S_OK)
+		goto bail;
+
+	for (auto connection: gConnections)
+	{
+		if (ports & connection.first)
+		{
+			if (connection.first == bmdVideoConnectionSDI || connection.first == bmdVideoConnectionOpticalSDI)
+			{
+				for (std::list<std::pair<BMDSupportedVideoModeFlags, std::string>>::const_reverse_iterator links = gSDILinks.rbegin(); links != gSDILinks.rend(); links++)
+				{
+					dlbool_t multilinkSupported = false;
+					if (links->first & bmdSupportedVideoModeSDIDualLink)
+					{
+						if (FAILED(deckLinkAttributes->GetFlag(BMDDeckLinkSupportsDualLinkSDI, &multilinkSupported)) || ! multilinkSupported)
+							continue;
+					}
+					else if (links->first & bmdSupportedVideoModeSDIQuadLink)
+					{
+						if (FAILED(deckLinkAttributes->GetFlag(BMDDeckLinkSupportsQuadLinkSDI, &multilinkSupported)) || ! multilinkSupported)
+							continue;
+					}
+					
+					printf("%s %s output:\n", connection.second.c_str(), links->second.c_str());
+					print_output_modes_for_setup(deckLinkOutput, connection.first, links->first);
+					if (multilinkSupported)
+						print_output_modes_for_setup(deckLinkOutput, connection.first, (BMDSupportedVideoModeFlags)(links->first | bmdSupportedVideoModeDualStream3D));
+					printf("\n");
+				}
+				
+				if (keyingSupported)
+				{
+					printf("%s fill and key outputs:\n", connection.second.c_str());
+					print_output_modes_for_setup(deckLinkOutput, connection.first, bmdSupportedVideoModeKeying);
+					printf("\n");
+				}
+				
+			}
+			else
+			{
+				
+				printf("%s output:\n", connection.second.c_str());
+				print_output_modes_for_setup(deckLinkOutput, connection.first, bmdSupportedVideoModeDefault);
+				print_output_modes_for_setup(deckLinkOutput, connection.first, bmdSupportedVideoModeDualStream3D);
+				printf("\n");
+				
+			}
+		 }
+	}
+	
+bail:
+	if (deckLinkAttributes)
+		deckLinkAttributes->Release();
+
+	if (deckLinkOutput)
+		deckLinkOutput->Release();
+
+	printf("\n");
+}
+
+void print_input_mode(IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode* displayMode, const char* nameSuffix)
+{
+	std::string				modeName;
+	int						modeWidth;
+	int						modeHeight;
+	BMDTimeValue			frameRateDuration;
+	BMDTimeScale			frameRateScale;
+	bool					printedMode = false;
+	int						unsupportedCount = 0;
+	
+	// Print the supported pixel formats for this display mode
+	for (auto pixelFromat: gPixelFormats)
+	{
+		dlbool_t supported;
+
+		if (deckLinkInput->DoesSupportVideoMode(connection, displayMode->GetDisplayMode(), pixelFromat.first, flags, &supported) == S_OK && supported)
+		{
+			if (! printedMode)
+			{
+				// Mode properties
+				mode_name(displayMode, modeName);
+				modeWidth = displayMode->GetWidth();
+				modeHeight = displayMode->GetHeight();
+				displayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
+				
+				printf(" %-20s %-12s \t %4d x %4d \t %7g FPS\t", modeName.c_str(), nameSuffix, modeWidth, modeHeight, (double)frameRateScale / (double)frameRateDuration);
+				
+				// Show pixel formats already found to be unsupported
+				while (unsupportedCount--)
+				{
+					printf("%-15s", "------");
+				}
+				
+				printedMode = true;
+			}
+			
+			printf("%-15s", pixelFromat.second.c_str());
+		}
+		else
+		{
+			if (printedMode)
+				printf("%-15s", "------");
+			else
+				unsupportedCount++;
+		}
+	}
+	
+	if (printedMode)
+		printf("\n");
+}
+
+void	print_input_modes_for_setup (IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, const char* nameSuffix)
+{
+	IDeckLinkDisplayModeIterator*   displayModeIterator = NULL;
+	IDeckLinkDisplayMode*           displayMode = NULL;
+	HRESULT							result;
+	
+	// Obtain an IDeckLinkDisplayModeIterator to enumerate the display modes supported on input
+	result = deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
+	if (result != S_OK)
+	{
+		fprintf(stderr, "Could not obtain the video input display mode iterator - result = %08x\n", result);
+		return;
+	}
+	
 	while (displayModeIterator->Next(&displayMode) == S_OK)
 	{
-		char *			displayModeString = NULL;
-		
-		result = displayMode->GetName((const char **) &displayModeString);
-		if (result == S_OK)
-		{
-			char					modeName[64];
-			int						modeWidth;
-			int						modeHeight;
-			BMDTimeValue			frameRateDuration;
-			BMDTimeScale			frameRateScale;
-			int						pixelFormatIndex = 0; // index into the gKnownPixelFormats / gKnownFormatNames arrays
-			BMDDisplayModeSupport	displayModeSupport;
-			
-			
-			// Obtain the display mode's properties
-			modeWidth = displayMode->GetWidth();
-			modeHeight = displayMode->GetHeight();
-			displayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
-			printf(" %-20s \t %d x %d \t %7g FPS\t", displayModeString, modeWidth, modeHeight, (double)frameRateScale / (double)frameRateDuration);
-
-			// Print the supported pixel formats for this display mode
-			while ((gKnownPixelFormats[pixelFormatIndex] != 0) && (gKnownPixelFormatNames[pixelFormatIndex] != NULL))
-			{
-				if ((deckLinkOutput->DoesSupportVideoMode(displayMode->GetDisplayMode(), gKnownPixelFormats[pixelFormatIndex], bmdVideoOutputFlagDefault, &displayModeSupport, NULL) == S_OK)
-						&& (displayModeSupport != bmdDisplayModeNotSupported))
-				{
-					printf("%s\t", gKnownPixelFormatNames[pixelFormatIndex]);
-				}
-				else
-					printf("------\t\t");
-				pixelFormatIndex++;
-			}
-
-			printf("\n");
-
-			free(displayModeString);
-		}
-		
-		// Release the IDeckLinkDisplayMode object to prevent a leak
+		print_input_mode(deckLinkInput, connection, flags, displayMode, nameSuffix);
 		displayMode->Release();
 	}
 	
-	printf("\n");
-	
-bail:
-	// Ensure that the interfaces we obtained are released to prevent a memory leak
-	if (displayModeIterator != NULL)
-		displayModeIterator->Release();
-	
-	if (deckLinkOutput != NULL)
-		deckLinkOutput->Release();
+	displayModeIterator->Release();
 }
-
 
 void	print_input_modes (IDeckLink* deckLink)
 {
 	IDeckLinkInput*					deckLinkInput = NULL;
-	IDeckLinkDisplayModeIterator*		displayModeIterator = NULL;
-	IDeckLinkDisplayMode*				displayMode = NULL;
-	HRESULT								result;	
-	
-	// Query the DeckLink for its configuration interface
+	IDeckLinkProfileAttributes*		deckLinkAttributes = NULL;
+	HRESULT							result;
+	int64_t							ports;
+
+	// Query the DeckLink for its input interface
 	result = deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&deckLinkInput);
 	if (result != S_OK)
 	{
@@ -348,196 +642,40 @@ void	print_input_modes (IDeckLink* deckLink)
 		goto bail;
 	}
 	
-	// Obtain an IDeckLinkDisplayModeIterator to enumerate the display modes supported on input
-	result = deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
-	if (result != S_OK)
-	{
-		fprintf(stderr, "Could not obtain the video input display mode iterator - result = %08x\n", result);
-		goto bail;
-	}
-	
-	// List all supported input display modes
-	printf("Supported video input display modes and pixel formats:\n");
-	while (displayModeIterator->Next(&displayMode) == S_OK)
-	{
-		char *			displayModeString = NULL;
-		
-		result = displayMode->GetName((const char **) &displayModeString);
-		if (result == S_OK)
-		{
-			char					modeName[64];
-			int						modeWidth;
-			int						modeHeight;
-			BMDTimeValue			frameRateDuration;
-			BMDTimeScale			frameRateScale;
-			int						pixelFormatIndex = 0; // index into the gKnownPixelFormats / gKnownFormatNames arrays
-			BMDDisplayModeSupport	displayModeSupport;
-			
-			
-			// Obtain the display mode's properties
-			modeWidth = displayMode->GetWidth();
-			modeHeight = displayMode->GetHeight();
-			displayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
-			printf(" %-20s \t %d x %d \t %7g FPS\t", displayModeString, modeWidth, modeHeight, (double)frameRateScale / (double)frameRateDuration);
-
-			// Print the supported pixel formats for this display mode
-			while ((gKnownPixelFormats[pixelFormatIndex] != 0) && (gKnownPixelFormatNames[pixelFormatIndex] != NULL))
-			{
-				if ((deckLinkInput->DoesSupportVideoMode(displayMode->GetDisplayMode(), gKnownPixelFormats[pixelFormatIndex], bmdVideoInputFlagDefault, &displayModeSupport, NULL) == S_OK)
-						&& (displayModeSupport != bmdDisplayModeNotSupported))
-				{
-					printf("%s\t", gKnownPixelFormatNames[pixelFormatIndex]);
-				}
-				else
-					printf("------\t\t");
-				pixelFormatIndex++;
-			}
-
-			printf("\n");
-
-			free(displayModeString);
-		}
-		
-		// Release the IDeckLinkDisplayMode object to prevent a leak
-		displayMode->Release();
-	}
-	
-	printf("\n");
-	
-bail:
-	// Ensure that the interfaces we obtained are released to prevent a memory leak
-	if (displayModeIterator != NULL)
-		displayModeIterator->Release();
-	
-	if (deckLinkInput != NULL)
-		deckLinkInput->Release();
-}
-
-
-void	print_capabilities (IDeckLink* deckLink)
-{
-	IDeckLinkAttributes*		deckLinkAttributes = NULL;
-	int64_t						ports;
-	int							itemCount;
-	HRESULT						result;	
-	
-	// Query the DeckLink for its configuration interface
-	result = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+	result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 	if (result != S_OK)
 	{
 		fprintf(stderr, "Could not obtain the IDeckLinkAttributes interface - result = %08x\n", result);
 		goto bail;
 	}
-	
-	printf("Supported video output connections:\n  ");
-	itemCount = 0;
-	result = deckLinkAttributes->GetInt(BMDDeckLinkVideoOutputConnections, &ports);
-	if (result == S_OK)
-	{
-		if (ports & bmdVideoConnectionSDI)
-		{
-			itemCount++;
-			printf("SDI");
-		}
-		
-		if (ports & bmdVideoConnectionHDMI)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("HDMI");
-		}
-		
-		if (ports & bmdVideoConnectionOpticalSDI)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("Optical SDI");
-		}
-		
-		if (ports & bmdVideoConnectionComponent)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("Component");
-		}
-		
-		if (ports & bmdVideoConnectionComposite)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("Composite");
-		}
-		
-		if (ports & bmdVideoConnectionSVideo)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("S-Video");
-		}
-	}
-	else
-	{
-		fprintf(stderr, "Could not obtain the list of output ports - result = %08x\n", result);
-		goto bail;
-	}
-	
-	printf("\n\n");
-	
-	printf("Supported video input connections:\n  ");
-	itemCount = 0;
+
 	result = deckLinkAttributes->GetInt(BMDDeckLinkVideoInputConnections, &ports);
-	if (result == S_OK)
+
+	if (result != S_OK)
+		goto bail;
+
+
+	printf("Supported video input display modes:\n\n");
+	for (auto connection: gConnections)
 	{
-		if (ports & bmdVideoConnectionSDI)
+		if (ports & connection.first)
 		{
-			itemCount++;
-			printf("SDI");
-		}
-		
-		if (ports & bmdVideoConnectionHDMI)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("HDMI");
-		}
-		
-		if (ports & bmdVideoConnectionOpticalSDI)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("Optical SDI");
-		}
-		
-		if (ports & bmdVideoConnectionComponent)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("Component");
-		}
-		
-		if (ports & bmdVideoConnectionComposite)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("Composite");
-		}
-		
-		if (ports & bmdVideoConnectionSVideo)
-		{
-			if (itemCount++ > 0)
-				printf(", ");
-			printf("S-Video");
+			printf("%s input:\n", connection.second.c_str());
+
+			print_input_modes_for_setup(deckLinkInput, connection.first, bmdSupportedVideoModeDefault, "");
+			print_input_modes_for_setup(deckLinkInput, connection.first, bmdSupportedVideoModeDualStream3D, "3D");
+			
+			printf("\n");
 		}
 	}
-	else
-	{
-		fprintf(stderr, "Could not obtain the list of input ports - result = %08x\n", result);
-		goto bail;
-	}	
-	printf("\n");
-	
+		
 bail:
-	if (deckLinkAttributes != NULL)
+	if (deckLinkAttributes)
 		deckLinkAttributes->Release();
+
+	if (deckLinkInput)
+		deckLinkInput->Release();
+
+	printf("\n");
 }
 

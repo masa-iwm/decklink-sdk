@@ -72,7 +72,7 @@
 			// Add this deckLink instance to the popup menus
 			CFStringRef			cardName;
 			
-			if (deckLink[i]->GetModelName(&cardName) != S_OK)
+			if (deckLink[i]->GetDisplayName(&cardName) != S_OK)
 				cardName = CFSTR("Unknown DeckLink");
 			
 			[[inputCardMenu menu] addItemWithTitle:(NSString*)cardName action:nil keyEquivalent:@""];

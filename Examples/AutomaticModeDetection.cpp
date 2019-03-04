@@ -155,7 +155,7 @@ private:
 int		main (int argc, char** argv)
 {
 	IDeckLinkIterator*			deckLinkIterator = NULL;
-	IDeckLinkAttributes*        deckLinkAttributes = NULL;
+	IDeckLinkProfileAttributes* deckLinkAttributes = NULL;
 	IDeckLink*					deckLink = NULL;
     IDeckLinkInput*             deckLinkInput = NULL;
     NotificationCallback*       notificationCallback = NULL;
@@ -182,10 +182,10 @@ int		main (int argc, char** argv)
     }
 
     // Obtain the Attributes interface for the DeckLink device
-    result = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+    result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
     if (result != S_OK)
 	{
-		fprintf(stderr, "Could not obtain the IDeckLinkAttributes interface - result = %08x\n", result);
+		fprintf(stderr, "Could not obtain the IDeckLinkProfileAttributes interface - result = %08x\n", result);
 		goto bail;
 	}
 

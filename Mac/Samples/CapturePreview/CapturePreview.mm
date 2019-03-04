@@ -30,6 +30,14 @@
 
 using namespace std;
 
+static const NSDictionary* kInputConnections = @{
+												 [NSNumber numberWithInteger:bmdVideoConnectionSDI]			: @"SDI",
+												 [NSNumber numberWithInteger:bmdVideoConnectionHDMI]		: @"HDMI",
+												 [NSNumber numberWithInteger:bmdVideoConnectionOpticalSDI]	: @"Optical SDI",
+												 [NSNumber numberWithInteger:bmdVideoConnectionComponent]	: @"Component",
+												 [NSNumber numberWithInteger:bmdVideoConnectionComposite]	: @"Composite",
+												 [NSNumber numberWithInteger:bmdVideoConnectionSVideo]		: @"S-Video",
+												};
 
 @implementation TimecodeStruct
 @synthesize timecode;
@@ -62,6 +70,7 @@ using namespace std;
 @synthesize rp188vitc1;
 @synthesize rp188vitc2;
 @synthesize rp188ltc;
+@synthesize rp188hfrtc;
 @synthesize hdrMetadata;
 
 - (void)dealloc
@@ -71,6 +80,7 @@ using namespace std;
 	[rp188vitc1 dealloc];
 	[rp188vitc2 dealloc];
 	[rp188ltc dealloc];
+	[rp188hfrtc dealloc];
 	[hdrMetadata dealloc];
 	
 	[super dealloc];
@@ -133,6 +143,7 @@ using namespace std;
 }
 @end
 
+
 @implementation CapturePreviewAppDelegate
 
 @synthesize window;
@@ -142,7 +153,7 @@ using namespace std;
 	self = [super init];
 	if (self)
 	{
-		ancillaryDataValues = [[NSMutableArray arrayWithObjects:@"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", nil] retain];
+		ancillaryDataValues = [[NSMutableArray arrayWithObjects:@"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", nil] retain];
 		ancillaryDataTypes = [[NSMutableArray arrayWithObjects:
 							@"VITC Timecode field 1", 
 							@"VITC User bits field 1", 
@@ -154,6 +165,8 @@ using namespace std;
 							@"RP188 LTC User bits",
 							@"RP188 VITC2 Timecode", 
 							@"RP188 VITC2 User bits",
+							@"RP188 HFRTC Timecode",
+							@"RP188 HFRTC User bits",
 							@"Static HDR Electro-optical Transfer Function",
 							@"Static HDR Display Primaries Red X",
 							@"Static HDR Display Primaries Red Y",
@@ -186,10 +199,11 @@ using namespace std;
 	[self enableInterface:NO];
 	
 	//
-	// Create and initialise DeckLink device discovery and preview objects
+	// Create and initialise DeckLink device discovery, profile manager and preview objects
 	screenPreviewCallback = CreateCocoaScreenPreview(previewView);
 	deckLinkDiscovery = new DeckLinkDeviceDiscovery(self);
-	if ((screenPreviewCallback != NULL) && (deckLinkDiscovery != NULL))
+	profileCallback = new ProfileCallback(self);
+	if ((screenPreviewCallback != NULL) && (deckLinkDiscovery != NULL) && (profileCallback != NULL))
 	{
 		deckLinkDiscovery->Enable();
 	}
@@ -197,6 +211,7 @@ using namespace std;
 	{
 		[self showErrorMessage:@"This application requires the Desktop Video drivers installed." title:@"Please install the Blackmagic Desktop Video drivers to use the features of this application."];
 	}
+	
 }
 
 - (void)addDevice:(IDeckLink*)deckLink
@@ -218,11 +233,9 @@ using namespace std;
 	if ([deviceListPopup numberOfItems] == 1)
 	{
 		// We have added our first item, enable the interface
+		[self enableInterface:YES];
 		[deviceListPopup selectItemAtIndex:0];
 		[self newDeviceSelected:nil];
-		
-		[startStopButton setEnabled:YES];
-		[self enableInterface:YES];
 	}
 	
 }
@@ -269,48 +282,181 @@ using namespace std;
 		// Select the first device in the list and enable the interface
 		[deviceListPopup selectItemAtIndex:0];
 		[self newDeviceSelected:nil];
-		
-		[startStopButton setEnabled:YES];
 	}
 	
 	// Release DeckLinkDevice instance
 	deviceToRemove->Release();
 }
 
+- (void)haltStreams
+{
+	// Profile is changing, stop capture if active
+	if (selectedDevice->isCapturing())
+		[self stopCapture];
+}
+
+- (void)updateProfile:(IDeckLinkProfile*)newProfile
+{
+	// Action as if new device selected to check whether device is active/inactive
+	// This call will subsequently updated input connections and video mode popups if active
+	[self newDeviceSelected:nil];
+	
+	// A reference was added in IDeckLinkProfileCallback::ProfileActivated callback
+	newProfile->Release();
+}
 
 - (void)showErrorMessage:(NSString*)message title:(NSString*)title
 {
-	NSRunAlertPanel(title, message, @"OK", nil, nil);
+	NSAlert* alert = [[NSAlert alloc] init];
+	alert.messageText = title;
+	alert.informativeText = message;
+	[alert runModal];
+	[alert release];
+}
+
+
+- (void)refreshInputConnectionList
+{
+	BMDVideoConnection availableInputConnections = selectedDevice->getInputConnections();
+	
+	[inputConnectionPopup removeAllItems];
+	
+	for (NSNumber* key in kInputConnections)
+	{
+		BMDVideoConnection inputConnection = (BMDVideoConnection)[key intValue];
+		
+		if ((inputConnection & availableInputConnections) != 0)
+		{
+			[inputConnectionPopup addItemWithTitle:kInputConnections[key]];
+			[[inputConnectionPopup lastItem] setTag:(NSInteger)inputConnection];
+		}
+	}
+
+	if ([inputConnectionPopup numberOfItems] > 0)
+	{
+		int64_t currentInputConnection;
+		
+		// Get the current selected input connection
+		if (selectedDevice->deckLinkConfig->GetInt(bmdDeckLinkConfigVideoInputConnection, &currentInputConnection) == S_OK)
+		{
+			[inputConnectionPopup selectItemWithTag:(NSInteger)currentInputConnection];
+			[self newConnectionSelected:nil];
+		}
+	}
 }
 
 
 - (void)refreshVideoModeList
 {
-	NSMutableArray*		modeNames;
-	int					modeIndex = 0;
+	// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
+	IDeckLinkDisplayModeIterator*		displayModeIterator;
+	IDeckLinkDisplayMode*				deckLinkDisplayMode;
+	IDeckLinkInput*						deckLinkInput;
 	
 	// Clear the menu
 	[modeListPopup removeAllItems];
 	
-	// Get the mode names
-	modeNames = selectedDevice->getDisplayModeNames();
+	deckLinkInput = selectedDevice->deckLinkInput;
 	
-	// Add them to the menu
-	while (modeIndex < [modeNames count])
-		[modeListPopup addItemWithTitle:[modeNames objectAtIndex:modeIndex++]];
+	if (deckLinkInput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
+		return;
+	
+	while (displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
+	{
+		CFStringRef				modeName;
+		bool					supported;
+		HRESULT					hr;
+		
+		hr = deckLinkInput->DoesSupportVideoMode(selectedInputConnection, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdSupportedVideoModeDefault, &supported);
+		if (hr != S_OK || !supported)
+			continue;
+		
+		if (deckLinkDisplayMode->GetName(&modeName) != S_OK)
+		{
+			deckLinkDisplayMode->Release();
+			deckLinkDisplayMode = NULL;
+			continue;
+		}
+		
+		// Add this item to the video format poup menu
+		[modeListPopup addItemWithTitle:(NSString*)modeName];
+		
+		// Save the IDeckLinkDisplayMode in the menu item's tag
+		[[modeListPopup lastItem] setTag:(NSInteger)deckLinkDisplayMode->GetDisplayMode()];
+		
+		deckLinkDisplayMode->Release();
+		CFRelease(modeName);
+	}
+	
+	displayModeIterator->Release();
+	displayModeIterator = NULL;
+
+	[startStopButton setEnabled:([modeListPopup numberOfItems] != 0)];
 }
 
 
 - (IBAction)newDeviceSelected:(id)sender
 {
+	// Release profile callback from existing selected device
+	if ((selectedDevice != NULL) && (selectedDevice->deckLinkProfileManager != NULL))
+		selectedDevice->deckLinkProfileManager->SetCallback(NULL);
+	
 	// Get the DeckLinkDevice object for the selected menu item.
 	selectedDevice = (DeckLinkDevice*)[[deviceListPopup selectedItem] tag];
 	
-	// Update the video mode popup menu
-	[self refreshVideoModeList];
+	if (selectedDevice != NULL)
+	{
+		IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
+		int64_t						duplexMode;
+		
+		// Register profile callback with newly selected device's profile manager
+		if (selectedDevice->deckLinkProfileManager != NULL)
+			selectedDevice->deckLinkProfileManager->SetCallback(profileCallback);
+		
+		// Query Duplex mode attribute to check whether sub-device is active
+		if (selectedDevice->deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) == S_OK)
+		{
+			if ((deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &duplexMode) == S_OK)
+				&& (duplexMode != bmdDuplexInactive))
+			{
+				// Update the input connections popup menu
+				[self refreshInputConnectionList];
+				
+				// Enable the interface
+				[inputConnectionPopup setEnabled:YES];
+				[modeListPopup setEnabled:YES];
+				[applyDetectedVideoMode setEnabled:YES];
+				
+				// Set default state for apply detected video mode checkbox
+				[applyDetectedVideoMode setState:(selectedDevice->deviceSupportsFormatDetection() ? NSOnState : NSOffState)];
+				[self toggleApplyDetectionVideoMode:nil];
+			}
+			else
+			{
+				[inputConnectionPopup removeAllItems];
+				[inputConnectionPopup setEnabled:NO];
+				[modeListPopup removeAllItems];
+				[modeListPopup setEnabled:NO];
+				[applyDetectedVideoMode setState:NSOffState];
+				[startStopButton setEnabled:NO];
+			}
+			
+			deckLinkAttributes->Release();
+		}
+	}
+}
+
+
+- (IBAction)newConnectionSelected:(id)sender
+{
+	selectedInputConnection = (BMDVideoConnection)[[inputConnectionPopup selectedItem] tag];
 	
-	// Enable the interface
-	[self enableInterface:YES];
+	// Configure input connection for selected device
+	if (selectedDevice->deckLinkConfig->SetInt(bmdDeckLinkConfigVideoInputConnection, (int64_t)selectedInputConnection) != S_OK)
+		return;
+	
+	// Updated video mode popup for selected input connection
+	[self refreshVideoModeList];
 }
 
 
@@ -325,10 +471,15 @@ using namespace std;
 		[self startCapture];
 }
 
+- (IBAction)toggleApplyDetectionVideoMode:(id)sender
+{
+	[modeListPopup setEnabled:([applyDetectedVideoMode state] == NSOffState)];
+}
+
 
 - (void)startCapture
 {
-	if (selectedDevice && selectedDevice->startCapture([modeListPopup indexOfSelectedItem], screenPreviewCallback))
+	if (selectedDevice && selectedDevice->startCapture([[modeListPopup selectedItem] tag], screenPreviewCallback, ([applyDetectedVideoMode state] == NSOnState)))
 	{
 		// Update UI
 		[startStopButton setTitle:@"Stop"];
@@ -353,24 +504,19 @@ using namespace std;
 - (void)enableInterface:(BOOL)enabled
 {
 	[deviceListPopup setEnabled:enabled];
-	[modeListPopup setEnabled:enabled];
+	[inputConnectionPopup setEnabled:enabled];
 	[noValidSource setHidden:YES];
 	
 	if (enabled == TRUE)
 	{
-		if (selectedDevice && selectedDevice->deviceSupportsFormatDetection())
-		{
-			[applyDetectedVideoMode setEnabled:TRUE];
-			[applyDetectedVideoMode setState:NSOnState];
-		}
-		else
-		{
-			[applyDetectedVideoMode setEnabled:FALSE];
-			[applyDetectedVideoMode setState:NSOffState];
-		}
+		[applyDetectedVideoMode setEnabled:(selectedDevice && selectedDevice->deviceSupportsFormatDetection())];
+		[modeListPopup setEnabled:([applyDetectedVideoMode state] == NSOffState)];
 	}
 	else
+	{
 		[applyDetectedVideoMode setEnabled:FALSE];
+		[modeListPopup setEnabled:enabled];
+	}
 }
 
 
@@ -390,9 +536,9 @@ using namespace std;
 }
 
 
-- (void)selectDetectedVideoModeWithIndex:(UInt32)newVideoModeIndex
+- (void)selectDetectedVideoMode:(BMDDisplayMode)newVideoMode
 {
-	[modeListPopup selectItemAtIndex:newVideoModeIndex];
+	[modeListPopup selectItemWithTag:(NSInteger)newVideoMode];
 }
 
 - (void)setAncillaryData:(AncillaryDataStruct *)latestAncillaryDataValues
@@ -410,21 +556,23 @@ using namespace std;
 	[ancillaryDataValues replaceObjectAtIndex:7 withObject:latestAncillaryDataValues.rp188ltc.userBits];
 	[ancillaryDataValues replaceObjectAtIndex:8 withObject:latestAncillaryDataValues.rp188vitc2.timecode];
 	[ancillaryDataValues replaceObjectAtIndex:9 withObject:latestAncillaryDataValues.rp188vitc2.userBits];
+	[ancillaryDataValues replaceObjectAtIndex:10 withObject:latestAncillaryDataValues.rp188hfrtc.timecode];
+	[ancillaryDataValues replaceObjectAtIndex:11 withObject:latestAncillaryDataValues.rp188hfrtc.userBits];
 
 	// HDR metadata
-	[ancillaryDataValues replaceObjectAtIndex:10 withObject:latestAncillaryDataValues.hdrMetadata.electroOpticalTransferFunction];
-	[ancillaryDataValues replaceObjectAtIndex:11 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesRedX];
-	[ancillaryDataValues replaceObjectAtIndex:12 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesRedY];
-	[ancillaryDataValues replaceObjectAtIndex:13 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesGreenX];
-	[ancillaryDataValues replaceObjectAtIndex:14 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesGreenY];
-	[ancillaryDataValues replaceObjectAtIndex:15 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesBlueX];
-	[ancillaryDataValues replaceObjectAtIndex:16 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesBlueY];
-	[ancillaryDataValues replaceObjectAtIndex:17 withObject:latestAncillaryDataValues.hdrMetadata.whitePointX];
-	[ancillaryDataValues replaceObjectAtIndex:18 withObject:latestAncillaryDataValues.hdrMetadata.whitePointY];
-	[ancillaryDataValues replaceObjectAtIndex:19 withObject:latestAncillaryDataValues.hdrMetadata.maxDisplayMasteringLuminance];
-	[ancillaryDataValues replaceObjectAtIndex:20 withObject:latestAncillaryDataValues.hdrMetadata.minDisplayMasteringLuminance];
-	[ancillaryDataValues replaceObjectAtIndex:21 withObject:latestAncillaryDataValues.hdrMetadata.maximumContentLightLevel];
-	[ancillaryDataValues replaceObjectAtIndex:22 withObject:latestAncillaryDataValues.hdrMetadata.maximumFrameAverageLightLevel];
+	[ancillaryDataValues replaceObjectAtIndex:12 withObject:latestAncillaryDataValues.hdrMetadata.electroOpticalTransferFunction];
+	[ancillaryDataValues replaceObjectAtIndex:13 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesRedX];
+	[ancillaryDataValues replaceObjectAtIndex:14 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesRedY];
+	[ancillaryDataValues replaceObjectAtIndex:15 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesGreenX];
+	[ancillaryDataValues replaceObjectAtIndex:16 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesGreenY];
+	[ancillaryDataValues replaceObjectAtIndex:17 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesBlueX];
+	[ancillaryDataValues replaceObjectAtIndex:18 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesBlueY];
+	[ancillaryDataValues replaceObjectAtIndex:19 withObject:latestAncillaryDataValues.hdrMetadata.whitePointX];
+	[ancillaryDataValues replaceObjectAtIndex:20 withObject:latestAncillaryDataValues.hdrMetadata.whitePointY];
+	[ancillaryDataValues replaceObjectAtIndex:21 withObject:latestAncillaryDataValues.hdrMetadata.maxDisplayMasteringLuminance];
+	[ancillaryDataValues replaceObjectAtIndex:22 withObject:latestAncillaryDataValues.hdrMetadata.minDisplayMasteringLuminance];
+	[ancillaryDataValues replaceObjectAtIndex:23 withObject:latestAncillaryDataValues.hdrMetadata.maximumContentLightLevel];
+	[ancillaryDataValues replaceObjectAtIndex:24 withObject:latestAncillaryDataValues.hdrMetadata.maximumFrameAverageLightLevel];
 }
 
 - (void)reloadAncillaryTable;
@@ -470,6 +618,12 @@ using namespace std;
 	// Stop the capture
 	[self stopCapture];
 
+	// Disable profile callback
+	if ((selectedDevice != NULL) && (selectedDevice->deckLinkProfileManager != NULL))
+	{
+		selectedDevice->deckLinkProfileManager->SetCallback(NULL);
+	}
+
 	// Disable DeckLink device discovery
 	deckLinkDiscovery->Disable();
 
@@ -480,14 +634,22 @@ using namespace std;
 		device->Release();
 		[deviceListPopup removeItemAtIndex:0];
 	}
+
+	// Release profile callback interface
+	if (profileCallback != NULL)
+	{
+		profileCallback->Release();
+		profileCallback = NULL;
+	}
 	
-	// Release DeckLink discovery & screen preview instances
+	// Release DeckLink device discovery interface
 	if (deckLinkDiscovery != NULL)
 	{
 		deckLinkDiscovery->Release();
 		deckLinkDiscovery = NULL;
 	}
 	
+	// Release screen preview callback interface
 	if (screenPreviewCallback)
 	{
 		screenPreviewCallback->Release();

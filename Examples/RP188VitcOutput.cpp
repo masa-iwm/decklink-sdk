@@ -27,6 +27,12 @@
 
 #include "platform.h"
 
+#if defined(_WIN32)
+typedef BOOL BMDbool;
+#else
+typedef bool BMDbool;
+#endif
+
 // Video mode parameters
 const BMDDisplayMode      kDisplayMode = bmdModeHD1080i50;
 const BMDVideoOutputFlags kOutputFlags = bmdVideoOutputRP188;
@@ -36,6 +42,7 @@ const BMDPixelFormat      kPixelFormat = bmdFormat10BitYUV;
 const INT32_UNSIGNED kRowBytes = 5120;
 BMDTimeValue         gFrameDuration = 0;
 BMDTimeScale         gTimeScale = 0;
+INT32_UNSIGNED       gDropFrames = 0;
 
 // Timecode options
 const bool kIsDropFrame = false;
@@ -53,20 +60,19 @@ static void convertFrameCountToTimecode(INT32_UNSIGNED frameCount, INT8_UNSIGNED
 {
 	INT32_UNSIGNED maxFPS = (INT32_UNSIGNED)(gTimeScale / 1000);
 
-	// Dropped frame counting only applies to M-rate modes (i.e. Fractional frame rates)
-	if (kIsDropFrame && gFrameDuration == 1001)
+	if (gDropFrames)
 	{
 		INT32_UNSIGNED deciMins, deciMinsRemainder;
 
-		INT32_UNSIGNED framesIn10mins = (INT32_UNSIGNED)((60 * 10 * maxFPS) - (9 * 2));
+		INT32_UNSIGNED framesIn10mins = (INT32_UNSIGNED)((60 * 10 * maxFPS) - (9 * gDropFrames));
 		deciMins = frameCount / framesIn10mins;
 		deciMinsRemainder = frameCount - (deciMins * framesIn10mins);
 
-		// Add 2 frames for 9 minutes of every 10 minutes that have elapsed
-		// AND 2 frames for every minute (over the first minute) in this 10-minute block.
-		frameCount += 2 * 9 * deciMins;
-		if (deciMinsRemainder >= 2)
-			frameCount += 2 * ((deciMinsRemainder - 2) / (framesIn10mins / 10));
+		// Add gDropFrames for 9 minutes of every 10 minutes that have elapsed
+		// AND gDropFrames for every minute (over the first minute) in this 10-minute block.
+		frameCount += gDropFrames * 9 * deciMins;
+		if (deciMinsRemainder >= gDropFrames)
+			frameCount += gDropFrames * ((deciMinsRemainder - gDropFrames) / (framesIn10mins / 10));
 	}
 
 	*frames = (INT8_UNSIGNED)(frameCount % maxFPS);
@@ -78,7 +84,7 @@ static void convertFrameCountToTimecode(INT32_UNSIGNED frameCount, INT8_UNSIGNED
 	*hours = (INT8_UNSIGNED)frameCount;
 }
 
-static HRESULT setRP188VitcTimecodeOnFrame(IDeckLinkMutableVideoFrame* videoFrame, INT8_UNSIGNED hours, INT8_UNSIGNED minutes, INT8_UNSIGNED seconds, INT8_UNSIGNED frames)
+static HRESULT setRP188VitcTimecodeOnFrame(IDeckLinkMutableVideoFrame* videoFrame, INT8_UNSIGNED hours, INT8_UNSIGNED minutes, INT8_UNSIGNED seconds, INT8_UNSIGNED frames, BOOL setHFRTCTimecode)
 {
 	HRESULT	result = S_OK;
 
@@ -89,6 +95,16 @@ static HRESULT setRP188VitcTimecodeOnFrame(IDeckLinkMutableVideoFrame* videoFram
 	if (kIsDropFrame)
 		flags |= bmdTimecodeIsDropFrame;
 
+	if (setHFRTCTimecode)
+	{
+		result = videoFrame->SetTimecodeFromComponents(bmdTimecodeRP188HighFrameRate, hours, minutes, seconds, frames, flags);
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Could not set HFRTC timecode on frame - result = %08x\n", result);
+			goto bail;
+		}
+	}
+	
 	if (gDisplayMode->GetFieldDominance() != bmdProgressiveFrame)
 	{
 		// An interlaced or PsF frame has both VITC1 and VITC2 set with the same timecode value (SMPTE ST 12-2:2014 7.2)
@@ -100,7 +116,7 @@ static HRESULT setRP188VitcTimecodeOnFrame(IDeckLinkMutableVideoFrame* videoFram
 		// If this isn't a High-P mode, then just use VITC1 (SMPTE ST 12-2:2014 7.2)
 		setVITC1Timecode = true;
 	}
-	else
+	else if (gTimeScale / gFrameDuration <= 60)
 	{
 		// If this is a High-P mode then use VITC1 on even frames and VITC2 on odd frames. This is done because the 
 		// frames field of the RP188 VITC timecode cannot hold values greater than 30 (SMPTE ST 12-2:2014 7.2, 9.2)
@@ -141,10 +157,12 @@ bail:
 class OutputCallback: public IDeckLinkVideoOutputCallback
 {
 public:
-	OutputCallback(IDeckLinkOutput* deckLinkOutput) : m_refCount(1)
+	OutputCallback(IDeckLinkOutput* deckLinkOutput, BOOL deckLinkSupportsHFRTC) : m_refCount(1)
 	{
 		m_deckLinkOutput = deckLinkOutput;
 		m_deckLinkOutput->AddRef();
+		
+		m_deckLinkSupportsHFRTC = deckLinkSupportsHFRTC;
 	}
 
 	virtual HRESULT	STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult completionResult)
@@ -193,7 +211,7 @@ public:
 		if (result != S_OK)
 			goto bail;
 
-		result = setRP188VitcTimecodeOnFrame(mutableFrame, hours, minutes, seconds, frames);
+		result = setRP188VitcTimecodeOnFrame(mutableFrame, hours, minutes, seconds, frames, m_deckLinkSupportsHFRTC);
 		if (result != S_OK)
 			goto bail;
 
@@ -213,6 +231,7 @@ public:
 
 private:
 	IDeckLinkOutput*  m_deckLinkOutput;
+	BOOL              m_deckLinkSupportsHFRTC;
 	INT32_SIGNED m_refCount;
 	
 	virtual ~OutputCallback(void)
@@ -265,9 +284,11 @@ int main(int argc, const char * argv[])
 	IDeckLinkIterator*      deckLinkIterator = NULL;
 	IDeckLink*              deckLink         = NULL;
 	IDeckLinkOutput*        deckLinkOutput   = NULL;
+	IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
 	OutputCallback*         outputCallback   = NULL;
 	IDeckLinkVideoFrame*    videoFrameBlue   = NULL;
-	BMDDisplayModeSupport   supported;
+	BMDbool					supported;
+	BMDbool					deckLinkSupportsHFRTC;
 	HRESULT                 result;
 
 	Initialize();
@@ -292,12 +313,27 @@ int main(int argc, const char * argv[])
 	result = deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput);
 	if (result != S_OK)
 	{
-		fprintf(stderr, "Could not obtain the IDeckLinkInput interface - result = %08x\n", result);
+		fprintf(stderr, "Could not obtain the IDeckLinkOutput interface - result = %08x\n", result);
 		goto bail;
+	}
+	
+	// Obtain attributes interface for the DeckLink device
+	result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
+	if (result != S_OK)
+	{
+		fprintf(stderr, "Could not obtain the IDeckLinkProfileAttributes interface - result = %08x\n", result);
+		goto bail;
+	}
+	
+	// Check whether HFRTC is supported by this device
+	result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHighFrameRateTimecode, &deckLinkSupportsHFRTC);
+	if (result != S_OK)
+	{
+		deckLinkSupportsHFRTC = false;
 	}
 
 	// Create an instance of output callback
-	outputCallback = new OutputCallback(deckLinkOutput);
+	outputCallback = new OutputCallback(deckLinkOutput, deckLinkSupportsHFRTC);
 	if (outputCallback == NULL)
 	{
 		fprintf(stderr, "Could not create output callback object\n");
@@ -313,22 +349,37 @@ int main(int argc, const char * argv[])
 	}
 
 	// Check the selected display mode/pixelformat can be output 
-	result = deckLinkOutput->DoesSupportVideoMode(kDisplayMode, kPixelFormat, kOutputFlags, &supported, &gDisplayMode);
+	result = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, kDisplayMode, kPixelFormat, bmdSupportedVideoModeDefault, NULL, &supported);
 	if (result != S_OK)
 	{
 		fprintf(stderr, "Could not determine whether video mode is supported - result = %08x\n", result);
 		goto bail;
 	}
 
-	if (supported == bmdDisplayModeNotSupported)
+	if (! supported)
 	{
 		fprintf(stderr, "Video mode is not supported\n");
+		goto bail;
+	}
+
+	result = deckLinkOutput->GetDisplayMode(kDisplayMode, &gDisplayMode);
+	if (result != S_OK)
+	{
+		fprintf(stderr, "Could not get display mode - result = %08x\n", result);
 		goto bail;
 	}
 
 	// Store the frame duration and timesale for later use
 	gDisplayMode->GetFrameRate(&gFrameDuration, &gTimeScale);
 
+	// Frame rates with multiple 30-frame counting can implement Drop Frames compensation, refer to SMPTE 12-3
+	if (kIsDropFrame && gTimeScale % 30000 == 0)
+	{
+		gDropFrames = 2 * (gTimeScale / 30000);
+	}
+	else
+		gDropFrames = 0;
+	
 	// Enable video output
 	result = deckLinkOutput->EnableVideoOutput(kDisplayMode, kOutputFlags);
 	if (result != S_OK)
@@ -379,6 +430,10 @@ bail:
 	if (deckLinkOutput != NULL)
 		deckLinkOutput->Release();
 
+	// Release the attributes interface
+	if (deckLinkAttributes != NULL)
+		deckLinkAttributes->Release();
+	
 	// Release the Decklink object
 	if (deckLink != NULL)
 		deckLink->Release();

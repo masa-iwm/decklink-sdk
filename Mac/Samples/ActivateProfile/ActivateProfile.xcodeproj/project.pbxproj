@@ -1,0 +1,281 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		166BBED622017C3B0013A322 /* ActivateProfile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 166BBED522017C3B0013A322 /* ActivateProfile.cpp */; };
+		166BBED922017C450013A322 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 166BBED722017C450013A322 /* platform.cpp */; };
+		166BBEDC22017C630013A322 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 166BBEDB22017C630013A322 /* DeckLinkAPIDispatch.cpp */; };
+		166BBEDE22017CF10013A322 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 166BBEDD22017CF10013A322 /* CoreFoundation.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		16B2ADDE22017B8E00520E22 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		166BBED522017C3B0013A322 /* ActivateProfile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActivateProfile.cpp; sourceTree = SOURCE_ROOT; };
+		166BBED722017C450013A322 /* platform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = platform.cpp; sourceTree = "<group>"; };
+		166BBED822017C450013A322 /* platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = "<group>"; };
+		166BBEDA22017C630013A322 /* DeckLinkAPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeckLinkAPI.h; path = ../../../Mac/include/DeckLinkAPI.h; sourceTree = "<group>"; };
+		166BBEDB22017C630013A322 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../../Mac/include/DeckLinkAPIDispatch.cpp; sourceTree = "<group>"; };
+		166BBEDD22017CF10013A322 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		16B2ADE022017B8E00520E22 /* ActivateProfile */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ActivateProfile; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		16B2ADDD22017B8E00520E22 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				166BBEDE22017CF10013A322 /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		166BBED322017C140013A322 /* DeckLinkAPI */ = {
+			isa = PBXGroup;
+			children = (
+				166BBEDA22017C630013A322 /* DeckLinkAPI.h */,
+				166BBEDB22017C630013A322 /* DeckLinkAPIDispatch.cpp */,
+			);
+			name = DeckLinkAPI;
+			sourceTree = "<group>";
+		};
+		166BBED422017C1B0013A322 /* Platform */ = {
+			isa = PBXGroup;
+			children = (
+				166BBED722017C450013A322 /* platform.cpp */,
+				166BBED822017C450013A322 /* platform.h */,
+			);
+			name = Platform;
+			sourceTree = "<group>";
+		};
+		16B2ADD722017B8E00520E22 = {
+			isa = PBXGroup;
+			children = (
+				166BBEDD22017CF10013A322 /* CoreFoundation.framework */,
+				16B2ADE222017B8E00520E22 /* ActivateProfile */,
+				166BBED322017C140013A322 /* DeckLinkAPI */,
+				166BBED422017C1B0013A322 /* Platform */,
+				16B2ADE122017B8E00520E22 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		16B2ADE122017B8E00520E22 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				16B2ADE022017B8E00520E22 /* ActivateProfile */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		16B2ADE222017B8E00520E22 /* ActivateProfile */ = {
+			isa = PBXGroup;
+			children = (
+				166BBED522017C3B0013A322 /* ActivateProfile.cpp */,
+			);
+			path = ActivateProfile;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		16B2ADDF22017B8E00520E22 /* ActivateProfile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 16B2ADE722017B8E00520E22 /* Build configuration list for PBXNativeTarget "ActivateProfile" */;
+			buildPhases = (
+				16B2ADDC22017B8E00520E22 /* Sources */,
+				16B2ADDD22017B8E00520E22 /* Frameworks */,
+				16B2ADDE22017B8E00520E22 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ActivateProfile;
+			productName = ActivateProfile;
+			productReference = 16B2ADE022017B8E00520E22 /* ActivateProfile */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		16B2ADD822017B8E00520E22 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0720;
+				ORGANIZATIONNAME = "Blackmagic Design";
+				TargetAttributes = {
+					16B2ADDF22017B8E00520E22 = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
+				};
+			};
+			buildConfigurationList = 16B2ADDB22017B8E00520E22 /* Build configuration list for PBXProject "ActivateProfile" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 16B2ADD722017B8E00520E22;
+			productRefGroup = 16B2ADE122017B8E00520E22 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				16B2ADDF22017B8E00520E22 /* ActivateProfile */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		16B2ADDC22017B8E00520E22 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				166BBED922017C450013A322 /* platform.cpp in Sources */,
+				166BBEDC22017C630013A322 /* DeckLinkAPIDispatch.cpp in Sources */,
+				166BBED622017C3B0013A322 /* ActivateProfile.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		16B2ADE522017B8E00520E22 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		16B2ADE622017B8E00520E22 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		16B2ADE822017B8E00520E22 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.activateprofile";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		16B2ADE922017B8E00520E22 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.activateprofile";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		16B2ADDB22017B8E00520E22 /* Build configuration list for PBXProject "ActivateProfile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16B2ADE522017B8E00520E22 /* Debug */,
+				16B2ADE622017B8E00520E22 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		16B2ADE722017B8E00520E22 /* Build configuration list for PBXNativeTarget "ActivateProfile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16B2ADE822017B8E00520E22 /* Debug */,
+				16B2ADE922017B8E00520E22 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 16B2ADD822017B8E00520E22 /* Project object */;
+}

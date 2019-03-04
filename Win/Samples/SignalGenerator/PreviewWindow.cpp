@@ -126,14 +126,9 @@ ULONG		PreviewWindow::AddRef()
 }
 ULONG		PreviewWindow::Release()
 {
-	ULONG		newRefValue;
-
-	newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+	ULONG newRefValue = InterlockedDecrement((LONG*)&m_refCount);
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 
 	return newRefValue;
 }

@@ -569,7 +569,7 @@ namespace StillsCSharp
                 foreach (StringObjectPair<_BMDPixelFormat> item in comboBoxCapturePixelFormat.Items)
                 {
                     if (item.value == e.pixelFormat)
-                        comboBoxCaptureVideoMode.SelectedItem = item;
+						comboBoxCapturePixelFormat.SelectedItem = item;
                 }
             }
         }

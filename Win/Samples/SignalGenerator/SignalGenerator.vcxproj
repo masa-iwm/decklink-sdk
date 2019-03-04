@@ -220,6 +220,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ProfileCallback.cpp" />
     <ClCompile Include="SignalGenerator.cpp" />
     <ClCompile Include="SignalGenerator3DVideoFrame.cpp" />
     <ClCompile Include="SignalGeneratorDlg.cpp" />
@@ -234,6 +235,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ProfileCallback.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SignalGenerator.h" />
     <ClInclude Include="SignalGenerator3DVideoFrame.h" />

@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="9532" systemVersion="15G22010" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none">
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="9532" systemVersion="17G4015" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none">
     <dependencies>
         <deployment identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="9532"/>
@@ -651,21 +651,21 @@
         <window title="CapturePreview" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="371">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
-            <rect key="contentRect" x="335" y="325" width="1346" height="518"/>
+            <rect key="contentRect" x="335" y="325" width="1411" height="541"/>
             <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1178"/>
             <view key="contentView" id="372">
-                <rect key="frame" x="0.0" y="0.0" width="1346" height="518"/>
+                <rect key="frame" x="0.0" y="0.0" width="1411" height="541"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
                     <box title="Capture Properties" borderType="line" id="533">
-                        <rect key="frame" x="17" y="361" width="500" height="145"/>
+                        <rect key="frame" x="17" y="350" width="500" height="179"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <view key="contentView" id="7f3-z7-fkS">
-                            <rect key="frame" x="1" y="1" width="498" height="129"/>
+                            <rect key="frame" x="1" y="1" width="498" height="163"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <textField verticalHuggingPriority="750" id="535">
-                                    <rect key="frame" x="15" y="101" width="184" height="17"/>
+                                    <rect key="frame" x="15" y="134" width="184" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Input Card" id="536">
                                         <font key="font" metaFont="system"/>
@@ -674,7 +674,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" id="537">
-                                    <rect key="frame" x="15" y="49" width="184" height="17"/>
+                                    <rect key="frame" x="18" y="47" width="184" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Video Format" id="538">
                                         <font key="font" metaFont="system"/>
@@ -683,7 +683,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <popUpButton verticalHuggingPriority="750" id="539">
-                                    <rect key="frame" x="220" y="95" width="263" height="26"/>
+                                    <rect key="frame" x="220" y="129" width="263" height="26"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <popUpButtonCell key="cell" type="push" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="542" id="540">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -700,8 +700,26 @@
                                         <action selector="newDeviceSelected:" target="556" id="568"/>
                                     </connections>
                                 </popUpButton>
+                                <popUpButton verticalHuggingPriority="750" id="8Fa-iI-eik" userLabel="Input Connection Popup">
+                                    <rect key="frame" x="220" y="98" width="263" height="26"/>
+                                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                    <popUpButtonCell key="cell" type="push" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="rvY-mO-AfC" id="o8c-Zn-xM6">
+                                        <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                                        <font key="font" metaFont="menu"/>
+                                        <menu key="menu" title="OtherViews" id="7BA-83-QOm">
+                                            <items>
+                                                <menuItem state="on" id="rvY-mO-AfC"/>
+                                                <menuItem title="Item 2" id="MGJ-93-Rkk"/>
+                                                <menuItem title="Item 3" id="Tin-7y-sZy"/>
+                                            </items>
+                                        </menu>
+                                    </popUpButtonCell>
+                                    <connections>
+                                        <action selector="newConnectionSelected:" target="556" id="bxa-Le-zjU"/>
+                                    </connections>
+                                </popUpButton>
                                 <popUpButton verticalHuggingPriority="750" id="545">
-                                    <rect key="frame" x="220" y="43" width="263" height="26"/>
+                                    <rect key="frame" x="220" y="42" width="263" height="26"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <popUpButtonCell key="cell" type="push" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="550" id="546">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -715,8 +733,19 @@
                                         </menu>
                                     </popUpButtonCell>
                                 </popUpButton>
+                                <button id="633">
+                                    <rect key="frame" x="27" y="74" width="213" height="18"/>
+                                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                    <buttonCell key="cell" type="check" title="Apply detected input format" bezelStyle="regularSquare" imagePosition="right" alignment="left" state="on" inset="2" id="634">
+                                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                        <font key="font" metaFont="system"/>
+                                    </buttonCell>
+                                    <connections>
+                                        <action selector="toggleApplyDetectionVideoMode:" target="556" id="piR-RI-xei"/>
+                                    </connections>
+                                </button>
                                 <button verticalHuggingPriority="750" id="551">
-                                    <rect key="frame" x="362" y="6" width="124" height="32"/>
+                                    <rect key="frame" x="360" y="8" width="124" height="32"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <buttonCell key="cell" type="push" title="Start Capture" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="552">
                                         <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -727,7 +756,7 @@
                                     </connections>
                                 </button>
                                 <textField hidden="YES" verticalHuggingPriority="750" id="569">
-                                    <rect key="frame" x="15" y="14" width="184" height="17"/>
+                                    <rect key="frame" x="18" y="17" width="184" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="No valid input signal" id="570">
                                         <font key="font" metaFont="system"/>
@@ -735,21 +764,22 @@
                                         <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                                     </textFieldCell>
                                 </textField>
-                                <button id="633">
-                                    <rect key="frame" x="16" y="73" width="222" height="18"/>
+                                <textField verticalHuggingPriority="750" id="SyD-YJ-2Yg" userLabel="Input Connection">
+                                    <rect key="frame" x="18" y="103" width="184" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                    <buttonCell key="cell" type="check" title="Apply detected input format" bezelStyle="regularSquare" imagePosition="right" alignment="left" state="on" inset="2" id="634">
-                                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Input Connection" id="y7w-B0-nzn">
                                         <font key="font" metaFont="system"/>
-                                    </buttonCell>
-                                </button>
+                                        <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                        <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
+                                    </textFieldCell>
+                                </textField>
                             </subviews>
                         </view>
                         <color key="borderColor" white="0.0" alpha="0.41999999999999998" colorSpace="calibratedWhite"/>
                         <color key="fillColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                     </box>
                     <box title="Ancillary data" borderType="line" id="668">
-                        <rect key="frame" x="17" y="16" width="500" height="341"/>
+                        <rect key="frame" x="17" y="5" width="500" height="341"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <view key="contentView" id="DHV-cK-SnJ">
                             <rect key="frame" x="1" y="1" width="498" height="325"/>
@@ -763,7 +793,7 @@
                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                         <subviews>
                                             <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" alternatingRowBackgroundColors="YES" columnSelection="YES" multipleSelection="NO" autosaveColumns="NO" headerView="718" id="708">
-                                                <rect key="frame" x="0.0" y="0.0" width="460" height="266"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="460" height="19"/>
                                                 <autoresizingMask key="autoresizingMask"/>
                                                 <size key="intercellSpacing" width="3" height="2"/>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -824,14 +854,14 @@
                         <color key="fillColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                     </box>
                     <box title="Preview" borderType="line" id="625">
-                        <rect key="frame" x="519" y="16" width="810" height="490"/>
+                        <rect key="frame" x="519" y="5" width="875" height="524"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <view key="contentView" id="vjd-zQ-e5B">
-                            <rect key="frame" x="1" y="1" width="808" height="474"/>
+                            <rect key="frame" x="1" y="1" width="873" height="508"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <customView id="534">
-                                    <rect key="frame" x="20" y="21" width="768" height="432"/>
+                                    <rect key="frame" x="20" y="20" width="830" height="467"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                                 </customView>
                             </subviews>
@@ -841,7 +871,7 @@
                     </box>
                 </subviews>
             </view>
-            <point key="canvasLocation" x="569.5" y="468"/>
+            <point key="canvasLocation" x="605.5" y="494.5"/>
         </window>
         <customObject id="420" customClass="NSFontManager"/>
         <customObject id="556" customClass="CapturePreviewAppDelegate">
@@ -849,6 +879,7 @@
                 <outlet property="ancillaryDataTable" destination="708" id="716"/>
                 <outlet property="applyDetectedVideoMode" destination="633" id="635"/>
                 <outlet property="deviceListPopup" destination="539" id="563"/>
+                <outlet property="inputConnectionPopup" destination="8Fa-iI-eik" id="V6h-dm-cVI"/>
                 <outlet property="modeListPopup" destination="545" id="560"/>
                 <outlet property="noValidSource" destination="569" id="574"/>
                 <outlet property="previewView" destination="534" id="630"/>

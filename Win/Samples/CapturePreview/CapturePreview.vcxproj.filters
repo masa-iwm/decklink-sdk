@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="DeckLinkAPI">
-      <UniqueIdentifier>{40ffc91a-2f66-47dd-bf53-eea4209ab732}</UniqueIdentifier>
+      <UniqueIdentifier>{dd2a6936-2893-4939-966a-e4f3c696fc34}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -35,6 +35,9 @@
     </ClCompile>
     <ClCompile Include="DeckLinkAPI_i.c">
       <Filter>DeckLinkAPI</Filter>
+    </ClCompile>
+    <ClCompile Include="ProfileCallback.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -57,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProfileCallback.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

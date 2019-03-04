@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		16AF37F3219A822A007126A4 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16AF37F2219A822A007126A4 /* platform.cpp */; };
 		8DD76F770486A8DE00D96B5E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08FB7796FE84155DC02AAC07 /* main.cpp */; settings = {ATTRIBUTES = (); }; };
 		8DD76F790486A8DE00D96B5E /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09AB6884FE841BABC02AAC07 /* CoreFoundation.framework */; };
 		B15E5F850D07766700350752 /* DeckLinkAPI.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = B15E5F840D07766700350752 /* DeckLinkAPI.h */; };
@@ -29,9 +30,10 @@
 /* Begin PBXFileReference section */
 		08FB7796FE84155DC02AAC07 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		09AB6884FE841BABC02AAC07 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
+		16AF37F2219A822A007126A4 /* platform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = platform.cpp; sourceTree = "<group>"; };
 		8DD76F7E0486A8DE00D96B5E /* DeviceList */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = DeviceList; sourceTree = BUILT_PRODUCTS_DIR; };
-		B15E5F840D07766700350752 /* DeckLinkAPI.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = DeckLinkAPI.h; path = ../../include/DeckLinkAPI.h; sourceTree = SOURCE_ROOT; };
-		B15E5F860D07766C00350752 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../include/DeckLinkAPIDispatch.cpp; sourceTree = SOURCE_ROOT; };
+		B15E5F840D07766700350752 /* DeckLinkAPI.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = DeckLinkAPI.h; path = ../../../Mac/include/DeckLinkAPI.h; sourceTree = SOURCE_ROOT; };
+		B15E5F860D07766C00350752 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../../Mac/include/DeckLinkAPIDispatch.cpp; sourceTree = SOURCE_ROOT; };
 		FC6F088E159800B600CFAA9C /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -63,6 +65,7 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				16AF37F2219A822A007126A4 /* platform.cpp */,
 				08FB7796FE84155DC02AAC07 /* main.cpp */,
 			);
 			name = Source;
@@ -143,6 +146,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8DD76F770486A8DE00D96B5E /* main.cpp in Sources */,
+				16AF37F3219A822A007126A4 /* platform.cpp in Sources */,
 				B15E5F870D07766C00350752 /* DeckLinkAPIDispatch.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

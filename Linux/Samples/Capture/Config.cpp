@@ -263,7 +263,7 @@ void BMDConfig::DisplayUsage(int status)
 	int								deckLinkCount = 0;
 	char*							deckLinkName = NULL;
 
-	IDeckLinkAttributes*			deckLinkAttributes = NULL;
+	IDeckLinkProfileAttributes*			deckLinkAttributes = NULL;
 	bool							formatDetectionSupported;
 
 	IDeckLinkInput*					deckLinkInput = NULL;
@@ -324,7 +324,7 @@ void BMDConfig::DisplayUsage(int status)
 		goto bail;
 	}
 
-	result = deckLinkSelected->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+	result = deckLinkSelected->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 	if (result == S_OK)
 	{
 		result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &formatDetectionSupported);

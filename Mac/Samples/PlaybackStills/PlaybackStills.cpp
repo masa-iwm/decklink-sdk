@@ -263,10 +263,10 @@ int main(int argc, char* argv[])
 		if (idx++ == deckLinkIndex)
 		{
 			// Check that selected device supports playback
-			IDeckLinkAttributes*	deckLinkAttributes = NULL;
-			int64_t					ioSupportAttribute = 0;
+			IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
+			int64_t						ioSupportAttribute = 0;
 
-			result = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+			result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 
 			if (result != S_OK)
 			{
@@ -326,7 +326,7 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			BMDDisplayModeSupport	displayModeSupported;
+			dlbool_t				displayModeSupported;
 			dlstring_t				displayModeName;
 
 			result = displayModes[displayModeIndex]->GetName(&displayModeName);
@@ -344,8 +344,8 @@ int main(int argc, char* argv[])
 
 			// Check display mode is supported with given options
 			// Passing pixel format = 0 to represent any pixel format
-			result = selectedDeckLinkOutput->DoesSupportVideoMode(selectedDisplayMode, (BMDPixelFormat)0, bmdVideoOutputFlagDefault, &displayModeSupported, NULL);
-			if ((result != S_OK) || (displayModeSupported == bmdDisplayModeNotSupported))
+			result = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, bmdFormatUnspecified, bmdSupportedVideoModeDefault, NULL, &displayModeSupported);
+			if ((result != S_OK) || (!displayModeSupported))
 			{
 				fprintf(stderr, "The display mode %s is not supported by device\n", selectedDisplayModeName.c_str());
 				displayHelp = true;

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -55,7 +55,6 @@ typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigHDMI3DPackingFormat                         = /* '3dpf' */ 0x33647066,
     bmdDeckLinkConfigBypass                                      = /* 'byps' */ 0x62797073,
     bmdDeckLinkConfigClockTimingAdjustment                       = /* 'ctad' */ 0x63746164,
-    bmdDeckLinkConfigDuplexMode                                  = /* 'dupx' */ 0x64757078,
 
     /* Audio Input/Output Flags */
 
@@ -87,6 +86,7 @@ typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigDefaultVideoOutputMode                      = /* 'dvom' */ 0x64766F6D,
     bmdDeckLinkConfigDefaultVideoOutputModeFlags                 = /* 'dvof' */ 0x64766F66,
     bmdDeckLinkConfigSDIOutputLinkConfiguration                  = /* 'solc' */ 0x736F6C63,
+    bmdDeckLinkConfigPlaybackGroup                               = /* 'plgr' */ 0x706C6772,
 
     /* Video Output Floats */
 
@@ -118,6 +118,7 @@ typedef [v1_enum] enum	_BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigVANCSourceLine2Mapping                      = /* 'vsl2' */ 0x76736C32,
     bmdDeckLinkConfigVANCSourceLine3Mapping                      = /* 'vsl3' */ 0x76736C33,
     bmdDeckLinkConfigCapturePassThroughMode                      = /* 'cptm' */ 0x6370746D,
+    bmdDeckLinkConfigCaptureGroup                                = /* 'cpgr' */ 0x63706772,
 
     /* Video Input Floats */
 
@@ -209,7 +210,7 @@ interface IDeckLinkEncoderConfiguration;
 
 [
     object,
-    uuid(EF90380B-4AE5-4346-9077-E288E149F129),
+    uuid(912F634B-2D4E-40A4-8AAB-8D80B73F1289),
     local, 
     helpstring("DeckLink Configuration interface")
 ] interface IDeckLinkConfiguration : IUnknown

@@ -90,8 +90,8 @@ BOOL CInputLoopThroughDlg::OnInitDialog()
 	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p50"),bmdModeHD720p50);
 	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p59.94"),bmdModeHD720p5994);
 	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("720p60"),bmdModeHD720p60);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("2K 23.98p"),bmdMode2k2398);
-	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("2K 24p"),bmdMode2k24);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("2Kp23.98"),bmdMode2k2398);
+	m_VideoFormatCombo.SetItemData(m_VideoFormatCombo.AddString("2Kp24"),bmdMode2k24);
 	m_VideoFormatCombo.SetCurSel(0);
 
 	CComPtr<IDeckLinkIterator>	pIterator = NULL;
@@ -108,7 +108,7 @@ BOOL CInputLoopThroughDlg::OnInitDialog()
 			
 			// Add this deckLink instance to the popup menus
 			
-			if (m_pDeckLink[i]->GetModelName(&cardNameBSTR) != S_OK)
+			if (m_pDeckLink[i]->GetDisplayName(&cardNameBSTR) != S_OK)
 				cardNameBSTR = L"Unknown DeckLink";
 
 			cardName = cardNameBSTR;

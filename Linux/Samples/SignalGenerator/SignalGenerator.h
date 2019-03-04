@@ -47,6 +47,7 @@
 // Define custom event type 
 const QEvent::Type ADD_DEVICE_EVENT			= static_cast<QEvent::Type>(QEvent::User + 1);
 const QEvent::Type REMOVE_DEVICE_EVENT		= static_cast<QEvent::Type>(QEvent::User + 2);
+const QEvent::Type PROFILE_ACTIVATED_EVENT	= static_cast<QEvent::Type>(QEvent::User + 3);
 
 class SignalGeneratorEvent : public QEvent
 {
@@ -61,42 +62,52 @@ public:
 	IDeckLink* deckLink() const { return m_deckLink; };
 };
 
+class ProfileCallbackEvent : public QEvent
+{
+private:
+	IDeckLinkProfile*		m_profile;
+
+public:
+	ProfileCallbackEvent(QEvent::Type type, IDeckLinkProfile* profile)
+		: QEvent(type), m_profile(profile) { m_profile->AddRef(); }
+	virtual ~ProfileCallbackEvent() { m_profile->Release(); }
+
+	IDeckLinkProfile* Profile() const { return m_profile; }
+};
 
 class Timecode
 {
 public:
-	Timecode(int f)
-		: fps(f),frames_(0),seconds_(0),minutes_(0),hours_(0)
+	Timecode(int f, int d)
+		: fps(f), framecount(0), dropframes(d), frames_(0),seconds_(0),minutes_(0),hours_(0)
 	{
 	}
 	void update()
 	{
-		if (frames_ >= (unsigned)fps - 1)
-		{
-			frames_ = 0;
-			seconds_++;
-		}
-		else
-			frames_++;
+		unsigned long frameCountNormalized = framecount++;
 
-		if (seconds_ >= 60)
+		if (dropframes)
 		{
-			seconds_ = 0;
-			minutes_++;
+			int deciMins, deciMinsRemainder;
+
+			int framesIn10mins = (60 * 10 * fps) - (9 * dropframes);
+			deciMins = frameCountNormalized / framesIn10mins;
+			deciMinsRemainder = frameCountNormalized - (deciMins * framesIn10mins);
+
+			// Add drop frames for 9 minutes of every 10 minutes that have elapsed
+			// AND drop frames for every minute (over the first minute) in this 10-minute block.
+			frameCountNormalized += dropframes * 9 * deciMins;
+			if (deciMinsRemainder >= dropframes)
+				frameCountNormalized += dropframes * ((deciMinsRemainder - dropframes) / (framesIn10mins / 10));
 		}
 
-		if (minutes_ >= 60)
-		{
-			minutes_ = 0;
-			hours_++;
-		}
-		if (hours_ >= 24)
-		{
-			frames_ = 0;
-			seconds_ = 0;
-			minutes_ = 0;
-			hours_ = 0;
-		}
+		frames_ = (int)(frameCountNormalized % fps);
+		frameCountNormalized /= fps;
+		seconds_ = (int)(frameCountNormalized % 60);
+		frameCountNormalized /= 60;
+		minutes_ = (int)(frameCountNormalized % 60);
+		frameCountNormalized /= 60;
+		hours_ = (int)frameCountNormalized;
 	}
 	int hours() const { return hours_; }
 	int minutes() const { return minutes_; }
@@ -104,7 +115,9 @@ public:
 	int frames() const { return frames_; }
 private:
 	int fps;
-	unsigned long frames_;
+	unsigned long framecount;
+	int dropframes;
+	int frames_;
 	int seconds_;
 	int minutes_;
 	int hours_;
@@ -120,6 +133,7 @@ enum OutputSignal
 class CDeckLinkGLWidget;
 class DeckLinkOutputDevice;
 class DeckLinkDeviceDiscovery;
+class ProfileCallback;
 
 class SignalGenerator : public QDialog
 {
@@ -133,13 +147,15 @@ public:
 	bool						running;
 	DeckLinkOutputDevice* 		selectedDevice;
 	DeckLinkDeviceDiscovery*	deckLinkDiscovery;
-	IDeckLinkDisplayMode*		selectedDisplayMode;
+	BMDDisplayMode				selectedDisplayMode;
+	ProfileCallback*			profileCallback;
 	
 	uint32_t					frameWidth;
 	uint32_t					frameHeight;
 	BMDTimeValue				frameDuration;
 	BMDTimeScale				frameTimescale;
 	uint32_t					framesPerSecond;
+	uint32_t					dropFrames;
 	IDeckLinkMutableVideoFrame*	videoFrameBlack;
 	IDeckLinkMutableVideoFrame*	videoFrameBars;
 	uint32_t					totalFramesScheduled;
@@ -157,6 +173,7 @@ public:
 	QWaitCondition				stopPlaybackCondition;
 	
 	BMDTimecodeFormat			timeCodeFormat;
+	bool						hfrtcSupported;
 
 	void customEvent(QEvent* event);
 	void closeEvent(QCloseEvent *event);
@@ -176,6 +193,8 @@ public:
 	void addDevice(IDeckLink* deckLink);
 	void removeDevice(IDeckLink* deckLink);
 	void playbackStopped(void);
+	void haltStreams(void);
+	void updateProfile(IDeckLinkProfile* newProfile);
 	
 public slots:
 	void outputDeviceChanged(int selectedDeviceIndex);

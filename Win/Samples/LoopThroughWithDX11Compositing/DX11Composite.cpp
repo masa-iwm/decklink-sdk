@@ -128,7 +128,7 @@ bool DX11Composite::InitDeckLink()
 	bool							bSuccess = false;
 	IDeckLinkIterator*				pDLIterator = NULL;
 	IDeckLink*						pDL = NULL;
-	IDeckLinkAttributes*			deckLinkAttributes = NULL;
+	IDeckLinkProfileAttributes*			deckLinkAttributes = NULL;
 	IDeckLinkDisplayModeIterator*	pDLDisplayModeIterator = NULL;
 	IDeckLinkDisplayMode*			pDLDisplayMode = NULL;
 	BMDDisplayMode					displayMode = bmdModeHD1080i5994;		// mode to use for capture and playout
@@ -144,19 +144,23 @@ bool DX11Composite::InitDeckLink()
 
 	while (pDLIterator->Next(&pDL) == S_OK)
 	{
-		BOOL supportsFullDuplex = FALSE;
+		int64_t duplexMode;
 
-		if (result = pDL->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes) != S_OK)
+		if (result = pDL->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
 		{
-			printf("Could not obtain the IDeckLinkAttributes interface - result %08x\n", result);
+			printf("Could not obtain the IDeckLinkProfileAttributes interface - result %08x\n", result);
 			SAFE_RELEASE(pDL);
 			continue;
 		}
 
-		if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsFullDuplex, &supportsFullDuplex) != S_OK)
-			supportsFullDuplex = FALSE;
-
+		result = deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &duplexMode);
 		SAFE_RELEASE(deckLinkAttributes);
+
+		if (result != S_OK  || duplexMode == bmdDuplexInactive)
+		{
+			SAFE_RELEASE(pDL);
+			continue;
+		}
 
 		// Use a full duplex device as capture and playback, or half-duplex device
 		// as capture or playback.
@@ -164,7 +168,7 @@ bool DX11Composite::InitDeckLink()
 		if (!mDLInput && pDL->QueryInterface(IID_IDeckLinkInput, (void**)&mDLInput) == S_OK)
 			inputUsed = true;
 
-		if (!mDLOutput && (!inputUsed || supportsFullDuplex))
+		if (!mDLOutput && (!inputUsed || (duplexMode == bmdDuplexFull)))
 		{
 			if (pDL->QueryInterface(IID_IDeckLinkOutput, (void**)&mDLOutput) != S_OK)
 				mDLOutput = NULL;

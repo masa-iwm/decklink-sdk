@@ -10,15 +10,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DeviceList.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DeckLinkAPI_i.c">
       <Filter>DeckLink API</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="platform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="..\..\include\DeckLinkAPI.idl">
+    <Midl Include="..\..\..\Win\include\DeckLinkAPI.idl">
       <Filter>DeckLink API</Filter>
     </Midl>
   </ItemGroup>

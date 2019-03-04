@@ -1,5 +1,5 @@
 #** -LICENSE-START-
-#** Copyright (c) 2009 Blackmagic Design
+#** Copyright (c) 2018 Blackmagic Design
 #**
 #** Permission is hereby granted, free of charge, to any person or organization
 #** obtaining a copy of the software and accompanying documentation covered by
@@ -25,12 +25,13 @@
 #** -LICENSE-END-
 
 CC=g++
-SDK_PATH=../../include
-CFLAGS=-Wno-multichar -I $(SDK_PATH) -fno-rtti
+SDK_PATH=../../../Linux/include
+CFLAGS=-std=c++11 -Wno-multichar -I $(SDK_PATH) -fno-rtti
 LDFLAGS=-lm -ldl -lpthread
 
-DeviceList: main.cpp $(SDK_PATH)/DeckLinkAPIDispatch.cpp
-	$(CC) -o DeviceList main.cpp $(SDK_PATH)/DeckLinkAPIDispatch.cpp $(CFLAGS) $(LDFLAGS)
+DeviceList: main.cpp platform.cpp $(SDK_PATH)/DeckLinkAPIDispatch.cpp
+	$(CC) -o DeviceList main.cpp platform.cpp $(SDK_PATH)/DeckLinkAPIDispatch.cpp $(CFLAGS) $(LDFLAGS)
 
 clean:
 	rm -f DeviceList
+

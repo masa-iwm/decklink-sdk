@@ -66,23 +66,12 @@ enum {
 	kAudioInputConnectionsString 
 };
 
-// Duplex Mode
-const std::vector<std::tuple<BMDDuplexMode, std::string>> kDuplexMode =
-{
-	std::make_tuple(bmdDuplexModeFull, "Device Full Duplex"),
-	std::make_tuple(bmdDuplexModeHalf, "Device Half Duplex"),
-};
-enum { 
-	kDuplexModeValue = 0, 
-	kDuplexModeString 
-};
-
 // Link Configuration - Link configuration, Link configuration valid function, display string
-const std::vector<std::tuple<BMDLinkConfiguration, std::function<bool(IDeckLinkAttributes*)>, std::string>> kLinkConfiguration =
+const std::vector<std::tuple<BMDLinkConfiguration, std::function<bool(IDeckLinkProfileAttributes*)>, std::string>> kLinkConfiguration =
 {
-	std::make_tuple(bmdLinkConfigurationSingleLink, [](IDeckLinkAttributes* dla) -> bool { return true; }, "Single-link SDI video connection"),
-	std::make_tuple(bmdLinkConfigurationDualLink, [](IDeckLinkAttributes* dla) -> bool { dlbool_t flag; return (dla->GetFlag(BMDDeckLinkSupportsDualLinkSDI, &flag) == S_OK) && flag; }, "Dual-link SDI video connection"),
-	std::make_tuple(bmdLinkConfigurationQuadLink, [](IDeckLinkAttributes* dla) -> bool { dlbool_t flag; return (dla->GetFlag(BMDDeckLinkSupportsQuadLinkSDI, &flag) == S_OK) && flag; }, "Quad-link SDI video connection"),
+	std::make_tuple(bmdLinkConfigurationSingleLink, [](IDeckLinkProfileAttributes* dla) -> bool { return true; }, "Single-link SDI video connection"),
+	std::make_tuple(bmdLinkConfigurationDualLink, [](IDeckLinkProfileAttributes* dla) -> bool { dlbool_t flag; return (dla->GetFlag(BMDDeckLinkSupportsDualLinkSDI, &flag) == S_OK) && flag; }, "Dual-link SDI video connection"),
+	std::make_tuple(bmdLinkConfigurationQuadLink, [](IDeckLinkProfileAttributes* dla) -> bool { dlbool_t flag; return (dla->GetFlag(BMDDeckLinkSupportsQuadLinkSDI, &flag) == S_OK) && flag; }, "Quad-link SDI video connection"),
 };
 enum { 
 	kLinkConfigurationValue = 0, 
@@ -132,7 +121,7 @@ std::string GetPassThroughModeString(BMDDeckLinkCapturePassthroughMode passThrou
 	}
 }
 
-std::string	GetDisplayNameAttribute(IDeckLinkAttributes* deckLinkAttributes)
+std::string	GetDisplayNameAttribute(IDeckLinkProfileAttributes* deckLinkAttributes)
 {
 	dlstring_t deckLinkName;
 	std::string retString;
@@ -148,7 +137,7 @@ std::string	GetDisplayNameAttribute(IDeckLinkAttributes* deckLinkAttributes)
 	return retString;
 }
 
-void DisplayUsage(IDeckLinkConfiguration* deckLinkConfiguration, IDeckLinkAttributes* deckLinkAttributes, std::vector<std::string>& displayNames)
+void DisplayUsage(IDeckLinkConfiguration* deckLinkConfiguration, IDeckLinkProfileAttributes* deckLinkAttributes, std::vector<std::string>& displayNames)
 {
 	int64_t videoIOSupport;
 
@@ -215,30 +204,6 @@ void DisplayUsage(IDeckLinkConfiguration* deckLinkConfiguration, IDeckLinkAttrib
 		}
 		else
 			fprintf(stderr, "       No SDI connections on the selected device\n");
-	}
-
-	fprintf(stderr, "    -p <duplex mode id>:\n");
-	{
-		dlbool_t supportsDuplexMode;
-
-		// Get current duplex mode configuration
-		if ((deckLinkAttributes->GetFlag(BMDDeckLinkSupportsDuplexModeConfiguration, &supportsDuplexMode) != S_OK) || !supportsDuplexMode)
-			fprintf(stderr, "       Duplex mode not supported by the selected device\n");
-		else
-		{
-			int64_t currentDuplexMode;
-
-			if (deckLinkConfiguration->GetInt(bmdDeckLinkConfigDuplexMode, &currentDuplexMode) != S_OK)
-				currentDuplexMode = bmdDuplexModeFull;
-
-			for (size_t i = 0; i < kDuplexMode.size(); i++)
-				fprintf(stderr,
-				"       %c%2d:  %s\n",
-				((BMDDuplexMode)currentDuplexMode == std::get<kDuplexModeValue>(kDuplexMode[i])) ? '*' : ' ',
-				(int)i,
-				(std::get<kDuplexModeString>(kDuplexMode[i])).c_str()
-				);
-		}
 	}
 
 	fprintf(stderr, "    -v <video input connector id>:\n");
@@ -406,7 +371,6 @@ int main(int argc, char* argv[])
 	bool						displayHelp					= false;
 	int							deckLinkIndex				= -1;
 	int							linkConfigurationIndex		= -1;
-	int							duplexModeIndex				= -1;
 	int							videoInputConnectorIndex	= -1;
 	int							audioInputConnectorIndex	= -1;
 	int							videoOutputModeIndex		= -1;
@@ -417,7 +381,7 @@ int main(int argc, char* argv[])
 	IDeckLinkIterator*			deckLinkIterator		= NULL;
 	IDeckLink*					deckLink				= NULL;
 	IDeckLink*					selectedDeckLink		= NULL;
-	IDeckLinkAttributes*		deckLinkAttributes		= NULL;
+	IDeckLinkProfileAttributes*	deckLinkAttributes		= NULL;
 	IDeckLinkConfiguration*		deckLinkConfiguration	= NULL;
 
 	std::vector<std::string>	deckLinkDisplayNames;
@@ -432,9 +396,6 @@ int main(int argc, char* argv[])
 
 		else if (strcmp(argv[i], "-l") == 0)
 			linkConfigurationIndex = atoi(argv[++i]);
-
-		else if (strcmp(argv[i], "-p") == 0)
-			duplexModeIndex = atoi(argv[++i]);
 
 		else if (strcmp(argv[i], "-v") == 0)
 			videoInputConnectorIndex = atoi(argv[++i]);
@@ -501,9 +462,9 @@ int main(int argc, char* argv[])
 			goto bail;
 		}
 
-		if (selectedDeckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes) != S_OK)
+		if (selectedDeckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
 		{
-			fprintf(stderr, "Unable to query IDeckLinkAttributes interface\n");
+			fprintf(stderr, "Unable to query IDeckLinkProfileAttributes interface\n");
 			goto bail;
 		}
 	}
@@ -530,23 +491,6 @@ int main(int argc, char* argv[])
 		else
 		{
 			fprintf(stderr, "Link width not supported by device\n");
-			goto bail;
-		}
-	}
-	
-	// Set duplex mode configuration
-	if (duplexModeIndex != -1)
-	{
-		dlbool_t supportsDuplexMode;
-
-		if ((deckLinkAttributes->GetFlag(BMDDeckLinkSupportsDuplexModeConfiguration, &supportsDuplexMode) != S_OK) || !supportsDuplexMode)
-		{
-			fprintf(stderr, "Duplex mode not supported by device\n");
-			goto bail;
-		}
-		else if (deckLinkConfiguration->SetInt(bmdDeckLinkConfigDuplexMode, (int64_t)std::get<kDuplexModeValue>(kDuplexMode[duplexModeIndex])) != S_OK)
-		{
-			fprintf(stderr, "Unable to set Duplex mode on device\n");
 			goto bail;
 		}
 	}
@@ -644,8 +588,6 @@ int main(int argc, char* argv[])
 	fprintf(stderr, "Updating device with configuration:\n - Device display name: %s\n", GetDisplayNameAttribute(deckLinkAttributes).c_str());
 	if (linkConfigurationIndex != -1)
 		fprintf(stderr, " - Link width: %s\n", (std::get<kLinkConfigurationString>(kLinkConfiguration[linkConfigurationIndex])).c_str());
-	if (duplexModeIndex != -1)
-		fprintf(stderr, " - Duplex Mode: %s\n", (std::get<kDuplexModeString>(kDuplexMode[duplexModeIndex])).c_str());
 	if (videoInputConnectorIndex != -1)
 		fprintf(stderr, " - Video Input Connector: %s\n", (std::get<kVideoInputConnectionsString>(kVideoInputConnections[videoInputConnectorIndex])).c_str());
 	if (audioInputConnectorIndex != -1)

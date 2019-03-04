@@ -19,6 +19,14 @@
 		A82F1FFB19AC706B006B6B3D /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 085EF2D7181894CD00D5805C /* DeckLinkAPIDispatch.cpp */; };
 		A82F1FFD19AC706B006B6B3D /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085EF2D31818946000D5805C /* CoreFoundation.framework */; };
 		A82F200319AC70AB006B6B3D /* RP188VitcOutput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A82F200219AC70AB006B6B3D /* RP188VitcOutput.cpp */; };
+		A837E7BC2186BA3200C083AF /* SynchronizedCapture.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A837E7BB2186BA3200C083AF /* SynchronizedCapture.cpp */; };
+		A837E7BD2186CD3400C083AF /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08AFDC09181E06F700C86C10 /* platform.cpp */; };
+		A837E7BE2186CD3900C083AF /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 085EF2D7181894CD00D5805C /* DeckLinkAPIDispatch.cpp */; };
+		A837E7BF2186CD5400C083AF /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085EF2D31818946000D5805C /* CoreFoundation.framework */; };
+		A8385BCA21630318005E0A98 /* SynchronizedPlayback.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A882B31D2154AFA40058E063 /* SynchronizedPlayback.cpp */; };
+		A8385BCB21630354005E0A98 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08AFDC09181E06F700C86C10 /* platform.cpp */; };
+		A8385BCC2163035A005E0A98 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 085EF2D7181894CD00D5805C /* DeckLinkAPIDispatch.cpp */; };
+		A8385BCD21630380005E0A98 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085EF2D31818946000D5805C /* CoreFoundation.framework */; };
 		A8F503DF1C0D119500212771 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08AFDC09181E06F700C86C10 /* platform.cpp */; };
 		A8F503E01C0D119500212771 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 085EF2D7181894CD00D5805C /* DeckLinkAPIDispatch.cpp */; };
 		A8F503E21C0D119500212771 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085EF2D31818946000D5805C /* CoreFoundation.framework */; };
@@ -28,6 +36,27 @@
 		DE75DF80195CFE0E0016F2B3 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08AFDC09181E06F700C86C10 /* platform.cpp */; };
 		DE75DF81195CFE0E0016F2B3 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 085EF2D7181894CD00D5805C /* DeckLinkAPIDispatch.cpp */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A837E7B22186B9DF00C083AF /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		A882B3212154AFBD0058E063 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		085EF2C91818942B00D5805C /* AutomaticModeDetection */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AutomaticModeDetection; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -41,6 +70,10 @@
 		08AFDC09181E06F700C86C10 /* platform.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = platform.cpp; path = Mac/platform.cpp; sourceTree = "<group>"; };
 		A82F200119AC706B006B6B3D /* RP188VitcOutput */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = RP188VitcOutput; sourceTree = BUILT_PRODUCTS_DIR; };
 		A82F200219AC70AB006B6B3D /* RP188VitcOutput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RP188VitcOutput.cpp; sourceTree = SOURCE_ROOT; };
+		A837E7B42186B9DF00C083AF /* SynchronizedCapture */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SynchronizedCapture; sourceTree = BUILT_PRODUCTS_DIR; };
+		A837E7BB2186BA3200C083AF /* SynchronizedCapture.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SynchronizedCapture.cpp; sourceTree = SOURCE_ROOT; };
+		A882B31D2154AFA40058E063 /* SynchronizedPlayback.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SynchronizedPlayback.cpp; sourceTree = SOURCE_ROOT; };
+		A882B3232154AFBD0058E063 /* SynchronizedPlayback */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SynchronizedPlayback; sourceTree = BUILT_PRODUCTS_DIR; };
 		A8F503E61C0D119500212771 /* StatusMonitor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = StatusMonitor; sourceTree = BUILT_PRODUCTS_DIR; };
 		A8F503E71C0D11C200212771 /* StatusMonitor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StatusMonitor.cpp; sourceTree = "<group>"; };
 		DEAE2E481958EC2700DE9F48 /* VancOutput */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = VancOutput; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,6 +105,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A837E7B12186B9DF00C083AF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A837E7BF2186CD5400C083AF /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A882B3202154AFBD0058E063 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A8385BCD21630380005E0A98 /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A8F503E11C0D119500212771 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -98,6 +147,8 @@
 				08A4810A185059A400C11683 /* DeviceNotification */,
 				DEAE2E491958EC2700DE9F48 /* VancOutput */,
 				A82F1FEF19AC704D006B6B3D /* RP188VitcOutput */,
+				A882B3242154AFBD0058E063 /* SynchronizedPlayback */,
+				A837E7B52186B9DF00C083AF /* SynchronizedCapture */,
 				DEB1D2BA1958038E00A19F86 /* Frameworks */,
 				083BE8AB181892BD0067DA94 /* Products */,
 				085EF2C41818940A00D5805C /* Common */,
@@ -113,6 +164,8 @@
 				DEAE2E481958EC2700DE9F48 /* VancOutput */,
 				A82F200119AC706B006B6B3D /* RP188VitcOutput */,
 				A8F503E61C0D119500212771 /* StatusMonitor */,
+				A882B3232154AFBD0058E063 /* SynchronizedPlayback */,
+				A837E7B42186B9DF00C083AF /* SynchronizedCapture */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -150,6 +203,22 @@
 				A82F200219AC70AB006B6B3D /* RP188VitcOutput.cpp */,
 			);
 			path = RP188VitcOutput;
+			sourceTree = "<group>";
+		};
+		A837E7B52186B9DF00C083AF /* SynchronizedCapture */ = {
+			isa = PBXGroup;
+			children = (
+				A837E7BB2186BA3200C083AF /* SynchronizedCapture.cpp */,
+			);
+			path = SynchronizedCapture;
+			sourceTree = "<group>";
+		};
+		A882B3242154AFBD0058E063 /* SynchronizedPlayback */ = {
+			isa = PBXGroup;
+			children = (
+				A882B31D2154AFA40058E063 /* SynchronizedPlayback.cpp */,
+			);
+			path = SynchronizedPlayback;
 			sourceTree = "<group>";
 		};
 		A8F503E91C0D11C900212771 /* StatusMonitor */ = {
@@ -227,6 +296,40 @@
 			productReference = A82F200119AC706B006B6B3D /* RP188VitcOutput */;
 			productType = "com.apple.product-type.tool";
 		};
+		A837E7B32186B9DF00C083AF /* SynchronizedCapture */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A837E7BA2186B9DF00C083AF /* Build configuration list for PBXNativeTarget "SynchronizedCapture" */;
+			buildPhases = (
+				A837E7B02186B9DF00C083AF /* Sources */,
+				A837E7B12186B9DF00C083AF /* Frameworks */,
+				A837E7B22186B9DF00C083AF /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SynchronizedCapture;
+			productName = SynchronizedCapture;
+			productReference = A837E7B42186B9DF00C083AF /* SynchronizedCapture */;
+			productType = "com.apple.product-type.tool";
+		};
+		A882B3222154AFBD0058E063 /* SynchronizedPlayback */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A882B3272154AFBD0058E063 /* Build configuration list for PBXNativeTarget "SynchronizedPlayback" */;
+			buildPhases = (
+				A882B31F2154AFBD0058E063 /* Sources */,
+				A882B3202154AFBD0058E063 /* Frameworks */,
+				A882B3212154AFBD0058E063 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SynchronizedPlayback;
+			productName = SynchronizedPlayback;
+			productReference = A882B3232154AFBD0058E063 /* SynchronizedPlayback */;
+			productType = "com.apple.product-type.tool";
+		};
 		A8F503DC1C0D119500212771 /* StatusMonitor */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A8F503E31C0D119500212771 /* Build configuration list for PBXNativeTarget "StatusMonitor" */;
@@ -267,6 +370,14 @@
 			attributes = {
 				LastUpgradeCheck = 0460;
 				ORGANIZATIONNAME = "Blackmagic Design";
+				TargetAttributes = {
+					A837E7B32186B9DF00C083AF = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
+					A882B3222154AFBD0058E063 = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
+				};
 			};
 			buildConfigurationList = 083BE8A5181892BD0067DA94 /* Build configuration list for PBXProject "Examples" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -285,6 +396,8 @@
 				DEAE2E471958EC2700DE9F48 /* VancOutput */,
 				A82F1FF719AC706B006B6B3D /* RP188VitcOutput */,
 				A8F503DC1C0D119500212771 /* StatusMonitor */,
+				A882B3222154AFBD0058E063 /* SynchronizedPlayback */,
+				A837E7B32186B9DF00C083AF /* SynchronizedCapture */,
 			);
 		};
 /* End PBXProject section */
@@ -317,6 +430,26 @@
 				A82F1FFA19AC706B006B6B3D /* platform.cpp in Sources */,
 				A82F200319AC70AB006B6B3D /* RP188VitcOutput.cpp in Sources */,
 				A82F1FFB19AC706B006B6B3D /* DeckLinkAPIDispatch.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A837E7B02186B9DF00C083AF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A837E7BD2186CD3400C083AF /* platform.cpp in Sources */,
+				A837E7BE2186CD3900C083AF /* DeckLinkAPIDispatch.cpp in Sources */,
+				A837E7BC2186BA3200C083AF /* SynchronizedCapture.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A882B31F2154AFBD0058E063 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A8385BCB21630354005E0A98 /* platform.cpp in Sources */,
+				A8385BCC2163035A005E0A98 /* DeckLinkAPIDispatch.cpp in Sources */,
+				A8385BCA21630318005E0A98 /* SynchronizedPlayback.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -458,6 +591,110 @@
 			};
 			name = Release;
 		};
+		A837E7B82186B9DF00C083AF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_IDENTITY = "-";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		A837E7B92186B9DF00C083AF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		A882B3282154AFBD0058E063 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_IDENTITY = "-";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		A882B3292154AFBD0058E063 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		A8F503E41C0D119500212771 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -529,6 +766,23 @@
 			buildConfigurations = (
 				A82F1FFF19AC706B006B6B3D /* Debug */,
 				A82F200019AC706B006B6B3D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A837E7BA2186B9DF00C083AF /* Build configuration list for PBXNativeTarget "SynchronizedCapture" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A837E7B82186B9DF00C083AF /* Debug */,
+				A837E7B92186B9DF00C083AF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		A882B3272154AFBD0058E063 /* Build configuration list for PBXNativeTarget "SynchronizedPlayback" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A882B3282154AFBD0058E063 /* Debug */,
+				A882B3292154AFBD0058E063 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

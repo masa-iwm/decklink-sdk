@@ -29,16 +29,16 @@
 
 #import "DeckLinkKeyerController.h"
 
+static const BMDPixelFormat kPixelFormat = bmdFormat8BitARGB;
 
 @implementation DeckLinkKeyerController
 - (void)awakeFromNib
 {
 	IDeckLinkIterator*					deckLinkIterator = NULL;
-	IDeckLinkAttributes*				deckLinkAttributes = NULL;
+	IDeckLinkProfileAttributes*				deckLinkAttributes = NULL;
 	IDeckLinkDisplayModeIterator*		displayModeIterator = NULL;
 	IDeckLinkDisplayMode*				deckLinkDisplayMode = NULL;
 	bool								success = false;
-	bool								supportHDKeying;
 	bool								supportExternalKeying;
 	bool								supportInternalKeying;
 	
@@ -71,8 +71,8 @@
 	if (deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput) != S_OK)
 		goto bail;
 
-	// obtain the DeckLink Attribute interface (IDeckLinkAttributes)
-	if (deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes) != S_OK)
+	// obtain the DeckLink Attribute interface (IDeckLinkProfileAttributes)
+	if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
 		goto bail;
 
 	// Is keying supported ?
@@ -91,11 +91,6 @@
 		[alert release];
 		goto bail;
 	}
-
-	// Is keying is supported in HD modes ?
-	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHDKeying, &supportHDKeying) != S_OK)
-		goto bail;
-	
 	
 	// **** Setup the display mode menu ****	
 	if (deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
@@ -103,13 +98,15 @@
 
 	while(displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
 	{
-		CFStringRef		modeName;
+		bool supported;
+		HRESULT hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(),
+														  kPixelFormat, bmdSupportedVideoModeKeying, nullptr, &supported);
+		if (FAILED(hr) || !supported)
+			continue;
 		
+		CFStringRef		modeName;
 		if (deckLinkDisplayMode->GetName(&modeName) == S_OK)
 		{
-			// Skip HD modes on cards such as DeckLink SDI (only PAL/NTSC are supported for keying)
-			if ((deckLinkDisplayMode->GetWidth() > 720) && !supportHDKeying)
-				continue;
 
 			// Add this item to the video format poup menu
 			[outputModeMenu addItemWithTitle:(NSString*)modeName];
@@ -268,7 +265,7 @@ bail:
 	if (keyFrameBuffer == NULL)
 	{
 		// If we dont have a DeckLinkVideoFrame yet, create one & fetch the associated buffer
-		if (deckLinkOutput->CreateVideoFrame(width, height, width*4*sizeof(uint8_t), bmdFormat8BitARGB, bmdFrameFlagDefault, &keyFrameBuffer) == S_OK)
+		if (deckLinkOutput->CreateVideoFrame(width, height, width*4*sizeof(uint8_t), kPixelFormat, bmdFrameFlagDefault, &keyFrameBuffer) == S_OK)
 			keyFrameBuffer->GetBytes(&buffer);
 	}
 	else
@@ -278,7 +275,7 @@ bail:
 			// If we already have a DeckLinkVideoFrame, but its dimensions are different from the requested ones,
 			// release the frame, create a new one with the requested dimensions & fetch the associated buffer
 			keyFrameBuffer->Release();
-			if (deckLinkOutput->CreateVideoFrame(width, height, width*4*sizeof(uint8_t), bmdFormat8BitARGB, bmdFrameFlagDefault, &keyFrameBuffer) == S_OK)
+			if (deckLinkOutput->CreateVideoFrame(width, height, width*4*sizeof(uint8_t), kPixelFormat, bmdFrameFlagDefault, &keyFrameBuffer) == S_OK)
 				keyFrameBuffer->GetBytes(&buffer);
 		}
 		else

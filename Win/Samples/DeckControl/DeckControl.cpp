@@ -88,7 +88,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		result = deckLink->GetModelName(&deviceNameBSTR); 
 		if (result == S_OK) 
 		{ 
-			IDeckLinkAttributes*	deckLinkAttributes; 
+			IDeckLinkProfileAttributes*	deckLinkAttributes; 
  		 	HRESULT			attributeResult; 
 			BSTR			serialNameBSTR = NULL; 
 			BOOL			serialSupported; 
@@ -96,10 +96,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			_bstr_t		deviceName(deviceNameBSTR);
 			printf("Found Blackmagic device: %s\n", (char*)deviceName); 
 			 
-			attributeResult = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes); 
+			attributeResult = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes); 
  			if (attributeResult != S_OK) 
 			{ 
-				fprintf(stderr, "Could not obtain the IDeckLinkAttributes interface"); 
+				fprintf(stderr, "Could not obtain the IDeckLinkProfileAttributes interface"); 
 			} 
 			else 
 			{ 

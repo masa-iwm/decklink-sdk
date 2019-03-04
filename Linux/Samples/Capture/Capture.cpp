@@ -205,13 +205,13 @@ int main(int argc, char *argv[])
 	IDeckLinkIterator*				deckLinkIterator = NULL;
 	IDeckLink*						deckLink = NULL;
 
-	IDeckLinkAttributes*			deckLinkAttributes = NULL;
+	IDeckLinkProfileAttributes*		deckLinkAttributes = NULL;
 	bool							formatDetectionSupported;
 
 	IDeckLinkDisplayModeIterator*	displayModeIterator = NULL;
 	IDeckLinkDisplayMode*			displayMode = NULL;
 	char*							displayModeName = NULL;
-	BMDDisplayModeSupport			displayModeSupported;
+	bool							supported;
 
 	DeckLinkCaptureDelegate*		delegate = NULL;
 
@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
 	if (g_config.m_displayModeIndex == -1)
 	{
 		// Check the card supports format detection
-		result = deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+		result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 		if (result == S_OK)
 		{
 			result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &formatDetectionSupported);
@@ -312,11 +312,11 @@ int main(int argc, char *argv[])
 	}
 
 	// Check display mode is supported with given options
-	result = g_deckLinkInput->DoesSupportVideoMode(displayMode->GetDisplayMode(), g_config.m_pixelFormat, bmdVideoInputFlagDefault, &displayModeSupported, NULL);
+	result = g_deckLinkInput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode->GetDisplayMode(), g_config.m_pixelFormat, bmdSupportedVideoModeDefault, &supported);
 	if (result != S_OK)
 		goto bail;
 
-	if (displayModeSupported == bmdDisplayModeNotSupported)
+	if (! supported)
 	{
 		fprintf(stderr, "The display mode %s is not supported with the selected pixel format\n", displayModeName);
 		goto bail;

@@ -24,7 +24,7 @@
 #** DEALINGS IN THE SOFTWARE.
 #** -LICENSE-END-
 
-SUBDIRS=DeviceList TestPattern Capture LoopThroughWithOpenGLCompositing OpenGLOutput SignalGenerator
+SUBDIRS=DeviceList TestPattern Capture CapturePreview LoopThroughWithOpenGLCompositing OpenGLOutput SignalGenerator SignalGenHDR
 
 all:
 	@for i in $(SUBDIRS); do \

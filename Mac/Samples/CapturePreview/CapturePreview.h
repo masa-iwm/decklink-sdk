@@ -32,6 +32,7 @@
 // Forward declarations
 class DeckLinkDeviceDiscovery;
 class DeckLinkDevice;
+class ProfileCallback;
 
 @interface TimecodeStruct : NSObject
 {
@@ -83,6 +84,7 @@ class DeckLinkDevice;
 	TimecodeStruct*	rp188vitc1;
 	TimecodeStruct*	rp188vitc2;
 	TimecodeStruct*	rp188ltc;
+	TimecodeStruct* rp188hfrtc;
 
 	// HDR Metadata
 	HDRMetadataStruct* hdrMetadata;
@@ -92,6 +94,7 @@ class DeckLinkDevice;
 @property (nonatomic,copy) TimecodeStruct*    rp188vitc1;
 @property (nonatomic,copy) TimecodeStruct*    rp188vitc2;
 @property (nonatomic,copy) TimecodeStruct*    rp188ltc;
+@property (nonatomic,copy) TimecodeStruct*    rp188hfrtc;
 @property (nonatomic,copy) HDRMetadataStruct* hdrMetadata;
 @end
 
@@ -102,6 +105,8 @@ class DeckLinkDevice;
 	DeckLinkDeviceDiscovery*		deckLinkDiscovery;
 	IDeckLinkScreenPreviewCallback*	screenPreviewCallback;
 	DeckLinkDevice*					selectedDevice;
+	ProfileCallback*				profileCallback;
+	BMDVideoConnection				selectedInputConnection;
 	
 	// The following members store values & labels for the 8 pieces of ancillary data (VITC & RP188 F1/F2 timecodes & user bits) 
 	NSMutableArray*					ancillaryDataValues;
@@ -110,6 +115,7 @@ class DeckLinkDevice;
 	IBOutlet NSView*				previewView;
 	
 	IBOutlet NSPopUpButton*			deviceListPopup;
+	IBOutlet NSPopUpButton*			inputConnectionPopup;
 	IBOutlet NSPopUpButton*			modeListPopup;
 	
 	IBOutlet NSButton*				startStopButton;
@@ -126,8 +132,11 @@ class DeckLinkDevice;
 
 - (IBAction)toggleStart:(id)sender;
 - (IBAction)newDeviceSelected:(id)sender;
+- (IBAction)newConnectionSelected:(id)sender;
+- (IBAction)toggleApplyDetectionVideoMode:(id)sender;
 - (void)enableInterface:(BOOL)enabled;
 
+- (void)refreshInputConnectionList;
 - (void)refreshVideoModeList;
 - (void)startCapture;
 - (void)stopCapture;
@@ -135,8 +144,11 @@ class DeckLinkDevice;
 - (void)addDevice:(IDeckLink*)deckLink;
 - (void)removeDevice:(IDeckLink*)deckLink;
 
+- (void)haltStreams;
+- (void)updateProfile:(IDeckLinkProfile*)newProfile;
+
 - (void)updateInputSourceState:(BOOL)state;
-- (void)selectDetectedVideoModeWithIndex:(UInt32)newVideoModeIndex;
+- (void)selectDetectedVideoMode:(BMDDisplayMode)newVideoMode;
 - (void)setAncillaryData:(AncillaryDataStruct*) latestAncillaryDataValues;
 - (void)reloadAncillaryTable;
 

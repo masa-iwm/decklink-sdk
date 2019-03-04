@@ -371,12 +371,12 @@ PlaybackHelper::~PlaybackHelper()
 // Call init() before any other method. if init() fails, destroy the object
 bool	PlaybackHelper::init()
 {
-	IDeckLinkAttributes*	attributes = NULL;
+	IDeckLinkProfileAttributes*	attributes = NULL;
 	bool					hasBypass;
 	bool					result = false;
 	
-	// Get the IDeckLinkAttributes interface
-	if (m_deckLink->QueryInterface(IID_IDeckLinkAttributes, (void **)&attributes) != S_OK)
+	// Get the IDeckLinkProfileAttributes interface
+	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void **)&attributes) != S_OK)
 	{
 		printf("Could not get the IdeckLinkAttributes interface\n");
 		goto bail;

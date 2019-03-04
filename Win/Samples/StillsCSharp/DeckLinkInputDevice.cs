@@ -108,12 +108,18 @@ namespace StillsCSharp
 
         public bool IsVideoModeSupported(IDeckLinkDisplayMode displayMode, _BMDPixelFormat pixelFormat)
         {
-            _BMDDisplayModeSupport displayModeSupport;
-            IDeckLinkDisplayMode resultDisplayMode;
+            int supported = 0;
 
-            m_deckLinkInput.DoesSupportVideoMode(displayMode.GetDisplayMode(), pixelFormat, InputFlags, out displayModeSupport, out resultDisplayMode);
+            try
+            {
+                m_deckLinkInput.DoesSupportVideoMode((_BMDVideoConnection)0, displayMode.GetDisplayMode(), pixelFormat, _BMDSupportedVideoModeFlags.bmdSupportedVideoModeDefault, out supported);
+            }
+            catch (Exception)
+            {
+                supported = 0;
+            }
 
-            return (displayModeSupport == _BMDDisplayModeSupport.bmdDisplayModeSupported);
+            return (supported != 0);
         }
 
         void IDeckLinkInputCallback.VideoInputFormatChanged(_BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode newDisplayMode, _BMDDetectedVideoInputFormatFlags detectedSignalFlags)
@@ -161,7 +167,7 @@ namespace StillsCSharp
                     m_deckLinkInput.StartStreams();
                 }
                 m_prevInputSignalAbsent = inputSignalAbsent;
-                
+
                 // Register video frame received event
                 var handler = VideoFrameArrivedHandler;
 

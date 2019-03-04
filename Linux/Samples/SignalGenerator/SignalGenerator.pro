@@ -7,13 +7,15 @@ LIBS		+= -ldl
 
 HEADERS 	=	SignalGenerator.h \
 				DeckLinkDeviceDiscovery.h \
-				DeckLinkOutputDevice.h
+				DeckLinkOutputDevice.h \
+				ProfileCallback.h
 
 SOURCES 	= 	main.cpp \
 				../../include/DeckLinkAPIDispatch.cpp \
 				DeckLinkDeviceDiscovery.cpp \
 				DeckLinkOutputDevice.cpp \
-            	SignalGenerator.cpp
+				SignalGenerator.cpp \
+				ProfileCallback.cpp
 
 FORMS 		= 	SignalGenerator.ui
 
