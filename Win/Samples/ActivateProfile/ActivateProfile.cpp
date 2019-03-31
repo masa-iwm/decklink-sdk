@@ -427,8 +427,6 @@ bail:
 		deckLinkProfileIterator = nullptr;
 	}
 
-	deckLinkProfileManager->SetCallback(nullptr);
-
 	if (profileCallback != nullptr)
 	{
 		profileCallback->Release();
@@ -437,6 +435,7 @@ bail:
 
 	if (deckLinkProfileManager != nullptr)
 	{
+		deckLinkProfileManager->SetCallback(nullptr);
 		deckLinkProfileManager->Release();
 		deckLinkProfileManager = nullptr;
 	}

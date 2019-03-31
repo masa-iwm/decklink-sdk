@@ -126,6 +126,25 @@ library KsDeckLink
 		ksDeckLinkMode8kDCI5994 = /* '8d59' */ 0x38643539,
 		ksDeckLinkMode8kDCI60 = /* '8d60' */ 0x38643630,
 
+		/* PC Modes */
+
+		ksDeckLinkMode640x480p60 = /* 'vga6' */ 0x76676136,
+		ksDeckLinkMode800x600p60 = /* 'svg6' */ 0x73766736,
+		ksDeckLinkMode1440x900p50 = /* 'wxg5' */ 0x77786735,
+		ksDeckLinkMode1440x900p60 = /* 'wxg6' */ 0x77786736,
+		ksDeckLinkMode1440x1080p50 = /* 'sxg5' */ 0x73786735,
+		ksDeckLinkMode1440x1080p60 = /* 'sxg6' */ 0x73786736,
+		ksDeckLinkMode1600x1200p50 = /* 'uxg5' */ 0x75786735,
+		ksDeckLinkMode1600x1200p60 = /* 'uxg6' */ 0x75786736,
+		ksDeckLinkMode1920x1200p50 = /* 'wux5' */ 0x77757835,
+		ksDeckLinkMode1920x1200p60 = /* 'wux6' */ 0x77757836,
+		ksDeckLinkMode1920x1440p50 = /* '1945' */ 0x31393435,
+		ksDeckLinkMode1920x1440p60 = /* '1946' */ 0x31393436,
+		ksDeckLinkMode2560x1440p50 = /* 'wqh5' */ 0x77716835,
+		ksDeckLinkMode2560x1440p60 = /* 'wqh6' */ 0x77716836,
+		ksDeckLinkMode2560x1600p50 = /* 'wqx5' */ 0x77717835,
+		ksDeckLinkMode2560x1600p60 = /* 'wqx6' */ 0x77717836,
+
 		/* Special Modes */
 
 		ksDeckLinkModeAuto = /* 'auto' */ 0x6175746F,

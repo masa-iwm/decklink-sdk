@@ -542,7 +542,7 @@ HRESULT CDecklinkKeyDlg::BuildGraph(void)
 							}
 							else
 							{
-								StringCbPrintf(buf, sizeof(buf), TEXT("The device is unable to support the frame dimensions of the fill:\r\n\r\n%s\r\n"), COLE2T(pszFilename));
+								StringCbPrintf(buf, sizeof(buf), TEXT("The device is unable to support the frame dimensions of the fill:\r\n\r\n%s\r\n"), static_cast<LPSTR>(COLE2T(pszFilename)));
 								MessageBox(buf, TEXT("Unsupported frame dimensions"), MB_OK | MB_ICONERROR);
 							}
 							CoTaskMemFree(pszFilename);

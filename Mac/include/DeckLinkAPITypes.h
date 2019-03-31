@@ -59,7 +59,9 @@ enum _BMDTimecodeFlags {
     bmdTimecodeFlagDefault                                       = 0,
     bmdTimecodeIsDropFrame                                       = 1 << 0,
     bmdTimecodeFieldMark                                         = 1 << 1,
-    bmdTimecodeColorFrame                                        = 1 << 2
+    bmdTimecodeColorFrame                                        = 1 << 2,
+    bmdTimecodeEmbedRecordingTrigger                             = 1 << 3,	// On SDI recording trigger utilises a user-bit
+    bmdTimecodeRecordingTriggered                                = 1 << 4
 };
 
 /* Enum BMDVideoConnection - Video connection types */

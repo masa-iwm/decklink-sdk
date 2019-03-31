@@ -94,6 +94,7 @@ enum _BMDDeckLinkConfigurationID {
     bmdDeckLinkConfigDefaultVideoOutputMode                      = /* 'dvom' */ 0x64766F6D,
     bmdDeckLinkConfigDefaultVideoOutputModeFlags                 = /* 'dvof' */ 0x64766F66,
     bmdDeckLinkConfigSDIOutputLinkConfiguration                  = /* 'solc' */ 0x736F6C63,
+    bmdDeckLinkConfigHDMITimecodePacking                         = /* 'htpk' */ 0x6874706B,
     bmdDeckLinkConfigPlaybackGroup                               = /* 'plgr' */ 0x706C6772,
 
     /* Video Output Floats */

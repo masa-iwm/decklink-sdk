@@ -458,6 +458,15 @@ enum _BMDProfileID {
     bmdProfileFourSubDevicesHalfDuplex                           = /* '4dhd' */ 0x34646864
 };
 
+/* Enum BMDHDMITimecodePacking - Packing form of timecode on HDMI */
+
+typedef uint32_t BMDHDMITimecodePacking;
+enum _BMDHDMITimecodePacking {
+    bmdHDMITimecodePackingIEEEOUI000085                          = 0x00008500,
+    bmdHDMITimecodePackingIEEEOUI080046                          = 0x08004601,
+    bmdHDMITimecodePackingIEEEOUI5CF9F0                          = 0x5CF9F003
+};
+
 /* Enum BMDDeckLinkAttributeID - DeckLink Attribute ID */
 
 typedef uint32_t BMDDeckLinkAttributeID;
@@ -483,6 +492,7 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkHasLTCTimecodeInput                               = /* 'hltc' */ 0x686C7463,
     BMDDeckLinkSupportsHDRMetadata                               = /* 'hdrm' */ 0x6864726D,
     BMDDeckLinkSupportsColorspaceMetadata                        = /* 'cmet' */ 0x636D6574,
+    BMDDeckLinkSupportsHDMITimecode                              = /* 'htim' */ 0x6874696D,
     BMDDeckLinkSupportsHighFrameRateTimecode                     = /* 'HFRT' */ 0x48465254,
     BMDDeckLinkSupportsSynchronizeToCaptureGroup                 = /* 'stcg' */ 0x73746367,
     BMDDeckLinkSupportsSynchronizeToPlaybackGroup                = /* 'stpg' */ 0x73747067,

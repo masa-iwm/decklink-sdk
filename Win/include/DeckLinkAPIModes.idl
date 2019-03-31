@@ -169,6 +169,25 @@ typedef [v1_enum] enum	_BMDDisplayMode {
     bmdMode8kDCI5994                                             = /* '8d59' */ 0x38643539,
     bmdMode8kDCI60                                               = /* '8d60' */ 0x38643630,
 
+    /* PC Modes */
+
+    bmdMode640x480p60                                            = /* 'vga6' */ 0x76676136,
+    bmdMode800x600p60                                            = /* 'svg6' */ 0x73766736,
+    bmdMode1440x900p50                                           = /* 'wxg5' */ 0x77786735,
+    bmdMode1440x900p60                                           = /* 'wxg6' */ 0x77786736,
+    bmdMode1440x1080p50                                          = /* 'sxg5' */ 0x73786735,
+    bmdMode1440x1080p60                                          = /* 'sxg6' */ 0x73786736,
+    bmdMode1600x1200p50                                          = /* 'uxg5' */ 0x75786735,
+    bmdMode1600x1200p60                                          = /* 'uxg6' */ 0x75786736,
+    bmdMode1920x1200p50                                          = /* 'wux5' */ 0x77757835,
+    bmdMode1920x1200p60                                          = /* 'wux6' */ 0x77757836,
+    bmdMode1920x1440p50                                          = /* '1945' */ 0x31393435,
+    bmdMode1920x1440p60                                          = /* '1946' */ 0x31393436,
+    bmdMode2560x1440p50                                          = /* 'wqh5' */ 0x77716835,
+    bmdMode2560x1440p60                                          = /* 'wqh6' */ 0x77716836,
+    bmdMode2560x1600p50                                          = /* 'wqx5' */ 0x77717835,
+    bmdMode2560x1600p60                                          = /* 'wqx6' */ 0x77717836,
+
     /* RAW Modes for Cintel (input only) */
 
     bmdModeCintelRAW                                             = /* 'rwci' */ 0x72776369,	// Frame size up to 4096x3072, variable frame rate

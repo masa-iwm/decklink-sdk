@@ -166,7 +166,7 @@ HRESULT ImageLoader::ConvertPNGToDeckLinkVideoFrame(const std::string& pngFilena
 			goto bail;
 	}
 
-	rectLock = { 0, 0, imageWidth, imageHeight };
+	rectLock = { 0, 0, static_cast<INT>(imageWidth), static_cast<INT>(imageHeight) };
 
 	// Create bitmap lock so we can access the pixel data directly.
 	result = bitmapFrame->Lock(&rectLock, WICBitmapLockRead, &bitmapLock);
