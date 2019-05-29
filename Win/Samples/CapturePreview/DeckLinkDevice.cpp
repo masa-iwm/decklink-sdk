@@ -346,37 +346,37 @@ void DeckLinkDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFram
 	hdrMetadata.maximumContentLightLevel = _T("");
 	hdrMetadata.maximumFrameAverageLightLevel = _T("");
 	hdrMetadata.colorspace = _T("");
-
-	if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
+	
+	IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
+	if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
 	{
-		IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
-		if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
+		double doubleValue = 0.0;
+		int64_t intValue = 0;
+
+		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
 		{
-			double doubleValue = 0.0;
-			int64_t intValue = 0;
-
-			if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
+			switch (intValue)
 			{
-				switch (intValue)
-				{
-				case 0:
-					hdrMetadata.electroOpticalTransferFunction = _T("SDR");
-					break;
-				case 1:
-					hdrMetadata.electroOpticalTransferFunction = _T("HDR");
-					break;
-				case 2:
-					hdrMetadata.electroOpticalTransferFunction = _T("PQ (ST2084)");
-					break;
-				case 3:
-					hdrMetadata.electroOpticalTransferFunction = _T("HLG");
-					break;
-				default:
-					hdrMetadata.electroOpticalTransferFunction.Format(_T("Unknown EOTF: %d"), (int32_t)intValue);
-					break;
-				}
+			case 0:
+				hdrMetadata.electroOpticalTransferFunction = _T("SDR");
+				break;
+			case 1:
+				hdrMetadata.electroOpticalTransferFunction = _T("HDR");
+				break;
+			case 2:
+				hdrMetadata.electroOpticalTransferFunction = _T("PQ (ST2084)");
+				break;
+			case 3:
+				hdrMetadata.electroOpticalTransferFunction = _T("HLG");
+				break;
+			default:
+				hdrMetadata.electroOpticalTransferFunction.Format(_T("Unknown EOTF: %d"), (int32_t)intValue);
+				break;
 			}
+		}
 
+		if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
+		{
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
 				hdrMetadata.displayPrimariesRedX.Format(_T("%.04f"), doubleValue);
 
@@ -428,9 +428,8 @@ void DeckLinkDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFram
 					break;
 				}
 			}
-
-			metadataExtensions->Release();
 		}
+		metadataExtensions->Release();
 	}
 }
 

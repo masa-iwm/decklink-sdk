@@ -493,6 +493,7 @@ enum _BMDDeckLinkAttributeID {
     BMDDeckLinkSupportsDualLinkSDI                               = 'sdls',
     BMDDeckLinkSupportsQuadLinkSDI                               = 'sqls',
     BMDDeckLinkSupportsIdleOutput                                = 'idou',
+    BMDDeckLinkVANCRequires10BitYUVVideoFrames                   = 'vioY',	// Legacy product requires v210 active picture for IDeckLinkVideoFrameAncillaryPackets or 10-bit VANC
     BMDDeckLinkHasLTCTimecodeInput                               = 'hltc',
     BMDDeckLinkSupportsHDRMetadata                               = 'hdrm',
     BMDDeckLinkSupportsColorspaceMetadata                        = 'cmet',

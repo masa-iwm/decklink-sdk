@@ -56,7 +56,7 @@ static const std::vector<std::pair<BMDPixelFormat, NSString*>> kPixelFormats = {
 
 // Supported EOTFs
 static const std::vector<std::pair<EOTF, NSString*>> kSupportedEOTF = {
-	std::make_pair(EOTF::PQ,	@"PQ (ST 2048)"),
+	std::make_pair(EOTF::PQ,	@"PQ (ST 2084)"),
 	std::make_pair(EOTF::HLG,	@"HLG"),
 };
 

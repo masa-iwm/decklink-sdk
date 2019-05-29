@@ -53,7 +53,7 @@ static const std::vector<std::pair<BMDPixelFormat, CString>> kPixelFormats = {
 
 // Supported EOTFs
 static const std::vector<std::pair<EOTF, CString>> kSupportedEOTF = {
-	std::make_pair(EOTF::PQ,	_T("PQ (ST 2048)")),
+	std::make_pair(EOTF::PQ,	_T("PQ (ST 2084)")),
 	std::make_pair(EOTF::HLG,	_T("HLG")),
 };
 

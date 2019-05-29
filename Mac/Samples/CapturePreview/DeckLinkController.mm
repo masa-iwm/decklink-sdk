@@ -339,36 +339,36 @@ HDRMetadataStruct*	DeckLinkDevice::getHDRMetadataFromFrame(IDeckLinkVideoInputFr
 	returnHDRMetadata.maximumContentLightLevel = @"";
 	returnHDRMetadata.maximumFrameAverageLightLevel = @"";
 
-	if (frame->GetFlags() & bmdFrameContainsHDRMetadata)
+	IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
+	if (frame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**) &metadataExtensions) == S_OK)
 	{
-		IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
-		if (frame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**) &metadataExtensions) == S_OK)
+		double doubleValue = 0.0;
+		int64_t intValue = 0;
+
+		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
 		{
-			double doubleValue = 0.0;
-			int64_t intValue = 0;
-
-			if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
+			switch (intValue)
 			{
-				switch (intValue)
-				{
-					case 0:
-						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"SDR"];
-						break;
-					case 1:
-						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HDR"];
-						break;
-					case 2:
-						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"PQ (ST2084)"];
-						break;
-					case 3:
-						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HLG"];
-						break;
-					default:
-						returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"Unknown EOTF: %d", (int32_t)intValue];
-						break;
-				}
+				case 0:
+					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"SDR"];
+					break;
+				case 1:
+					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HDR"];
+					break;
+				case 2:
+					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"PQ (ST2084)"];
+					break;
+				case 3:
+					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HLG"];
+					break;
+				default:
+					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"Unknown EOTF: %d", (int32_t)intValue];
+					break;
 			}
+		}
 
+		if (frame->GetFlags() & bmdFrameContainsHDRMetadata)
+		{
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
 				returnHDRMetadata.displayPrimariesRedX = [NSString stringWithFormat:@"%.04f", doubleValue];
 
@@ -404,9 +404,8 @@ HDRMetadataStruct*	DeckLinkDevice::getHDRMetadataFromFrame(IDeckLinkVideoInputFr
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
 				returnHDRMetadata.maximumFrameAverageLightLevel = [NSString stringWithFormat:@"%.04f", doubleValue];
-
-			metadataExtensions->Release();
 		}
+		metadataExtensions->Release();
 	}
 	return returnHDRMetadata;
 }

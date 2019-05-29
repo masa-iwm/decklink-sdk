@@ -69,6 +69,17 @@ OpenGLComposite::~OpenGLComposite()
 	}
 
 	// Cleanup for Playout
+	while (!mDLOutputVideoFrameQueue.empty())
+	{
+		IDeckLinkMutableVideoFrame* frameToRelease = mDLOutputVideoFrameQueue.front();
+		if (frameToRelease != NULL)
+		{
+			frameToRelease->Release();
+			frameToRelease = NULL;
+		}
+		mDLOutputVideoFrameQueue.pop_front();
+	}
+
 	if (mDLOutput != NULL)
 	{
 		mDLOutput->SetScheduledFrameCompletionCallback(NULL);
@@ -810,6 +821,11 @@ PinnedMemoryAllocator::PinnedMemoryAllocator(HDC hdc, HGLRC hglrc, VideoFrameTra
 
 PinnedMemoryAllocator::~PinnedMemoryAllocator()
 {
+	for (auto iter = mFrameTransfer.begin(); iter != mFrameTransfer.end(); ++iter)
+	{
+		delete iter->second;
+	}
+	mFrameTransfer.clear();
 }
 
 bool PinnedMemoryAllocator::transferFrame(void* address, GLuint gpuTexture)

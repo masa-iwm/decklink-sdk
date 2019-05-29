@@ -366,36 +366,36 @@ void DeckLinkInputDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* vide
 	hdrMetadata->maximumFrameAverageLightLevel = "";
 	hdrMetadata->colorspace = "";
 
-	if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
+	IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
+	if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
 	{
-		IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
-		if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
+		double doubleValue = 0.0;
+		int64_t intValue = 0;
+
+		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
 		{
-			double doubleValue = 0.0;
-			int64_t intValue = 0;
-
-			if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
+			switch (intValue)
 			{
-				switch (intValue)
-				{
-				case 0:
-					hdrMetadata->electroOpticalTransferFunction = "SDR";
-					break;
-				case 1:
-					hdrMetadata->electroOpticalTransferFunction = "HDR";
-					break;
-				case 2:
-					hdrMetadata->electroOpticalTransferFunction = "PQ (ST2084)";
-					break;
-				case 3:
-					hdrMetadata->electroOpticalTransferFunction = "HLG";
-					break;
-				default:
-					hdrMetadata->electroOpticalTransferFunction = QString("Unknown EOTF: %1").arg((int32_t)intValue);
-					break;
-				}
+			case 0:
+				hdrMetadata->electroOpticalTransferFunction = "SDR";
+				break;
+			case 1:
+				hdrMetadata->electroOpticalTransferFunction = "HDR";
+				break;
+			case 2:
+				hdrMetadata->electroOpticalTransferFunction = "PQ (ST2084)";
+				break;
+			case 3:
+				hdrMetadata->electroOpticalTransferFunction = "HLG";
+				break;
+			default:
+				hdrMetadata->electroOpticalTransferFunction = QString("Unknown EOTF: %1").arg((int32_t)intValue);
+				break;
 			}
+		}
 
+		if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
+		{
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
 				hdrMetadata->displayPrimariesRedX = QString::number(doubleValue, 'f', 4);
 
@@ -450,9 +450,8 @@ void DeckLinkInputDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* vide
 					break;
 				}
 			}
-
-			metadataExtensions->Release();
 		}
+		metadataExtensions->Release();
 	}
 }
 
