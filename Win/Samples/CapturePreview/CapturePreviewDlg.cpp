@@ -506,12 +506,12 @@ void CCapturePreviewDlg::RemoveDevice(IDeckLink* deckLink)
 	deviceToRemove->Release();
 }
 
-void	CCapturePreviewDlg::UpdateFrameData(AncillaryDataStruct& ancillaryData, HDRMetadataStruct& hdrMetadata)
+void	CCapturePreviewDlg::UpdateFrameData(AncillaryDataStruct& ancillaryData, MetadataStruct& metadata)
 {
 	// Copy ancillary data under protection of critsec object
 	m_critSec.Lock();
 		m_ancillaryData = ancillaryData;
-		m_hdrMetadata = hdrMetadata;
+		m_metadata = metadata;
 	m_critSec.Unlock();
 }
 
@@ -541,20 +541,20 @@ LRESULT  CCapturePreviewDlg::OnRefreshInputStreamData(WPARAM wParam, LPARAM lPar
 	m_rp188HfrtcTc.SetWindowText(m_ancillaryData.rp188hfrtcTimecode);
 	m_rp188HfrtcUb.SetWindowText(m_ancillaryData.rp188hfrtcUserBits);
 
-	m_hdrEotf.SetWindowText(m_hdrMetadata.electroOpticalTransferFunction);
-	m_hdrDpRedX.SetWindowText(m_hdrMetadata.displayPrimariesRedX);
-	m_hdrDpRedY.SetWindowText(m_hdrMetadata.displayPrimariesRedY);
-	m_hdrDpGreenX.SetWindowText(m_hdrMetadata.displayPrimariesGreenX);
-	m_hdrDpGreenY.SetWindowText(m_hdrMetadata.displayPrimariesGreenY);
-	m_hdrDpBlueX.SetWindowText(m_hdrMetadata.displayPrimariesBlueX);
-	m_hdrDpBlueY.SetWindowText(m_hdrMetadata.displayPrimariesBlueY);
-	m_hdrWhitePointX.SetWindowText(m_hdrMetadata.whitePointX);
-	m_hdrWhitePointY.SetWindowText(m_hdrMetadata.whitePointY);
-	m_hdrMaxDml.SetWindowText(m_hdrMetadata.maxDisplayMasteringLuminance);
-	m_hdrMinDml.SetWindowText(m_hdrMetadata.minDisplayMasteringLuminance);
-	m_hdrMaxCll.SetWindowText(m_hdrMetadata.maximumContentLightLevel);
-	m_hdrMaxFall.SetWindowText(m_hdrMetadata.maximumFrameAverageLightLevel);  
-	m_colorspace.SetWindowText(m_hdrMetadata.colorspace);
+	m_hdrEotf.SetWindowText(m_metadata.electroOpticalTransferFunction);
+	m_hdrDpRedX.SetWindowText(m_metadata.displayPrimariesRedX);
+	m_hdrDpRedY.SetWindowText(m_metadata.displayPrimariesRedY);
+	m_hdrDpGreenX.SetWindowText(m_metadata.displayPrimariesGreenX);
+	m_hdrDpGreenY.SetWindowText(m_metadata.displayPrimariesGreenY);
+	m_hdrDpBlueX.SetWindowText(m_metadata.displayPrimariesBlueX);
+	m_hdrDpBlueY.SetWindowText(m_metadata.displayPrimariesBlueY);
+	m_hdrWhitePointX.SetWindowText(m_metadata.whitePointX);
+	m_hdrWhitePointY.SetWindowText(m_metadata.whitePointY);
+	m_hdrMaxDml.SetWindowText(m_metadata.maxDisplayMasteringLuminance);
+	m_hdrMinDml.SetWindowText(m_metadata.minDisplayMasteringLuminance);
+	m_hdrMaxCll.SetWindowText(m_metadata.maximumContentLightLevel);
+	m_hdrMaxFall.SetWindowText(m_metadata.maximumFrameAverageLightLevel);  
+	m_colorspace.SetWindowText(m_metadata.colorspace);
 	
 	m_critSec.Unlock();
 

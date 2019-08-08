@@ -287,7 +287,7 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived (IDeckLinkVideoInputFrame* v
 {
 	bool					validFrame;
 	AncillaryDataStruct*	ancillaryData;
-	HDRMetadataStruct*		hdrMetadata;
+	MetadataStruct*			metadata;
 
 	if (videoFrame == NULL)
 		return S_OK;
@@ -303,16 +303,16 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived (IDeckLinkVideoInputFrame* v
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC,				&ancillaryData->rp188ltcTimecode,	&ancillaryData->rp188ltcUserBits);
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188HighFrameRate,	&ancillaryData->rp188hfrtcTimecode,	&ancillaryData->rp188hfrtcUserBits);
 
-	hdrMetadata = new HDRMetadataStruct();
-	GetHDRMetadataFromFrame(videoFrame, hdrMetadata);
+	metadata = new MetadataStruct();
+	GetMetadataFromFrame(videoFrame, metadata);
 
 	// Update the UI with new Ancillary data
 	if (m_uiDelegate != nullptr)
-		QCoreApplication::postEvent(m_uiDelegate, new DeckLinkInputFrameArrivedEvent(ancillaryData, hdrMetadata, validFrame));
+		QCoreApplication::postEvent(m_uiDelegate, new DeckLinkInputFrameArrivedEvent(ancillaryData, metadata, validFrame));
 	else
 	{
 		delete ancillaryData;
-		delete hdrMetadata;
+		delete metadata;
 	}
 
 	return S_OK;
@@ -349,22 +349,22 @@ void DeckLinkInputDevice::GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* vi
 	}
 }
 
-void DeckLinkInputDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, HDRMetadataStruct* hdrMetadata)
+void DeckLinkInputDevice::GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct* metadata)
 {
-	hdrMetadata->electroOpticalTransferFunction = "";
-	hdrMetadata->displayPrimariesRedX = "";
-	hdrMetadata->displayPrimariesRedY = "";
-	hdrMetadata->displayPrimariesGreenX = "";
-	hdrMetadata->displayPrimariesGreenY = "";
-	hdrMetadata->displayPrimariesBlueX = "";
-	hdrMetadata->displayPrimariesBlueY = "";
-	hdrMetadata->whitePointX = "";
-	hdrMetadata->whitePointY = "";
-	hdrMetadata->maxDisplayMasteringLuminance = "";
-	hdrMetadata->minDisplayMasteringLuminance = "";
-	hdrMetadata->maximumContentLightLevel = "";
-	hdrMetadata->maximumFrameAverageLightLevel = "";
-	hdrMetadata->colorspace = "";
+	metadata->electroOpticalTransferFunction = "";
+	metadata->displayPrimariesRedX = "";
+	metadata->displayPrimariesRedY = "";
+	metadata->displayPrimariesGreenX = "";
+	metadata->displayPrimariesGreenY = "";
+	metadata->displayPrimariesBlueX = "";
+	metadata->displayPrimariesBlueY = "";
+	metadata->whitePointX = "";
+	metadata->whitePointY = "";
+	metadata->maxDisplayMasteringLuminance = "";
+	metadata->minDisplayMasteringLuminance = "";
+	metadata->maximumContentLightLevel = "";
+	metadata->maximumFrameAverageLightLevel = "";
+	metadata->colorspace = "";
 
 	IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
 	if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
@@ -377,19 +377,19 @@ void DeckLinkInputDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* vide
 			switch (intValue)
 			{
 			case 0:
-				hdrMetadata->electroOpticalTransferFunction = "SDR";
+				metadata->electroOpticalTransferFunction = "SDR";
 				break;
 			case 1:
-				hdrMetadata->electroOpticalTransferFunction = "HDR";
+				metadata->electroOpticalTransferFunction = "HDR";
 				break;
 			case 2:
-				hdrMetadata->electroOpticalTransferFunction = "PQ (ST2084)";
+				metadata->electroOpticalTransferFunction = "PQ (ST2084)";
 				break;
 			case 3:
-				hdrMetadata->electroOpticalTransferFunction = "HLG";
+				metadata->electroOpticalTransferFunction = "HLG";
 				break;
 			default:
-				hdrMetadata->electroOpticalTransferFunction = QString("Unknown EOTF: %1").arg((int32_t)intValue);
+				metadata->electroOpticalTransferFunction = QString("Unknown EOTF: %1").arg((int32_t)intValue);
 				break;
 			}
 		}
@@ -397,60 +397,61 @@ void DeckLinkInputDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* vide
 		if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
 		{
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
-				hdrMetadata->displayPrimariesRedX = QString::number(doubleValue, 'f', 4);
+				metadata->displayPrimariesRedX = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY, &doubleValue) == S_OK)
-				hdrMetadata->displayPrimariesRedY = QString::number(doubleValue, 'f', 4);
+				metadata->displayPrimariesRedY = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX, &doubleValue) == S_OK)
-				hdrMetadata->displayPrimariesGreenX = QString::number(doubleValue, 'f', 4);
+				metadata->displayPrimariesGreenX = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY, &doubleValue) == S_OK)
-				hdrMetadata->displayPrimariesGreenY = QString::number(doubleValue, 'f', 4);
+				metadata->displayPrimariesGreenY = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX, &doubleValue) == S_OK)
-				hdrMetadata->displayPrimariesBlueX = QString::number(doubleValue, 'f', 4);
+				metadata->displayPrimariesBlueX = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY, &doubleValue) == S_OK)
-				hdrMetadata->displayPrimariesBlueY = QString::number(doubleValue, 'f', 4);
+				metadata->displayPrimariesBlueY = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointX, &doubleValue) == S_OK)
-				hdrMetadata->whitePointX = QString::number(doubleValue, 'f', 4);
+				metadata->whitePointX = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointY, &doubleValue) == S_OK)
-				hdrMetadata->whitePointY = QString::number(doubleValue, 'f', 4);
+				metadata->whitePointY = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance, &doubleValue) == S_OK)
-				hdrMetadata->maxDisplayMasteringLuminance = QString::number(doubleValue, 'f', 4);
+				metadata->maxDisplayMasteringLuminance = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance, &doubleValue) == S_OK)
-				hdrMetadata->minDisplayMasteringLuminance = QString::number(doubleValue, 'f', 4);
+				metadata->minDisplayMasteringLuminance = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel, &doubleValue) == S_OK)
-				hdrMetadata->maximumContentLightLevel = QString::number(doubleValue, 'f', 4);
+				metadata->maximumContentLightLevel = QString::number(doubleValue, 'f', 4);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
-				hdrMetadata->maximumFrameAverageLightLevel = QString::number(doubleValue, 'f', 4);
+				metadata->maximumFrameAverageLightLevel = QString::number(doubleValue, 'f', 4);
+		}
 
-			if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataColorspace, &intValue) == S_OK)
+		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataColorspace, &intValue) == S_OK)
+		{
+			switch (intValue)
 			{
-				switch (intValue)
-				{
-				case bmdColorspaceRec601:
-					hdrMetadata->colorspace = "Rec.601";
-					break;
-				case bmdColorspaceRec709:
-					hdrMetadata->colorspace = "Rec.709";
-					break;
-				case bmdColorspaceRec2020:
-					hdrMetadata->colorspace = "Rec.2020";
-					break;
-				default:
-					hdrMetadata->colorspace = QString("Unknown Colorspace: %1").arg((int32_t)intValue);
-					break;
-				}
+			case bmdColorspaceRec601:
+				metadata->colorspace = "Rec.601";
+				break;
+			case bmdColorspaceRec709:
+				metadata->colorspace = "Rec.709";
+				break;
+			case bmdColorspaceRec2020:
+				metadata->colorspace = "Rec.2020";
+				break;
+			default:
+				metadata->colorspace = QString("Unknown Colorspace: %1").arg((int32_t)intValue);
+				break;
 			}
 		}
+
 		metadataExtensions->Release();
 	}
 }
@@ -460,8 +461,8 @@ DeckLinkInputFormatChangedEvent::DeckLinkInputFormatChangedEvent(BMDDisplayMode 
 {
 }
 
-DeckLinkInputFrameArrivedEvent::DeckLinkInputFrameArrivedEvent(AncillaryDataStruct* ancillaryData, HDRMetadataStruct* hdrMetadata, bool signalValid)
-	: QEvent(kVideoFrameArrivedEvent), m_ancillaryData(ancillaryData), m_hdrMetadata(hdrMetadata), m_signalValid(signalValid)
+DeckLinkInputFrameArrivedEvent::DeckLinkInputFrameArrivedEvent(AncillaryDataStruct* ancillaryData, MetadataStruct* metadata, bool signalValid)
+	: QEvent(kVideoFrameArrivedEvent), m_ancillaryData(ancillaryData), m_metadata(metadata), m_signalValid(signalValid)
 {
 }
 

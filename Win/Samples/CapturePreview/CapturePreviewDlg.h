@@ -75,7 +75,7 @@ typedef struct {
 	CString maximumContentLightLevel;
 	CString maximumFrameAverageLightLevel;
 	CString colorspace;
-} HDRMetadataStruct;
+} MetadataStruct;
 
 // Forward declarations
 class DeckLinkDevice;
@@ -107,7 +107,7 @@ public:
 
 	// DeckLinkDevice delegate methods
 	void					ShowErrorMessage(TCHAR* msg, TCHAR* title);
-	void					UpdateFrameData(AncillaryDataStruct& ancillaryData, HDRMetadataStruct& hdrMetadata);
+	void					UpdateFrameData(AncillaryDataStruct& ancillaryData, MetadataStruct& metadata);
 
 	// ProfileCallback delegate methods
 	void					HaltStreams();
@@ -164,7 +164,7 @@ protected:
 
 	//
 	AncillaryDataStruct			m_ancillaryData;
-	HDRMetadataStruct			m_hdrMetadata;
+	MetadataStruct			m_metadata;
 	CCriticalSection			m_critSec; // to synchronise access to the above structures
 	DeckLinkDevice*				m_selectedDevice;
 	BMDVideoConnection			m_selectedInputConnection;

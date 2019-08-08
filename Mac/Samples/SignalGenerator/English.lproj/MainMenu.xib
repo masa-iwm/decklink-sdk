@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="9532" systemVersion="17G3015" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none">
     <dependencies>
-        <deployment version="1050" identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="9532"/>
-        <capability name="box content view" minToolsVersion="7.0"/>
+        <deployment identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14460.31"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="NSApplication">
@@ -351,15 +351,15 @@
                             <action selector="toggleStart:" target="450" id="451"/>
                         </connections>
                     </button>
-                    <box autoresizesSubviews="NO" title="Properties" borderType="line" id="375">
+                    <box autoresizesSubviews="NO" borderType="line" title="Properties" id="375">
                         <rect key="frame" x="22" y="57" width="333" height="216"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <view key="contentView" id="XY9-Qo-0gC">
-                            <rect key="frame" x="1" y="1" width="331" height="200"/>
+                            <rect key="frame" x="3" y="3" width="327" height="198"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <popUpButton verticalHuggingPriority="750" id="376">
-                                    <rect key="frame" x="129" y="135" width="187" height="26"/>
+                                    <rect key="frame" x="129" y="133" width="187" height="26"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <popUpButtonCell key="cell" type="push" title="Pip" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" selectedItem="380" id="377">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -373,7 +373,7 @@
                                     </popUpButtonCell>
                                 </popUpButton>
                                 <popUpButton verticalHuggingPriority="750" id="XIa-D4-ttN" userLabel="Output Card Popup">
-                                    <rect key="frame" x="129" y="166" width="187" height="26"/>
+                                    <rect key="frame" x="129" y="164" width="187" height="26"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <popUpButtonCell key="cell" type="push" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" inset="2" selectedItem="utb-0g-sdl" id="0ta-0w-uNE">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -390,7 +390,7 @@
                                     </connections>
                                 </popUpButton>
                                 <popUpButton verticalHuggingPriority="750" id="384">
-                                    <rect key="frame" x="129" y="104" width="187" height="26"/>
+                                    <rect key="frame" x="129" y="102" width="187" height="26"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <popUpButtonCell key="cell" type="push" title="8" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" tag="8" inset="2" selectedItem="390" id="387">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -405,7 +405,7 @@
                                     </popUpButtonCell>
                                 </popUpButton>
                                 <textField verticalHuggingPriority="750" id="385">
-                                    <rect key="frame" x="12" y="111" width="115" height="17"/>
+                                    <rect key="frame" x="12" y="109" width="115" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Audio Channels:" id="386">
                                         <font key="font" metaFont="system"/>
@@ -414,7 +414,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" id="392">
-                                    <rect key="frame" x="12" y="79" width="115" height="17"/>
+                                    <rect key="frame" x="12" y="77" width="115" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Audio Depth:" id="399">
                                         <font key="font" metaFont="system"/>
@@ -423,7 +423,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <popUpButton verticalHuggingPriority="750" id="393">
-                                    <rect key="frame" x="129" y="73" width="187" height="26"/>
+                                    <rect key="frame" x="129" y="71" width="187" height="26"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <popUpButtonCell key="cell" type="push" title="16 Bit" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" tag="16" inset="2" selectedItem="398" id="394">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -437,7 +437,7 @@
                                     </popUpButtonCell>
                                 </popUpButton>
                                 <textField verticalHuggingPriority="750" id="403">
-                                    <rect key="frame" x="12" y="47" width="115" height="17"/>
+                                    <rect key="frame" x="12" y="45" width="115" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Video Format:" id="404">
                                         <font key="font" metaFont="system"/>
@@ -446,7 +446,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" id="481">
-                                    <rect key="frame" x="12" y="16" width="115" height="17"/>
+                                    <rect key="frame" x="12" y="14" width="115" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Pixel Format:" id="482">
                                         <font key="font" metaFont="system"/>
@@ -455,7 +455,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <popUpButton verticalHuggingPriority="750" id="477">
-                                    <rect key="frame" x="129" y="11" width="187" height="26"/>
+                                    <rect key="frame" x="129" y="9" width="187" height="26"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <popUpButtonCell key="cell" type="push" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" inset="2" id="478">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -468,7 +468,7 @@
                                     </popUpButtonCell>
                                 </popUpButton>
                                 <textField verticalHuggingPriority="750" id="yzk-y7-dQA">
-                                    <rect key="frame" x="12" y="171" width="115" height="17"/>
+                                    <rect key="frame" x="12" y="169" width="115" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Output Card:" id="MI2-mO-I5b">
                                         <font key="font" metaFont="system"/>
@@ -477,7 +477,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <textField verticalHuggingPriority="750" id="382">
-                                    <rect key="frame" x="12" y="140" width="115" height="17"/>
+                                    <rect key="frame" x="12" y="138" width="115" height="17"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <textFieldCell key="cell" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="right" title="Output Signal:" id="383">
                                         <font key="font" metaFont="system"/>
@@ -486,7 +486,7 @@
                                     </textFieldCell>
                                 </textField>
                                 <popUpButton verticalHuggingPriority="750" id="402">
-                                    <rect key="frame" x="129" y="42" width="187" height="26"/>
+                                    <rect key="frame" x="129" y="40" width="187" height="26"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <popUpButtonCell key="cell" type="push" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" inset="2" id="405">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -503,8 +503,6 @@
                                 </popUpButton>
                             </subviews>
                         </view>
-                        <color key="borderColor" white="0.0" alpha="0.41999999999999998" colorSpace="calibratedWhite"/>
-                        <color key="fillColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                     </box>
                     <customView id="463">
                         <rect key="frame" x="360" y="20" width="450" height="253"/>

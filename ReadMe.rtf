@@ -1,4 +1,4 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf500
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf600
 \cocoascreenfonts1{\fonttbl\f0\fnil\fcharset0 LucidaGrande-Bold;\f1\fnil\fcharset0 LucidaGrande;\f2\froman\fcharset0 Times-Bold;
 \f3\fswiss\fcharset0 Helvetica-Bold;\f4\fswiss\fcharset0 Helvetica;\f5\fnil\fcharset0 HelveticaNeue;
 \f6\froman\fcharset0 Times-Roman;}
@@ -13,7 +13,7 @@
 \deftab720
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\tx13563\pardeftab720\partightenfactor0
 
-\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 11.2\
+\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 11.3\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\partightenfactor0
 \cf0 \
 
@@ -21,7 +21,86 @@
 \
 \pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 11.2\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 11.3\
+\
+	- Updated Types\
+\
+		- \cf2 \expnd0\expndtw0\kerning0
+BMDDeckLinkConfigurationID
+\f2\fs26\fsmilli13333  \
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0\fs24 \cf2 \
+\pard\pardeftab720\partightenfactor0
+\cf3 \kerning1\expnd0\expndtw0 			- added 
+\f0\b bmdDeckLinkConfigSwapHDMICh3AndCh4OnInput
+\f1\b0 \
+			- added 
+\f0\b bmdDeckLinkConfigSwapHDMICh3AndCh4OnOutput
+\f1\b0 \
+				- Flags to swap HDMI audio channels 3 and 4 to support 5.1 audio channel ordering\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+	- New Samples
+\f1\b0 \
+\
+		- 
+\f0\b FileCapture
+\f1\b0 \
+			\
+			- Mac/Windows sample to demonstrate capture to file\
+\
+		- 
+\f0\b FilePlayback
+\f1\b0 \
+			\
+			- Mac/Windows sample to demonstrate playback from file\
+\
+
+\f0\b 	- Updated Samples\
+\
+		- PlaybackStills
+\f1\b0 \
+			\
+			- Added YUV conversion where requested output display mode does not support RGB format\
+			- Windows and Linux samples support 24-bit RGB PNG files \
+\
+
+\f0\b 		- Capture\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 			\
+			- Devices are listed with display labels and active state.\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 		- SignalGenHDR\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 			\
+			- Support for 2K DCI display modes		\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 		- CapturePreview\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 \
+			- Mac sample displays Colorspace metadata\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 		- All Mac Samples\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 \
+			- Updated to target Xcode 10\
+		\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+Changes in Blackmagic DeckLink SDK 11.2\
 \
 	- Updated Types\
 \
@@ -475,6 +554,7 @@ Changes in Blackmagic DeckLink SDK 11.0\
 
 \f1\b0 \cf0 				- Flag to determine whether device supports grouping of outputs for synchronized playback \
 \
+\pard\pardeftab720\partightenfactor0
 \cf2 \expnd0\expndtw0\kerning0
 			
 \f0\b - 
@@ -658,21 +738,26 @@ New interface representing an iterator that enumerates the available profiles fo
 
 \f1\b0 \cf0 			- New interface representing a device profile\
 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b 		- IDeckLinkProfileCallback\
+\f0\b \cf0 		- IDeckLinkProfileCallback\
 \
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0 			- New interface providing callbacks to help manage change in profiles\
+\f1\b0 \cf0 			- New interface providing callbacks to help manage change in profiles\
 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b 		- IDeckLinkProfileAttributes\
+\f0\b \cf0 		- IDeckLinkProfileAttributes\
 			\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0 			- New interface representing the device attributes for a profile (replaces 
+\f1\b0 \cf0 			- New interface representing the device attributes for a profile (replaces 
 \f0\b IDeckLinkAttributes
 \f1\b0  interface)\
+\pard\pardeftab720\partightenfactor0
 
-\f0\b \
+\f0\b \cf0 \
 \pard\pardeftab720\partightenfactor0
 \cf0 \kerning1\expnd0\expndtw0 	- Updated Interfaces\
 \
@@ -1245,10 +1330,12 @@ BMDAncillaryPacketFormat \
 \pard\pardeftab720\partightenfactor0
 
 \f1\b0 \cf0 				- \cf4 String representing an unique identifier for the device.\uc0\u8232 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b 		- BMDDeckLinkStatusID\
+\f0\b \cf0 		- BMDDeckLinkStatusID\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \
+\f1\b0 \cf0 \
 			- added 
 \f0\b \cf4 bmdDeckLinkStatusInterchangeablePanelType \
 \pard\pardeftab720\partightenfactor0
@@ -4038,4 +4125,4 @@ Some applications may use third party code under license. For details please ref
 \fs18 \cf0 \
 \'a9 2019 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
 \
-Updated May 27, 2019.}
+Updated August 12, 2019.}

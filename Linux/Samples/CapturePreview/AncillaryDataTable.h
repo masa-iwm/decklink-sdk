@@ -49,7 +49,7 @@ const QStringList kAncillaryDataTypes = {
 	"RP188 HFRTC User bits",
 };
 
-const QStringList kHDRMetadataTypes = {
+const QStringList kMetadataTypes = {
 	"Static HDR Electro-optical Transfer Function",
 	"Static HDR Display Primaries Red X",
 	"Static HDR Display Primaries Red Y",
@@ -99,7 +99,7 @@ typedef struct {
 	QString maximumContentLightLevel;
 	QString maximumFrameAverageLightLevel;
 	QString colorspace;
-} HDRMetadataStruct;
+} MetadataStruct;
 
 class AncillaryDataTable : public QAbstractTableModel
 {
@@ -109,10 +109,10 @@ public:
 	AncillaryDataTable(QObject* parent = nullptr);
 	virtual ~AncillaryDataTable() {}
 
-	void UpdateFrameData(AncillaryDataStruct* newAncData, HDRMetadataStruct* newHdrMetadata);
+	void UpdateFrameData(AncillaryDataStruct* newAncData, MetadataStruct* newMetadata);
 
 	// QAbstractTableModel methods
-	virtual int			rowCount(const QModelIndex& parent = QModelIndex()) const override { return kAncillaryDataTypes.size() + kHDRMetadataTypes.size(); }
+	virtual int			rowCount(const QModelIndex& parent = QModelIndex()) const override { return kAncillaryDataTypes.size() + kMetadataTypes.size(); }
 	virtual int			columnCount(const QModelIndex& parent = QModelIndex()) const  override{ return kAncillaryTableColumnCount; }
 	virtual QVariant	data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 	virtual QVariant	headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
@@ -120,6 +120,6 @@ public:
 private:
 	QMutex			m_updateMutex;
 	QStringList		m_ancillaryDataValues;
-	QStringList		m_hdrMetadataValues;
+	QStringList		m_metadataValues;
 };
 

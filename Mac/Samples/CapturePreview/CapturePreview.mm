@@ -71,7 +71,7 @@ static const NSDictionary* kInputConnections = @{
 @synthesize rp188vitc2;
 @synthesize rp188ltc;
 @synthesize rp188hfrtc;
-@synthesize hdrMetadata;
+@synthesize metadata;
 
 - (void)dealloc
 {
@@ -81,13 +81,13 @@ static const NSDictionary* kInputConnections = @{
 	[rp188vitc2 dealloc];
 	[rp188ltc dealloc];
 	[rp188hfrtc dealloc];
-	[hdrMetadata dealloc];
+	[metadata dealloc];
 	
 	[super dealloc];
 }
 @end
 
-@implementation HDRMetadataStruct
+@implementation MetadataStruct
 @synthesize electroOpticalTransferFunction;
 @synthesize displayPrimariesRedX;
 @synthesize displayPrimariesRedY;
@@ -101,6 +101,7 @@ static const NSDictionary* kInputConnections = @{
 @synthesize minDisplayMasteringLuminance;
 @synthesize maximumContentLightLevel;
 @synthesize maximumFrameAverageLightLevel;
+@synthesize colorspace;
 
 - (void)dealloc;
 {
@@ -117,29 +118,31 @@ static const NSDictionary* kInputConnections = @{
 	[minDisplayMasteringLuminance release];
 	[maximumContentLightLevel release];
 	[maximumFrameAverageLightLevel release];
+	[colorspace release];
 
 	[super dealloc];
 }
 
 -(id) copyWithZone: (NSZone *) zone
 {
-	HDRMetadataStruct *hdrMetadataCopy = [[[self class] allocWithZone: zone] init];
+	MetadataStruct *metadataCopy = [[[self class] allocWithZone: zone] init];
 
-	hdrMetadataCopy.electroOpticalTransferFunction = [NSString stringWithString:self.electroOpticalTransferFunction];
-	hdrMetadataCopy.displayPrimariesRedX = [NSString stringWithString:self.displayPrimariesRedX];
-	hdrMetadataCopy.displayPrimariesRedY = [NSString stringWithString:self.displayPrimariesRedY];
-	hdrMetadataCopy.displayPrimariesGreenX = [NSString stringWithString:self.displayPrimariesGreenX];
-	hdrMetadataCopy.displayPrimariesGreenY = [NSString stringWithString:self.displayPrimariesGreenY];
-	hdrMetadataCopy.displayPrimariesBlueX = [NSString stringWithString:self.displayPrimariesBlueX];
-	hdrMetadataCopy.displayPrimariesBlueY = [NSString stringWithString:self.displayPrimariesBlueY];
-	hdrMetadataCopy.whitePointX = [NSString stringWithString:self.whitePointX];
-	hdrMetadataCopy.whitePointY = [NSString stringWithString:self.whitePointY];
-	hdrMetadataCopy.maxDisplayMasteringLuminance = [NSString stringWithString:self.maxDisplayMasteringLuminance];
-	hdrMetadataCopy.minDisplayMasteringLuminance = [NSString stringWithString:self.minDisplayMasteringLuminance];
-	hdrMetadataCopy.maximumContentLightLevel = [NSString stringWithString:self.maximumContentLightLevel];
-	hdrMetadataCopy.maximumFrameAverageLightLevel = [NSString stringWithString:self.maximumFrameAverageLightLevel];
+	metadataCopy.electroOpticalTransferFunction = [NSString stringWithString:self.electroOpticalTransferFunction];
+	metadataCopy.displayPrimariesRedX = [NSString stringWithString:self.displayPrimariesRedX];
+	metadataCopy.displayPrimariesRedY = [NSString stringWithString:self.displayPrimariesRedY];
+	metadataCopy.displayPrimariesGreenX = [NSString stringWithString:self.displayPrimariesGreenX];
+	metadataCopy.displayPrimariesGreenY = [NSString stringWithString:self.displayPrimariesGreenY];
+	metadataCopy.displayPrimariesBlueX = [NSString stringWithString:self.displayPrimariesBlueX];
+	metadataCopy.displayPrimariesBlueY = [NSString stringWithString:self.displayPrimariesBlueY];
+	metadataCopy.whitePointX = [NSString stringWithString:self.whitePointX];
+	metadataCopy.whitePointY = [NSString stringWithString:self.whitePointY];
+	metadataCopy.maxDisplayMasteringLuminance = [NSString stringWithString:self.maxDisplayMasteringLuminance];
+	metadataCopy.minDisplayMasteringLuminance = [NSString stringWithString:self.minDisplayMasteringLuminance];
+	metadataCopy.maximumContentLightLevel = [NSString stringWithString:self.maximumContentLightLevel];
+	metadataCopy.maximumFrameAverageLightLevel = [NSString stringWithString:self.maximumFrameAverageLightLevel];
+	metadataCopy.colorspace = [NSString stringWithString:self.colorspace];
 
-	return hdrMetadataCopy;
+	return metadataCopy;
 }
 @end
 
@@ -153,7 +156,7 @@ static const NSDictionary* kInputConnections = @{
 	self = [super init];
 	if (self)
 	{
-		ancillaryDataValues = [[NSMutableArray arrayWithObjects:@"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", nil] retain];
+		ancillaryDataValues = [[NSMutableArray arrayWithObjects:@"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", @"", nil] retain];
 		ancillaryDataTypes = [[NSMutableArray arrayWithObjects:
 							@"VITC Timecode field 1", 
 							@"VITC User bits field 1", 
@@ -180,6 +183,7 @@ static const NSDictionary* kInputConnections = @{
 							@"Static HDR Min Display Mastering Luminance",
 							@"Static HDR Max Content Light Level",
 							@"Static HDR Max Frame Average Light Level",
+							@"Colorspace",
 							nil] retain];
 	}
 	return self;
@@ -560,19 +564,20 @@ static const NSDictionary* kInputConnections = @{
 	[ancillaryDataValues replaceObjectAtIndex:11 withObject:latestAncillaryDataValues.rp188hfrtc.userBits];
 
 	// HDR metadata
-	[ancillaryDataValues replaceObjectAtIndex:12 withObject:latestAncillaryDataValues.hdrMetadata.electroOpticalTransferFunction];
-	[ancillaryDataValues replaceObjectAtIndex:13 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesRedX];
-	[ancillaryDataValues replaceObjectAtIndex:14 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesRedY];
-	[ancillaryDataValues replaceObjectAtIndex:15 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesGreenX];
-	[ancillaryDataValues replaceObjectAtIndex:16 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesGreenY];
-	[ancillaryDataValues replaceObjectAtIndex:17 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesBlueX];
-	[ancillaryDataValues replaceObjectAtIndex:18 withObject:latestAncillaryDataValues.hdrMetadata.displayPrimariesBlueY];
-	[ancillaryDataValues replaceObjectAtIndex:19 withObject:latestAncillaryDataValues.hdrMetadata.whitePointX];
-	[ancillaryDataValues replaceObjectAtIndex:20 withObject:latestAncillaryDataValues.hdrMetadata.whitePointY];
-	[ancillaryDataValues replaceObjectAtIndex:21 withObject:latestAncillaryDataValues.hdrMetadata.maxDisplayMasteringLuminance];
-	[ancillaryDataValues replaceObjectAtIndex:22 withObject:latestAncillaryDataValues.hdrMetadata.minDisplayMasteringLuminance];
-	[ancillaryDataValues replaceObjectAtIndex:23 withObject:latestAncillaryDataValues.hdrMetadata.maximumContentLightLevel];
-	[ancillaryDataValues replaceObjectAtIndex:24 withObject:latestAncillaryDataValues.hdrMetadata.maximumFrameAverageLightLevel];
+	[ancillaryDataValues replaceObjectAtIndex:12 withObject:latestAncillaryDataValues.metadata.electroOpticalTransferFunction];
+	[ancillaryDataValues replaceObjectAtIndex:13 withObject:latestAncillaryDataValues.metadata.displayPrimariesRedX];
+	[ancillaryDataValues replaceObjectAtIndex:14 withObject:latestAncillaryDataValues.metadata.displayPrimariesRedY];
+	[ancillaryDataValues replaceObjectAtIndex:15 withObject:latestAncillaryDataValues.metadata.displayPrimariesGreenX];
+	[ancillaryDataValues replaceObjectAtIndex:16 withObject:latestAncillaryDataValues.metadata.displayPrimariesGreenY];
+	[ancillaryDataValues replaceObjectAtIndex:17 withObject:latestAncillaryDataValues.metadata.displayPrimariesBlueX];
+	[ancillaryDataValues replaceObjectAtIndex:18 withObject:latestAncillaryDataValues.metadata.displayPrimariesBlueY];
+	[ancillaryDataValues replaceObjectAtIndex:19 withObject:latestAncillaryDataValues.metadata.whitePointX];
+	[ancillaryDataValues replaceObjectAtIndex:20 withObject:latestAncillaryDataValues.metadata.whitePointY];
+	[ancillaryDataValues replaceObjectAtIndex:21 withObject:latestAncillaryDataValues.metadata.maxDisplayMasteringLuminance];
+	[ancillaryDataValues replaceObjectAtIndex:22 withObject:latestAncillaryDataValues.metadata.minDisplayMasteringLuminance];
+	[ancillaryDataValues replaceObjectAtIndex:23 withObject:latestAncillaryDataValues.metadata.maximumContentLightLevel];
+	[ancillaryDataValues replaceObjectAtIndex:24 withObject:latestAncillaryDataValues.metadata.maximumFrameAverageLightLevel];
+	[ancillaryDataValues replaceObjectAtIndex:25 withObject:latestAncillaryDataValues.metadata.colorspace];
 }
 
 - (void)reloadAncillaryTable;

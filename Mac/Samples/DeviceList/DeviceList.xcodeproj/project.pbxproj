@@ -157,6 +157,7 @@
 		1DEB924808733DCA0010E9CD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				COPY_PHASE_STRIP = NO;
@@ -174,6 +175,7 @@
 				);
 				PRODUCT_NAME = DeviceList;
 				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
 				ZERO_LINK = YES;
 			};
 			name = Debug;
@@ -181,7 +183,7 @@
 		1DEB924908733DCA0010E9CD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1 = "i386 x86_64";
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
@@ -196,6 +198,7 @@
 				);
 				PRODUCT_NAME = DeviceList;
 				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
 			};
 			name = Release;
 		};
@@ -204,7 +207,7 @@
 			buildSettings = {
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				SDKROOT = macosx;
 				VALID_ARCHS = x86_64;
 			};
@@ -215,7 +218,7 @@
 			buildSettings = {
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				SDKROOT = macosx;
 				VALID_ARCHS = x86_64;
 			};

@@ -52,7 +52,7 @@ private:
 	bool								m_applyDetectedInputMode;
 	//
 	static void							GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format, CString* timecodeString, CString* userBitsString);
-	static void							GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, HDRMetadataStruct& hdrMetadata);
+	static void							GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct& metadata);
 
 public:
 	DeckLinkDevice(CCapturePreviewDlg* uiDelegate, IDeckLink* device);

@@ -138,9 +138,9 @@ void CapturePreview::customEvent(QEvent *event)
 	{
 		DeckLinkInputFrameArrivedEvent* frameArrivedEvent = dynamic_cast<DeckLinkInputFrameArrivedEvent*>(event);
 		ui->invalidSignalLabel->setVisible(!frameArrivedEvent->SignalValid());
-		m_ancillaryDataTable->UpdateFrameData(frameArrivedEvent->AncillaryData(), frameArrivedEvent->HDRMetadata());
+		m_ancillaryDataTable->UpdateFrameData(frameArrivedEvent->AncillaryData(), frameArrivedEvent->Metadata());
 		delete frameArrivedEvent->AncillaryData();
-		delete frameArrivedEvent->HDRMetadata();
+		delete frameArrivedEvent->Metadata();
 	}
 	else if (event->type() == kProfileActivatedEvent)
 	{

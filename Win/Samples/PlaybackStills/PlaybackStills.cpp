@@ -34,16 +34,55 @@
 #include "ImageLoader.h"
 #include "DeckLinkAPI.h"
 
+static const BMDPixelFormat kConvertedPixelFormat = bmdFormat10BitYUV;
+
 std::mutex					g_playbackMutex;
 std::condition_variable		g_playbackStopCondition;
 bool						g_keyPressed = false;
 
-void PlaybackStills(IDeckLinkOutput* deckLinkOutput, IDeckLinkVideoFrame* playbackFrame, std::vector<std::string>& pngFiles, long updateIntervalms, bool loopPlayback)
+void PlaybackStills(IDeckLinkOutput* deckLinkOutput, IDeckLinkVideoFrame* playbackFrame, std::vector<std::string>& pngFiles, long updateIntervalms, bool loopPlayback, bool convertOutput)
 {
 	std::chrono::milliseconds	timerPeriod(updateIntervalms);
 	int							playbackStillsCount	= 0;
 	bool						playbackRunning		= true;
 	HRESULT						result				= S_OK;
+	IDeckLinkVideoConversion*	frameConverter		= NULL;
+	IDeckLinkMutableVideoFrame*	convertedVideoFrame	= NULL;
+	
+	if (convertOutput)
+	{
+		int outputBytesPerRow;
+
+		result = GetDeckLinkFrameConverter(&frameConverter);
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Unable to get Video Conversion interface\n");
+			goto bail;
+		}
+
+		// Refer to DeckLink SDK Manual - 2.7.4 Pixel Formats
+		switch (kConvertedPixelFormat)
+		{
+			case bmdFormat8BitYUV:
+				outputBytesPerRow = playbackFrame->GetWidth() * 2;
+				break;
+
+			case bmdFormat10BitYUV:
+				outputBytesPerRow = ((playbackFrame->GetWidth() + 47) / 48) * 128;
+				break;
+
+			default:
+				fprintf(stderr, "Unexpected output pixel format\n");
+				goto bail;
+		}
+
+		if (deckLinkOutput->CreateVideoFrame(playbackFrame->GetWidth(), playbackFrame->GetHeight(), outputBytesPerRow,
+			kConvertedPixelFormat, playbackFrame->GetFlags(), &convertedVideoFrame) != S_OK)
+		{
+			fprintf(stderr, "Could not create video frame to convert into\n");
+			playbackRunning = false;
+		}
+	}
 	
 	while (playbackRunning)
 	{
@@ -54,11 +93,31 @@ void PlaybackStills(IDeckLinkOutput* deckLinkOutput, IDeckLinkVideoFrame* playba
 			playbackRunning = false;
 		}
 		
-		result = deckLinkOutput->DisplayVideoFrameSync(playbackFrame);
-		if (result != S_OK)
+		if (convertOutput)
 		{
-			fprintf(stderr, "Unable to display video output\n");
-			playbackRunning = false;
+			// Pixel format conversion required to output frame
+			if (frameConverter->ConvertFrame(playbackFrame, convertedVideoFrame) != S_OK)
+			{
+				playbackRunning = false;
+				continue;
+			}
+
+			result = deckLinkOutput->DisplayVideoFrameSync(convertedVideoFrame);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Unable to display video output\n");
+				playbackRunning = false;
+			}
+		}
+		else
+		{
+			// Output frame without format conversion
+			result = deckLinkOutput->DisplayVideoFrameSync(playbackFrame);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Unable to display video output\n");
+				playbackRunning = false;
+			}
 		}
 		
 		std::unique_lock<std::mutex> lock(g_playbackMutex);
@@ -79,6 +138,14 @@ void PlaybackStills(IDeckLinkOutput* deckLinkOutput, IDeckLinkVideoFrame* playba
 			}
 		}
 	}
+
+bail:
+	if (convertedVideoFrame != NULL)
+		convertedVideoFrame->Release();
+
+	if (frameConverter != NULL)
+		frameConverter->Release();
+
 }
 
 void DisplayUsage(const IDeckLinkOutput* selectedDeckLinkOutput, const std::vector<std::string>& deviceNames,
@@ -168,6 +235,7 @@ int main(int argc, char* argv[])
 	int							displayModeIndex	= -1;
 	bool						loopPlayback		= false;
 	int							updateInterval		= 1;
+	bool						convertOutputFormat = false;
 	std::string					playbackDirectory;
 
 	HRESULT						result;
@@ -191,7 +259,7 @@ int main(int argc, char* argv[])
 	std::vector<std::string>			pngFiles;
 
 	// Initialize COM on this thread
-	result = CoInitialize(NULL);
+	result = CoInitializeEx(NULL, COINITBASE_MULTITHREADED);
 	if (FAILED(result))
 	{
 		fprintf(stderr, "Initialization of COM failed - result = %08x.\n", result);
@@ -353,13 +421,21 @@ int main(int argc, char* argv[])
 				goto bail;
 
 			// Check display mode is supported with given options
-			// Passing pixel format = 0 to represent any pixel format
-			result = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, bmdFormatUnspecified, bmdSupportedVideoModeDefault, NULL, &displayModeSupported);
+			result = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, ImageLoader::kImageLoaderPixelFormat, bmdSupportedVideoModeDefault, NULL, &displayModeSupported);
 			if ((result != S_OK) || (!displayModeSupported))
 			{
-				fprintf(stderr, "The display mode %s is not supported by device\n", selectedDisplayModeName.c_str());
-				displayHelp = true;
+				// Video mode is unsupported, check whether we can support with format conversion
+				result = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, kConvertedPixelFormat, bmdSupportedVideoModeDefault, nullptr, &displayModeSupported);
+				if ((result != S_OK) || (!displayModeSupported))
+				{
+					fprintf(stderr, "The display mode %s is not supported by device\n", selectedDisplayModeName.c_str());
+					displayHelp = true;
+				}
+				else
+					convertOutputFormat = true;
 			}
+			else
+				convertOutputFormat = false;
 		}
 	}
 
@@ -411,7 +487,7 @@ int main(int argc, char* argv[])
 	// Start thread for message processing
 	playbackStillsThread = std::thread([&]{
 		PlaybackStills(selectedDeckLinkOutput, (IDeckLinkVideoFrame*)playbackFrame, pngFiles,
-						updateInterval * 1000 * (long)frameDuration / (long)frameTimescale, loopPlayback);
+						updateInterval * 1000 * (long)frameDuration / (long)frameTimescale, loopPlayback, convertOutputFormat);
 	});
 	
 	// Wait on return press, then notify playback thread to finalize

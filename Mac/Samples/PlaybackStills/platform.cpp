@@ -41,3 +41,18 @@ HRESULT GetDeckLinkIterator(IDeckLinkIterator **deckLinkIterator)
 
 	return result;
 }
+
+HRESULT GetDeckLinkFrameConverter(IDeckLinkVideoConversion** deckLinkFrameConverter)
+{
+	HRESULT result = S_OK;
+
+	// Create an IDeckLinkVideoConversion interface object to provide pixel format conversion of video frame.
+	*deckLinkFrameConverter = CreateVideoConversionInstance();
+	if (*deckLinkFrameConverter == NULL)
+	{
+		fprintf(stderr, "A DeckLink Video Conversion interface could not be created.\n");
+		result = E_FAIL;
+	}
+
+	return result;
+}

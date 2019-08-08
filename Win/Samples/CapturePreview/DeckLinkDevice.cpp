@@ -275,7 +275,7 @@ bail:
 HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFrame* videoFrame, /* in */ IDeckLinkAudioInputPacket* audioPacket)
 {
 	AncillaryDataStruct		ancillaryData;
-	HDRMetadataStruct		hdrMetadata;
+	MetadataStruct			metadata;
 
 	if (videoFrame == NULL)
 		return S_OK;
@@ -287,9 +287,9 @@ HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFra
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC, &ancillaryData.rp188ltcTimecode, &ancillaryData.rp188ltcUserBits);
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2, &ancillaryData.rp188vitc2Timecode, &ancillaryData.rp188vitc2UserBits);
 	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188HighFrameRate, &ancillaryData.rp188hfrtcTimecode, &ancillaryData.rp188hfrtcUserBits);
-	GetHDRMetadataFromFrame(videoFrame, hdrMetadata);
+	GetMetadataFromFrame(videoFrame, metadata);
 
-	m_uiDelegate->UpdateFrameData(ancillaryData, hdrMetadata);
+	m_uiDelegate->UpdateFrameData(ancillaryData, metadata);
 
 	// Update the UI
 	PostMessage(m_uiDelegate->GetSafeHwnd(), WM_REFRESH_INPUT_STREAM_DATA_MESSAGE, (videoFrame->GetFlags() & bmdFrameHasNoInputSource), 0);
@@ -330,23 +330,23 @@ void	DeckLinkDevice::GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* videoFr
 
 }
 
-void DeckLinkDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, HDRMetadataStruct& hdrMetadata)
+void DeckLinkDevice::GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct& metadata)
 {
-	hdrMetadata.electroOpticalTransferFunction = _T("");
-	hdrMetadata.displayPrimariesRedX = _T("");
-	hdrMetadata.displayPrimariesRedY = _T("");
-	hdrMetadata.displayPrimariesGreenX = _T("");
-	hdrMetadata.displayPrimariesGreenY = _T("");
-	hdrMetadata.displayPrimariesBlueX = _T("");
-	hdrMetadata.displayPrimariesBlueY = _T("");
-	hdrMetadata.whitePointX = _T("");
-	hdrMetadata.whitePointY = _T("");
-	hdrMetadata.maxDisplayMasteringLuminance = _T("");
-	hdrMetadata.minDisplayMasteringLuminance = _T("");
-	hdrMetadata.maximumContentLightLevel = _T("");
-	hdrMetadata.maximumFrameAverageLightLevel = _T("");
-	hdrMetadata.colorspace = _T("");
-	
+	metadata.electroOpticalTransferFunction = _T("");
+	metadata.displayPrimariesRedX = _T("");
+	metadata.displayPrimariesRedY = _T("");
+	metadata.displayPrimariesGreenX = _T("");
+	metadata.displayPrimariesGreenY = _T("");
+	metadata.displayPrimariesBlueX = _T("");
+	metadata.displayPrimariesBlueY = _T("");
+	metadata.whitePointX = _T("");
+	metadata.whitePointY = _T("");
+	metadata.maxDisplayMasteringLuminance = _T("");
+	metadata.minDisplayMasteringLuminance = _T("");
+	metadata.maximumContentLightLevel = _T("");
+	metadata.maximumFrameAverageLightLevel = _T("");
+	metadata.colorspace = _T("");
+
 	IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
 	if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
 	{
@@ -358,19 +358,19 @@ void DeckLinkDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFram
 			switch (intValue)
 			{
 			case 0:
-				hdrMetadata.electroOpticalTransferFunction = _T("SDR");
+				metadata.electroOpticalTransferFunction = _T("SDR");
 				break;
 			case 1:
-				hdrMetadata.electroOpticalTransferFunction = _T("HDR");
+				metadata.electroOpticalTransferFunction = _T("HDR");
 				break;
 			case 2:
-				hdrMetadata.electroOpticalTransferFunction = _T("PQ (ST2084)");
+				metadata.electroOpticalTransferFunction = _T("PQ (ST2084)");
 				break;
 			case 3:
-				hdrMetadata.electroOpticalTransferFunction = _T("HLG");
+				metadata.electroOpticalTransferFunction = _T("HLG");
 				break;
 			default:
-				hdrMetadata.electroOpticalTransferFunction.Format(_T("Unknown EOTF: %d"), (int32_t)intValue);
+				metadata.electroOpticalTransferFunction.Format(_T("Unknown EOTF: %d"), (int32_t)intValue);
 				break;
 			}
 		}
@@ -378,57 +378,58 @@ void DeckLinkDevice::GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFram
 		if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
 		{
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
-				hdrMetadata.displayPrimariesRedX.Format(_T("%.04f"), doubleValue);
+				metadata.displayPrimariesRedX.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY, &doubleValue) == S_OK)
-				hdrMetadata.displayPrimariesRedY.Format(_T("%.04f"), doubleValue);
+				metadata.displayPrimariesRedY.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX, &doubleValue) == S_OK)
-				hdrMetadata.displayPrimariesGreenX.Format(_T("%.04f"), doubleValue);
+				metadata.displayPrimariesGreenX.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY, &doubleValue) == S_OK)
-				hdrMetadata.displayPrimariesGreenY.Format(_T("%.04f"), doubleValue);
+				metadata.displayPrimariesGreenY.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX, &doubleValue) == S_OK)
-				hdrMetadata.displayPrimariesBlueX.Format(_T("%.04f"), doubleValue);
+				metadata.displayPrimariesBlueX.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY, &doubleValue) == S_OK)
-				hdrMetadata.displayPrimariesBlueY.Format(_T("%.04f"), doubleValue);
+				metadata.displayPrimariesBlueY.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointX, &doubleValue) == S_OK)
-				hdrMetadata.whitePointX.Format(_T("%.04f"), doubleValue);
+				metadata.whitePointX.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointY, &doubleValue) == S_OK)
-				hdrMetadata.whitePointY.Format(_T("%.04f"), doubleValue);
+				metadata.whitePointY.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance, &doubleValue) == S_OK)
-				hdrMetadata.maxDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
+				metadata.maxDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance, &doubleValue) == S_OK)
-				hdrMetadata.minDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
+				metadata.minDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel, &doubleValue) == S_OK)
-				hdrMetadata.maximumContentLightLevel.Format(_T("%.04f"), doubleValue);
+				metadata.maximumContentLightLevel.Format(_T("%.04f"), doubleValue);
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
-				hdrMetadata.maximumFrameAverageLightLevel.Format(_T("%.04f"), doubleValue);
+				metadata.maximumFrameAverageLightLevel.Format(_T("%.04f"), doubleValue);
+		}
 
-			if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataColorspace, &intValue) == S_OK)
+		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataColorspace, &intValue) == S_OK)
+		{
+			switch (intValue)
 			{
-				switch (intValue)
-				{
-				case bmdColorspaceRec601:
-					hdrMetadata.colorspace = _T("Rec.601");
-					break;
-				case bmdColorspaceRec709:
-					hdrMetadata.colorspace = _T("Rec.709");
-					break;
-				case bmdColorspaceRec2020:
-					hdrMetadata.colorspace = _T("Rec.2020");
-					break;
-				}
+			case bmdColorspaceRec601:
+				metadata.colorspace = _T("Rec.601");
+				break;
+			case bmdColorspaceRec709:
+				metadata.colorspace = _T("Rec.709");
+				break;
+			case bmdColorspaceRec2020:
+				metadata.colorspace = _T("Rec.2020");
+				break;
 			}
 		}
+
 		metadataExtensions->Release();
 	}
 }

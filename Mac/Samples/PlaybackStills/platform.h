@@ -33,6 +33,7 @@
 #include "DeckLinkAPI.h"
 
 HRESULT GetDeckLinkIterator(IDeckLinkIterator **deckLinkIterator);
+HRESULT GetDeckLinkFrameConverter(IDeckLinkVideoConversion** deckLinkFrameConverter);
 
 
 #define dlbool_t	bool

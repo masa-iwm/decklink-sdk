@@ -283,8 +283,8 @@ void SignalGenHDR::RefreshDisplayModeMenu(void)
 		if (deckLinkDisplayMode->GetName(const_cast<const char**>(&modeName)) != S_OK)
 			continue;
 
-		// Ignore NTSC/PAL/720p/1080i/2K DCI display modes
-		if ((deckLinkDisplayMode->GetWidth() < 1920) || (deckLinkDisplayMode->GetWidth() == 2048) || (deckLinkDisplayMode->GetFieldDominance() != bmdProgressiveFrame))
+		// Ignore NTSC/PAL/720p/1080i display modes
+		if ((deckLinkDisplayMode->GetWidth() < 1920) || (deckLinkDisplayMode->GetFieldDominance() != bmdProgressiveFrame))
 			continue;
 
 		displayMode = deckLinkDisplayMode->GetDisplayMode();

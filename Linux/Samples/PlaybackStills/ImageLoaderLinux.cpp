@@ -145,10 +145,35 @@ HRESULT ImageLoader::ConvertPNGToDeckLinkVideoFrame(const std::string& pngFilena
 	rowBytes		= png_get_rowbytes(pngDataPtr, pngInfoPtr);
 	interlaceType	= png_get_interlace_type(pngDataPtr, pngInfoPtr);
 
-	if (colorType != PNG_COLOR_TYPE_RGB_ALPHA || bitDepth != 8)
+	if (bitDepth == 16)
 	{
-		fprintf(stderr, "PNG is not 8-bit BGRA\n");
-		goto bail;
+		// Strip 16-bit per channel to 8-bit 
+		png_set_strip_16(pngDataPtr);
+		rowBytes /= 2;
+	}
+
+	switch (colorType)
+	{
+		case PNG_COLOR_TYPE_PALETTE:
+			// Convert color palette to RGB
+			png_set_palette_to_rgb(pngDataPtr);
+			rowBytes = width * 3;
+			// Intended flow through
+
+		case PNG_COLOR_TYPE_RGB:
+			// Add filler to 24-bit RGB to convert into RGBA
+			png_set_filler(pngDataPtr, 0xff, PNG_FILLER_AFTER);
+			rowBytes += (rowBytes / 3);
+			break;
+
+		case PNG_COLOR_TYPE_RGB_ALPHA:
+			// No transformation required
+			break;
+
+		default:
+			// Unsupported format
+			fprintf(stderr, "PNG file is in unsupported format\n");
+			goto bail;
 	}
 	
 	if (interlaceType != PNG_INTERLACE_NONE)

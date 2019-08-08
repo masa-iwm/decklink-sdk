@@ -158,12 +158,12 @@ bool BMDConfig::ParseArguments(int argc,  char** argv)
 		DisplayUsage(0);
 
 	// Get device and display mode names
-	IDeckLink* deckLink = GetDeckLink(m_deckLinkIndex);
+	IDeckLink* deckLink = GetSelectedDeckLink();
 	if (deckLink != NULL)
 	{
 		if (m_displayModeIndex != -1)
 		{
-			IDeckLinkDisplayMode* displayMode = GetDeckLinkDisplayMode(deckLink, m_displayModeIndex);
+			IDeckLinkDisplayMode* displayMode = GetSelectedDeckLinkDisplayMode(deckLink);
 			if (displayMode != NULL)
 			{
 				displayMode->GetName((const char**)&m_displayModeName);
@@ -179,7 +179,7 @@ bool BMDConfig::ParseArguments(int argc,  char** argv)
 			m_displayModeName = strdup("Format Detection");
 		}
 
-		deckLink->GetModelName((const char**)&m_deckLinkName);
+		deckLink->GetDisplayName((const char**)&m_deckLinkName);
 		deckLink->Release();
 	}
 	else
@@ -190,19 +190,41 @@ bool BMDConfig::ParseArguments(int argc,  char** argv)
 	return true;
 }
 
-IDeckLink* BMDConfig::GetDeckLink(int idx)
+IDeckLink* BMDConfig::GetSelectedDeckLink()
 {
 	HRESULT				result;
 	IDeckLink*			deckLink;
 	IDeckLinkIterator*	deckLinkIterator = CreateDeckLinkIteratorInstance();
-	int					i = idx;
+	int					i = m_deckLinkIndex;
+
+	if (!deckLinkIterator)
+	{
+		fprintf(stderr, "This application requires the DeckLink drivers installed.\n");
+		return NULL;
+	}
 
 	while((result = deckLinkIterator->Next(&deckLink)) == S_OK)
 	{
-		if (i == 0)
-			break;
-		--i;
+		IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
+		int64_t 					intAttribute;
 
+		result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
+		if (result != S_OK)
+		{
+			deckLink->Release();
+			break;
+		}
+
+		// Skip over devices that don't support capture
+		if ((deckLinkAttributes->GetInt(BMDDeckLinkVideoIOSupport, &intAttribute) == S_OK) && 
+			((intAttribute & bmdDeviceSupportsCapture) != 0))
+		{
+			if (i == 0)
+				break;
+			--i;
+		}
+
+		deckLinkAttributes->Release();
 		deckLink->Release();
 	}
 
@@ -214,13 +236,13 @@ IDeckLink* BMDConfig::GetDeckLink(int idx)
 	return deckLink;
 }
 
-IDeckLinkDisplayMode* BMDConfig::GetDeckLinkDisplayMode(IDeckLink* deckLink, int idx)
+IDeckLinkDisplayMode* BMDConfig::GetSelectedDeckLinkDisplayMode(IDeckLink* deckLink)
 {
 	HRESULT							result;
 	IDeckLinkDisplayMode*			displayMode = NULL;
 	IDeckLinkInput*					deckLinkInput = NULL;
 	IDeckLinkDisplayModeIterator*	displayModeIterator = NULL;
-	int								i = idx;
+	int								i = m_displayModeIndex < 0 ? 0 : m_displayModeIndex; // Format detection still needs a valid mode to start with
 
 	result = deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&deckLinkInput);
 	if (result != S_OK)
@@ -263,7 +285,7 @@ void BMDConfig::DisplayUsage(int status)
 	int								deckLinkCount = 0;
 	char*							deckLinkName = NULL;
 
-	IDeckLinkProfileAttributes*			deckLinkAttributes = NULL;
+	IDeckLinkProfileAttributes*		deckLinkAttributes = NULL;
 	bool							formatDetectionSupported;
 
 	IDeckLinkInput*					deckLinkInput = NULL;
@@ -280,13 +302,35 @@ void BMDConfig::DisplayUsage(int status)
 	// Loop through all available devices
 	while (deckLinkIterator->Next(&deckLink) == S_OK)
 	{
-		result = deckLink->GetModelName((const char**)&deckLinkName);
+		bool deckLinkActive = false;
+		bool deckLinkSupportsCapture = false;
+
+		if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) == S_OK)
+		{
+			int64_t intAttribute;
+			deckLinkActive = ((deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &intAttribute) == S_OK) && 
+								(intAttribute != bmdDuplexInactive));
+			
+			deckLinkSupportsCapture = ((deckLinkAttributes->GetInt(BMDDeckLinkVideoIOSupport, &intAttribute) == S_OK) && 
+										((intAttribute & bmdDeviceSupportsCapture) != 0));
+
+			deckLinkAttributes->Release();
+		}
+
+		if (!deckLinkSupportsCapture)
+		{
+			deckLink->Release();
+			continue;
+		}
+		
+		result = deckLink->GetDisplayName((const char**)&deckLinkName);
 		if (result == S_OK)
 		{
 			fprintf(stderr,
-				"        %2d: %s%s\n",
+				"        %2d: %s%s%s\n",
 				deckLinkCount,
 				deckLinkName,
+				deckLinkActive ? "" : " (inactive)",
 				deckLinkCount == m_deckLinkIndex ? " (selected)" : ""
 			);
 

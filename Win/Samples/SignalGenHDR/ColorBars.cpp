@@ -243,7 +243,7 @@ void FillBT2111ColorBars(CComPtr<IDeckLinkMutableVideoFrame>& colorBarsFrame, EO
 		// Scale pattern for UHD frame height
 		uint32_t patternHeight = std::get<kColorBarsPatternHeight>(iter) * (height / kHD1080Height);
 
-		// If 4K/8K DCI mode, then pad with 40% grey bars
+		// If 2K/4K/8K DCI mode, then pad with 40% grey bars
 		uint32_t padWidth = (width % kHD1080Width) / 2;
 		
 		for (uint32_t i = 0; i < padWidth; i++)

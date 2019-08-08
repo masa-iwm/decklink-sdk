@@ -55,14 +55,14 @@ public:
 	const char*				m_videoOutputFile;
 	const char*				m_audioOutputFile;
 
+	IDeckLink* GetSelectedDeckLink(void);
+	IDeckLinkDisplayMode* GetSelectedDeckLinkDisplayMode(IDeckLink* deckLink);
+
 private:
 	char*					m_deckLinkName;
 	char*					m_displayModeName;
 
 	static const char* GetPixelFormatName(BMDPixelFormat pixelFormat);
-
-	IDeckLink* GetDeckLink(int idx);
-	IDeckLinkDisplayMode* GetDeckLinkDisplayMode(IDeckLink* deckLink, int idx);
 };
 
 #endif

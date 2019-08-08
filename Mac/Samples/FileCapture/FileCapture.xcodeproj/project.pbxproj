@@ -1,0 +1,375 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C10B0E4720B6419000BAE417 /* CocoaViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = C10B0E4520B6419000BAE417 /* CocoaViewController.mm */; };
+		C10B0E4C20B64ABA00BAE417 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = C10B0E4B20B64ABA00BAE417 /* AppDelegate.mm */; };
+		C10B0E5520B6793C00BAE417 /* DeckLinkCaptureDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C10B0E4F20B6793C00BAE417 /* DeckLinkCaptureDevice.cpp */; };
+		C10B0E5920B679D800BAE417 /* DeviceManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C10B0E5820B679D800BAE417 /* DeviceManager.cpp */; };
+		C10B0E6120B68CC900BAE417 /* DeckLinkCoreMediaWriter.mm in Sources */ = {isa = PBXBuildFile; fileRef = C10B0E5B20B68CC900BAE417 /* DeckLinkCoreMediaWriter.mm */; };
+		C10B0E6D20B693D000BAE417 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C10B0E6A20B693D000BAE417 /* AVFoundation.framework */; };
+		C10B0E6E20B693D000BAE417 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C10B0E6B20B693D000BAE417 /* CoreAudio.framework */; };
+		C10B0E6F20B693D000BAE417 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C10B0E6C20B693D000BAE417 /* CoreMedia.framework */; };
+		C10B0E7820BB78BD00BAE417 /* DeckLinkDeviceDiscovery.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C10B0E7720BB78BD00BAE417 /* DeckLinkDeviceDiscovery.cpp */; };
+		C174373420CF4DA1000A2153 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C174373320CF4DA1000A2153 /* DeckLinkAPIDispatch.cpp */; };
+		C1E30A0E20B62F0400A14DDB /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = C1E30A0D20B62F0400A14DDB /* main.m */; };
+		C1E30A1020B62F0400A14DDB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E30A0F20B62F0400A14DDB /* Assets.xcassets */; };
+		C1E30A1320B62F0400A14DDB /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = C1E30A1120B62F0400A14DDB /* MainMenu.xib */; };
+		C1E5B50520D72E18005695A4 /* DeckLinkConversionVideoFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C1E5B50420D72E18005695A4 /* DeckLinkConversionVideoFrame.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		C10B0E4520B6419000BAE417 /* CocoaViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CocoaViewController.mm; sourceTree = "<group>"; };
+		C10B0E4620B6419000BAE417 /* CocoaViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CocoaViewController.h; sourceTree = "<group>"; };
+		C10B0E4B20B64ABA00BAE417 /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
+		C10B0E4F20B6793C00BAE417 /* DeckLinkCaptureDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeckLinkCaptureDevice.cpp; sourceTree = "<group>"; };
+		C10B0E5020B6793C00BAE417 /* DeckLinkCaptureDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkCaptureDevice.h; sourceTree = "<group>"; };
+		C10B0E5720B679D800BAE417 /* DeviceManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeviceManager.h; sourceTree = "<group>"; };
+		C10B0E5820B679D800BAE417 /* DeviceManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeviceManager.cpp; sourceTree = "<group>"; };
+		C10B0E5B20B68CC900BAE417 /* DeckLinkCoreMediaWriter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DeckLinkCoreMediaWriter.mm; sourceTree = "<group>"; };
+		C10B0E5C20B68CC900BAE417 /* DeckLinkCoreMediaWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkCoreMediaWriter.h; sourceTree = "<group>"; };
+		C10B0E5F20B68CC900BAE417 /* DeckLinkMediaWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkMediaWriter.h; sourceTree = "<group>"; };
+		C10B0E6A20B693D000BAE417 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		C10B0E6B20B693D000BAE417 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		C10B0E6C20B693D000BAE417 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		C10B0E7620BB78BD00BAE417 /* DeckLinkDeviceDiscovery.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkDeviceDiscovery.h; sourceTree = "<group>"; };
+		C10B0E7720BB78BD00BAE417 /* DeckLinkDeviceDiscovery.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeckLinkDeviceDiscovery.cpp; sourceTree = "<group>"; };
+		C1741FE720BCC6BF00BD4565 /* DeckLinkMediaCommon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkMediaCommon.h; sourceTree = "<group>"; };
+		C1741FEB20BE711F00BD4565 /* DeckLinkDeviceState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkDeviceState.h; sourceTree = "<group>"; };
+		C174373320CF4DA1000A2153 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../include/DeckLinkAPIDispatch.cpp; sourceTree = "<group>"; };
+		C180240120D35CFD0084E73A /* com_ptr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = com_ptr.h; sourceTree = "<group>"; };
+		C19BECBE20C74377008A1F14 /* DeckLinkConversionVideoFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkConversionVideoFrame.h; sourceTree = "<group>"; };
+		C1E30A0620B62F0300A14DDB /* FileCapture.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FileCapture.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1E30A0920B62F0300A14DDB /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		C1E30A0D20B62F0400A14DDB /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		C1E30A0F20B62F0400A14DDB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C1E30A1220B62F0400A14DDB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		C1E30A1420B62F0400A14DDB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C1E5B50420D72E18005695A4 /* DeckLinkConversionVideoFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeckLinkConversionVideoFrame.cpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C1E30A0320B62F0300A14DDB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C10B0E6D20B693D000BAE417 /* AVFoundation.framework in Frameworks */,
+				C10B0E6E20B693D000BAE417 /* CoreAudio.framework in Frameworks */,
+				C10B0E6F20B693D000BAE417 /* CoreMedia.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		C10B0E4A20B6436900BAE417 /* DeckLinkAPI */ = {
+			isa = PBXGroup;
+			children = (
+				C174373320CF4DA1000A2153 /* DeckLinkAPIDispatch.cpp */,
+			);
+			name = DeckLinkAPI;
+			sourceTree = "<group>";
+		};
+		C10B0E5A20B67A3100BAE417 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				C1E30A0F20B62F0400A14DDB /* Assets.xcassets */,
+				C1E30A1120B62F0400A14DDB /* MainMenu.xib */,
+				C1E30A1420B62F0400A14DDB /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		C10B0E7320BB702C00BAE417 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C10B0E6A20B693D000BAE417 /* AVFoundation.framework */,
+				C10B0E6B20B693D000BAE417 /* CoreAudio.framework */,
+				C10B0E6C20B693D000BAE417 /* CoreMedia.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		C174373220CF4D3E000A2153 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				C10B0E4A20B6436900BAE417 /* DeckLinkAPI */,
+				C1E30A0920B62F0300A14DDB /* AppDelegate.h */,
+				C10B0E4B20B64ABA00BAE417 /* AppDelegate.mm */,
+				C10B0E4520B6419000BAE417 /* CocoaViewController.mm */,
+				C10B0E4620B6419000BAE417 /* CocoaViewController.h */,
+				C10B0E5020B6793C00BAE417 /* DeckLinkCaptureDevice.h */,
+				C10B0E4F20B6793C00BAE417 /* DeckLinkCaptureDevice.cpp */,
+				C19BECBE20C74377008A1F14 /* DeckLinkConversionVideoFrame.h */,
+				C1E5B50420D72E18005695A4 /* DeckLinkConversionVideoFrame.cpp */,
+				C10B0E5B20B68CC900BAE417 /* DeckLinkCoreMediaWriter.mm */,
+				C10B0E5C20B68CC900BAE417 /* DeckLinkCoreMediaWriter.h */,
+				C10B0E7620BB78BD00BAE417 /* DeckLinkDeviceDiscovery.h */,
+				C10B0E7720BB78BD00BAE417 /* DeckLinkDeviceDiscovery.cpp */,
+				C1741FEB20BE711F00BD4565 /* DeckLinkDeviceState.h */,
+				C1741FE720BCC6BF00BD4565 /* DeckLinkMediaCommon.h */,
+				C10B0E5F20B68CC900BAE417 /* DeckLinkMediaWriter.h */,
+				C10B0E5720B679D800BAE417 /* DeviceManager.h */,
+				C10B0E5820B679D800BAE417 /* DeviceManager.cpp */,
+				C180240120D35CFD0084E73A /* com_ptr.h */,
+				C1E30A0C20B62F0400A14DDB /* Supporting Files */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		C1E309FD20B62F0300A14DDB = {
+			isa = PBXGroup;
+			children = (
+				C174373220CF4D3E000A2153 /* Sources */,
+				C10B0E7320BB702C00BAE417 /* Frameworks */,
+				C1E30A0720B62F0300A14DDB /* Products */,
+				C10B0E5A20B67A3100BAE417 /* Resources */,
+			);
+			sourceTree = "<group>";
+		};
+		C1E30A0720B62F0300A14DDB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C1E30A0620B62F0300A14DDB /* FileCapture.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C1E30A0C20B62F0400A14DDB /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				C1E30A0D20B62F0400A14DDB /* main.m */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C1E30A0520B62F0300A14DDB /* FileCapture */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1E30A2D20B62F0400A14DDB /* Build configuration list for PBXNativeTarget "FileCapture" */;
+			buildPhases = (
+				C1E30A0220B62F0300A14DDB /* Sources */,
+				C1E30A0320B62F0300A14DDB /* Frameworks */,
+				C1E30A0420B62F0300A14DDB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FileCapture;
+			productName = FileCapture;
+			productReference = C1E30A0620B62F0300A14DDB /* FileCapture.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C1E309FE20B62F0300A14DDB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0720;
+				ORGANIZATIONNAME = "Blackmagic Design";
+				TargetAttributes = {
+					C1E30A0520B62F0300A14DDB = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
+				};
+			};
+			buildConfigurationList = C1E30A0120B62F0300A14DDB /* Build configuration list for PBXProject "FileCapture" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C1E309FD20B62F0300A14DDB;
+			productRefGroup = C1E30A0720B62F0300A14DDB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C1E30A0520B62F0300A14DDB /* FileCapture */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C1E30A0420B62F0300A14DDB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1E30A1020B62F0400A14DDB /* Assets.xcassets in Resources */,
+				C1E30A1320B62F0400A14DDB /* MainMenu.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C1E30A0220B62F0300A14DDB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1E30A0E20B62F0400A14DDB /* main.m in Sources */,
+				C10B0E6120B68CC900BAE417 /* DeckLinkCoreMediaWriter.mm in Sources */,
+				C10B0E5920B679D800BAE417 /* DeviceManager.cpp in Sources */,
+				C1E5B50520D72E18005695A4 /* DeckLinkConversionVideoFrame.cpp in Sources */,
+				C10B0E4720B6419000BAE417 /* CocoaViewController.mm in Sources */,
+				C10B0E7820BB78BD00BAE417 /* DeckLinkDeviceDiscovery.cpp in Sources */,
+				C174373420CF4DA1000A2153 /* DeckLinkAPIDispatch.cpp in Sources */,
+				C10B0E4C20B64ABA00BAE417 /* AppDelegate.mm in Sources */,
+				C10B0E5520B6793C00BAE417 /* DeckLinkCaptureDevice.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		C1E30A1120B62F0400A14DDB /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				C1E30A1220B62F0400A14DDB /* Base */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		C1E30A2B20B62F0400A14DDB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		C1E30A2C20B62F0400A14DDB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		C1E30A2E20B62F0400A14DDB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = ../../include;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.blackmagic-design.desktopvideo.sdk.FileCapture";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		C1E30A2F20B62F0400A14DDB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = ../../include;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.blackmagic-design.desktopvideo.sdk.FileCapture";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C1E30A0120B62F0300A14DDB /* Build configuration list for PBXProject "FileCapture" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1E30A2B20B62F0400A14DDB /* Debug */,
+				C1E30A2C20B62F0400A14DDB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C1E30A2D20B62F0400A14DDB /* Build configuration list for PBXNativeTarget "FileCapture" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1E30A2E20B62F0400A14DDB /* Debug */,
+				C1E30A2F20B62F0400A14DDB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C1E309FE20B62F0300A14DDB /* Project object */;
+}

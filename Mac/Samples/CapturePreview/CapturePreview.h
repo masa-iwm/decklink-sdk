@@ -43,7 +43,7 @@ class ProfileCallback;
 @property (copy) NSString* userBits;
 @end
 
-@interface HDRMetadataStruct : NSObject
+@interface MetadataStruct : NSObject
 {
 	NSString* electroOpticalTransferFunction;
 	NSString* displayPrimariesRedX;
@@ -58,6 +58,7 @@ class ProfileCallback;
 	NSString* minDisplayMasteringLuminance;
 	NSString* maximumContentLightLevel;
 	NSString* maximumFrameAverageLightLevel;
+	NSString* colorspace;
 }
 @property (copy) NSString* electroOpticalTransferFunction;
 @property (copy) NSString* displayPrimariesRedX;
@@ -72,6 +73,7 @@ class ProfileCallback;
 @property (copy) NSString* minDisplayMasteringLuminance;
 @property (copy) NSString* maximumContentLightLevel;
 @property (copy) NSString* maximumFrameAverageLightLevel;
+@property (copy) NSString* colorspace;
 @end
 
 @interface AncillaryDataStruct : NSObject
@@ -87,7 +89,7 @@ class ProfileCallback;
 	TimecodeStruct* rp188hfrtc;
 
 	// HDR Metadata
-	HDRMetadataStruct* hdrMetadata;
+	MetadataStruct* metadata;
 }
 @property (nonatomic,copy) TimecodeStruct*    vitcF1;
 @property (nonatomic,copy) TimecodeStruct*    vitcF2;
@@ -95,7 +97,7 @@ class ProfileCallback;
 @property (nonatomic,copy) TimecodeStruct*    rp188vitc2;
 @property (nonatomic,copy) TimecodeStruct*    rp188ltc;
 @property (nonatomic,copy) TimecodeStruct*    rp188hfrtc;
-@property (nonatomic,copy) HDRMetadataStruct* hdrMetadata;
+@property (nonatomic,copy) MetadataStruct*    metadata;
 @end
 
 

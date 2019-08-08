@@ -200,15 +200,14 @@ int main(int argc, char *argv[])
 {
 	HRESULT							result;
 	int								exitStatus = 1;
-	int								idx;
 
 	IDeckLinkIterator*				deckLinkIterator = NULL;
 	IDeckLink*						deckLink = NULL;
 
 	IDeckLinkProfileAttributes*		deckLinkAttributes = NULL;
 	bool							formatDetectionSupported;
+	int64_t							duplexMode;
 
-	IDeckLinkDisplayModeIterator*	displayModeIterator = NULL;
 	IDeckLinkDisplayMode*			displayMode = NULL;
 	char*							displayModeName = NULL;
 	bool							supported;
@@ -230,74 +229,53 @@ int main(int argc, char *argv[])
 	}
 
 	// Get the DeckLink device
-	deckLinkIterator = CreateDeckLinkIteratorInstance();
-	if (!deckLinkIterator)
+	deckLink = g_config.GetSelectedDeckLink();
+	if (deckLink == NULL)
 	{
-		fprintf(stderr, "This application requires the DeckLink drivers installed.\n");
+		fprintf(stderr, "Unable to get DeckLink device %u\n", g_config.m_deckLinkIndex);
 		goto bail;
 	}
 
-	idx = g_config.m_deckLinkIndex;
-
-	while ((result = deckLinkIterator->Next(&deckLink)) == S_OK)
+	result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
+	if (result != S_OK)
 	{
-		if (idx == 0)
-			break;
-		--idx;
-
-		deckLink->Release();
+		fprintf(stderr, "Unable to get DeckLink attributes interface\n");
+		goto bail;
 	}
 
-	if (result != S_OK || deckLink == NULL)
+	// Check the DeckLink device is active
+	result = deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &duplexMode);
+	if ((result != S_OK) || (duplexMode == bmdDuplexInactive))
 	{
-		fprintf(stderr, "Unable to get DeckLink device %u\n", g_config.m_deckLinkIndex);
+		fprintf(stderr, "The selected DeckLink device is inactive\n");
 		goto bail;
 	}
 
 	// Get the input (capture) interface of the DeckLink device
 	result = deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&g_deckLinkInput);
 	if (result != S_OK)
+	{
+		fprintf(stderr, "The selected device does not have an input interface\n");
 		goto bail;
+	}
 
 	// Get the display mode
 	if (g_config.m_displayModeIndex == -1)
 	{
 		// Check the card supports format detection
-		result = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
-		if (result == S_OK)
+		result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &formatDetectionSupported);
+		if (result != S_OK || !formatDetectionSupported)
 		{
-			result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &formatDetectionSupported);
-			if (result != S_OK || !formatDetectionSupported)
-			{
-				fprintf(stderr, "Format detection is not supported on this device\n");
-				goto bail;
-			}
+			fprintf(stderr, "Format detection is not supported on this device\n");
+			goto bail;
 		}
 
 		g_config.m_inputFlags |= bmdVideoInputEnableFormatDetection;
-
-		// Format detection still needs a valid mode to start with
-		idx = 0;
-	}
-	else
-	{
-		idx = g_config.m_displayModeIndex;
 	}
 
-	result = g_deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
-	if (result != S_OK)
-		goto bail;
+	displayMode = g_config.GetSelectedDeckLinkDisplayMode(deckLink);
 
-	while ((result = displayModeIterator->Next(&displayMode)) == S_OK)
-	{
-		if (idx == 0)
-			break;
-		--idx;
-
-		displayMode->Release();
-	}
-
-	if (result != S_OK || displayMode == NULL)
+	if (displayMode == NULL)
 	{
 		fprintf(stderr, "Unable to get display mode %d\n", g_config.m_displayModeIndex);
 		goto bail;
@@ -403,9 +381,6 @@ bail:
 
 	if (displayMode != NULL)
 		displayMode->Release();
-
-	if (displayModeIterator != NULL)
-		displayModeIterator->Release();
 
 	if (delegate != NULL)
 		delegate->Release();

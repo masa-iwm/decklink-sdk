@@ -55,7 +55,7 @@ private:
 	int64_t						m_supportedInputConnections;
 	//
 	static void					GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format, QString* timecodeString, QString* userBitsString);
-	static void					GetHDRMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, HDRMetadataStruct* hdrMetadata);
+	static void					GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct* metadata);
 
 public:
 	DeckLinkInputDevice(CapturePreview* owner, IDeckLink* deckLink);
@@ -101,15 +101,15 @@ class DeckLinkInputFrameArrivedEvent : public QEvent
 {
 private:
 	AncillaryDataStruct*	m_ancillaryData;
-	HDRMetadataStruct*		m_hdrMetadata;
+	MetadataStruct*			m_metadata;
 	bool					m_signalValid;
 
 public:
-	DeckLinkInputFrameArrivedEvent(AncillaryDataStruct* ancillaryData, HDRMetadataStruct* m_hdrMetadata, bool signalValid);
+	DeckLinkInputFrameArrivedEvent(AncillaryDataStruct* ancillaryData, MetadataStruct* metadata, bool signalValid);
 	virtual ~DeckLinkInputFrameArrivedEvent() {}
 
 	AncillaryDataStruct*	AncillaryData(void) const { return m_ancillaryData; }
-	HDRMetadataStruct*		HDRMetadata(void) const { return m_hdrMetadata; }
+	MetadataStruct*			Metadata(void) const { return m_metadata; }
 	bool					SignalValid(void) const { return m_signalValid; }
 };
 

@@ -121,14 +121,27 @@ HRESULT ImageLoader::ConvertPNGToDeckLinkVideoFrame(const std::string& pngFilena
 	if (FAILED(result))
 		goto bail;
 
-	// Get the pixel format, check it is in a BGRA32 compatible format
+	// Get the pixel format
 	result = bitmapFrameDecode->GetPixelFormat(&pixelFormat);
-	if (FAILED(result) || (!IsEqualGUID(pixelFormat, GUID_WICPixelFormat32bppBGRA) && !IsEqualGUID(pixelFormat, GUID_WICPixelFormat32bppBGR)))
+	if (FAILED(result))
 		goto bail;
 
 	result = bitmapFrameDecode->QueryInterface(IID_IWICBitmapSource, (void**)&bitmapFrameSource);
 	if (FAILED(result))
 		goto bail;
+
+	// If pixel format is not a BGRA32 compatible format, then convert source
+	if (!IsEqualGUID(pixelFormat, GUID_WICPixelFormat32bppBGRA) && !IsEqualGUID(pixelFormat, GUID_WICPixelFormat32bppBGR))
+	{
+		IWICBitmapSource *bitmapFrameSourceConverted = NULL;
+
+		result = WICConvertBitmapSource(GUID_WICPixelFormat32bppBGR, bitmapFrameSource, &bitmapFrameSourceConverted);
+		if (FAILED(result))
+			goto bail;
+
+		bitmapFrameSource->Release();
+		bitmapFrameSource = bitmapFrameSourceConverted;
+	}
 
 	videoFrameWidth = deckLinkVideoFrame->GetWidth();
 	videoFrameHeight = deckLinkVideoFrame->GetHeight();

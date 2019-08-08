@@ -274,7 +274,7 @@ HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFra
 	ancillaryData.rp188ltc = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC);
 	ancillaryData.rp188vitc2 = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2);
 	ancillaryData.rp188hfrtc = getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188HighFrameRate);
-	ancillaryData.hdrMetadata = getHDRMetadataFromFrame(videoFrame);
+	ancillaryData.metadata = getMetadataFromFrame(videoFrame);
 
 	// Update the UI
 	dispatch_block_t updateAncillary = ^{
@@ -321,23 +321,24 @@ TimecodeStruct*				DeckLinkDevice::getAncillaryDataFromFrame(IDeckLinkVideoInput
 	return returnTimeCode;
 }
 
-HDRMetadataStruct*	DeckLinkDevice::getHDRMetadataFromFrame(IDeckLinkVideoInputFrame* frame)
+MetadataStruct*	DeckLinkDevice::getMetadataFromFrame(IDeckLinkVideoInputFrame* frame)
 {
-	HDRMetadataStruct* returnHDRMetadata = [[[HDRMetadataStruct alloc] init] autorelease];
+	MetadataStruct* returnMetadata = [[[MetadataStruct alloc] init] autorelease];
 
-	returnHDRMetadata.electroOpticalTransferFunction = @"";
-	returnHDRMetadata.displayPrimariesRedX = @"";
-	returnHDRMetadata.displayPrimariesRedY = @"";
-	returnHDRMetadata.displayPrimariesGreenX = @"";
-	returnHDRMetadata.displayPrimariesGreenY = @"";
-	returnHDRMetadata.displayPrimariesBlueX = @"";
-	returnHDRMetadata.displayPrimariesBlueY = @"";
-	returnHDRMetadata.whitePointX = @"";
-	returnHDRMetadata.whitePointY = @"";
-	returnHDRMetadata.maxDisplayMasteringLuminance = @"";
-	returnHDRMetadata.minDisplayMasteringLuminance = @"";
-	returnHDRMetadata.maximumContentLightLevel = @"";
-	returnHDRMetadata.maximumFrameAverageLightLevel = @"";
+	returnMetadata.electroOpticalTransferFunction = @"";
+	returnMetadata.displayPrimariesRedX = @"";
+	returnMetadata.displayPrimariesRedY = @"";
+	returnMetadata.displayPrimariesGreenX = @"";
+	returnMetadata.displayPrimariesGreenY = @"";
+	returnMetadata.displayPrimariesBlueX = @"";
+	returnMetadata.displayPrimariesBlueY = @"";
+	returnMetadata.whitePointX = @"";
+	returnMetadata.whitePointY = @"";
+	returnMetadata.maxDisplayMasteringLuminance = @"";
+	returnMetadata.minDisplayMasteringLuminance = @"";
+	returnMetadata.maximumContentLightLevel = @"";
+	returnMetadata.maximumFrameAverageLightLevel = @"";
+	returnMetadata.colorspace = @"";
 
 	IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
 	if (frame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**) &metadataExtensions) == S_OK)
@@ -350,19 +351,19 @@ HDRMetadataStruct*	DeckLinkDevice::getHDRMetadataFromFrame(IDeckLinkVideoInputFr
 			switch (intValue)
 			{
 				case 0:
-					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"SDR"];
+					returnMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"SDR"];
 					break;
 				case 1:
-					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HDR"];
+					returnMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HDR"];
 					break;
 				case 2:
-					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"PQ (ST2084)"];
+					returnMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"PQ (ST2084)"];
 					break;
 				case 3:
-					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HLG"];
+					returnMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"HLG"];
 					break;
 				default:
-					returnHDRMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"Unknown EOTF: %d", (int32_t)intValue];
+					returnMetadata.electroOpticalTransferFunction = [NSString stringWithFormat:@"Unknown EOTF: %d", (int32_t)intValue];
 					break;
 			}
 		}
@@ -370,44 +371,63 @@ HDRMetadataStruct*	DeckLinkDevice::getHDRMetadataFromFrame(IDeckLinkVideoInputFr
 		if (frame->GetFlags() & bmdFrameContainsHDRMetadata)
 		{
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
-				returnHDRMetadata.displayPrimariesRedX = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.displayPrimariesRedX = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY, &doubleValue) == S_OK)
-				returnHDRMetadata.displayPrimariesRedY = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.displayPrimariesRedY = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX, &doubleValue) == S_OK)
-				returnHDRMetadata.displayPrimariesGreenX = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.displayPrimariesGreenX = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY, &doubleValue) == S_OK)
-				returnHDRMetadata.displayPrimariesGreenY = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.displayPrimariesGreenY = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX, &doubleValue) == S_OK)
-				returnHDRMetadata.displayPrimariesBlueX = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.displayPrimariesBlueX = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY, &doubleValue) == S_OK)
-				returnHDRMetadata.displayPrimariesBlueY = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.displayPrimariesBlueY = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointX, &doubleValue) == S_OK)
-				returnHDRMetadata.whitePointX = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.whitePointX = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointY, &doubleValue) == S_OK)
-				returnHDRMetadata.whitePointY = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.whitePointY = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance, &doubleValue) == S_OK)
-				returnHDRMetadata.maxDisplayMasteringLuminance = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.maxDisplayMasteringLuminance = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance, &doubleValue) == S_OK)
-				returnHDRMetadata.minDisplayMasteringLuminance = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.minDisplayMasteringLuminance = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel, &doubleValue) == S_OK)
-				returnHDRMetadata.maximumContentLightLevel = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.maximumContentLightLevel = [NSString stringWithFormat:@"%.04f", doubleValue];
 
 			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
-				returnHDRMetadata.maximumFrameAverageLightLevel = [NSString stringWithFormat:@"%.04f", doubleValue];
+				returnMetadata.maximumFrameAverageLightLevel = [NSString stringWithFormat:@"%.04f", doubleValue];
 		}
+
+		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataColorspace, &intValue) == S_OK)
+		{
+			switch (intValue)
+			{
+				case bmdColorspaceRec601:
+					returnMetadata.colorspace = [NSString stringWithFormat:@"Rec.601"];
+					break;
+
+				case bmdColorspaceRec709:
+					returnMetadata.colorspace = [NSString stringWithFormat:@"Rec.709"];
+					break;
+
+				case bmdColorspaceRec2020:
+					returnMetadata.colorspace = [NSString stringWithFormat:@"Rec.2020"];
+					break;
+			}
+		}
+
 		metadataExtensions->Release();
 	}
-	return returnHDRMetadata;
+	return returnMetadata;
 }
 
 

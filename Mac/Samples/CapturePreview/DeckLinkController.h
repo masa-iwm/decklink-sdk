@@ -66,7 +66,7 @@ public:
 private:
     
     TimecodeStruct*                         getAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format);
-	HDRMetadataStruct*						getHDRMetadataFromFrame(IDeckLinkVideoInputFrame* frame);
+	MetadataStruct*							getMetadataFromFrame(IDeckLinkVideoInputFrame* frame);
     
     
     CapturePreviewAppDelegate*              uiDelegate;
