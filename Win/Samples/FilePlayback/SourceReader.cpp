@@ -126,9 +126,19 @@ HRESULT SourceReader::Initialize(CString filename)
 		goto bail;
 
 	// Enable Video processing so we can read in RGB32 format
+#if (WINVER >= _WIN32_WINNT_WIN8) 
+	hr = attributes->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, TRUE);
+	if (hr != S_OK)
+		goto bail;
+
+	hr = attributes->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, TRUE);
+	if (hr != S_OK)
+		goto bail;
+#else
 	hr = attributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
 	if (hr != S_OK)
 		goto bail;
+#endif
 
 	hr = MFCreateSourceReaderFromURL(CT2CW(filename), attributes, (IMFSourceReader**)&m_sourceReader);
 	if (hr != S_OK)
@@ -313,71 +323,6 @@ HRESULT SourceReader::ConfigureAudioDecoder()
 
 bail:
 	return hr;
-}
-
-BMDDisplayMode SourceReader::LookupDisplayMode() const
-{
-	BMDDisplayMode candidateDisplayMode = bmdModeUnknown;
-
-	// Find the closest matching BMDDisplayMode for the given frame rate and resolution
-	if (m_frameHeight <= 486 && m_frameWidth <= 720 && (m_frameRateNumerator * 1001) == (m_frameRateDenominator * 30000))
-		candidateDisplayMode = bmdModeNTSC;
-	else if (m_frameHeight <= 576 && m_frameWidth <= 720 && (m_frameRateNumerator * 1000) == (m_frameRateDenominator * 25000))
-		candidateDisplayMode = bmdModePAL;
-	else if (m_frameHeight <= 720 && m_frameWidth <= 1280)
-	{
-		if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 50000))
-			candidateDisplayMode = bmdModeHD720p50;
-		else if ((m_frameRateNumerator * 1001) == (m_frameRateDenominator * 60000))
-			candidateDisplayMode = bmdModeHD720p5994;
-		else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 60000))
-			candidateDisplayMode = bmdModeHD720p60;
-	}
-	else if (m_frameHeight <= 1080 && m_frameWidth <= 1920)
-	{
-		if (m_frameFieldDominance == MFVideoInterlace_Progressive)
-		{
-			if ((m_frameRateNumerator * 1001) == (m_frameRateDenominator * 24000))
-				candidateDisplayMode = bmdModeHD1080p2398;
-			else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 24000))
-				candidateDisplayMode = bmdModeHD1080p24;
-			else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 25000))
-				candidateDisplayMode = bmdModeHD1080p25;
-			else if ((m_frameRateNumerator * 1001) == (m_frameRateDenominator * 30000))
-				candidateDisplayMode = bmdModeHD1080p2997;
-			else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 30000))
-				candidateDisplayMode = bmdModeHD1080p30;
-			else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 50000))
-				candidateDisplayMode = bmdModeHD1080p50;
-			else if ((m_frameRateNumerator * 1001) == (m_frameRateDenominator * 60000))
-				candidateDisplayMode = bmdModeHD1080p5994;
-			else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 60000))
-				candidateDisplayMode = bmdModeHD1080p6000;
-		}
-		else if (m_frameFieldDominance == MFVideoInterlace_FieldInterleavedUpperFirst)
-		{
-			if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 50000))
-				candidateDisplayMode = bmdModeHD1080i50;
-			else if ((m_frameRateNumerator * 1001) == (m_frameRateDenominator * 60000))
-				candidateDisplayMode = bmdModeHD1080i5994;
-			else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 60000))
-				candidateDisplayMode = bmdModeHD1080i6000;
-		}
-	}
-	else if (m_frameHeight <= 2160 && m_frameWidth <= 3840)
-	{
-		if ((m_frameRateNumerator * 1001) == (m_frameRateDenominator * 24000))
-			candidateDisplayMode = bmdMode4K2160p2398;
-		else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 24000))
-			candidateDisplayMode = bmdMode4K2160p24;
-		else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 25000))
-			candidateDisplayMode = bmdMode4K2160p25;
-		else if ((m_frameRateNumerator * 1001) == (m_frameRateDenominator * 30000))
-			candidateDisplayMode = bmdMode4K2160p2997;
-		else if ((m_frameRateNumerator * 1000) == (m_frameRateDenominator * 30000))
-			candidateDisplayMode = bmdMode4K2160p30;
-	}
-	return candidateDisplayMode;
 }
 
 BMDAudioSampleType SourceReader::GetAudioBitsPerSample() const

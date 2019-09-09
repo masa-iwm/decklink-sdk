@@ -57,6 +57,8 @@ static NSString* SecondsToHMS(int64_t seconds)
 	m_viewController	= std::unique_ptr<CocoaViewController>(std::move(new CocoaViewController(self)));
 	m_mediaReader		= std::shared_ptr<DeckLinkMediaReader>(new DeckLinkCoreMediaReader());
 
+	[m_streamTimeSlider setContinuous:YES];
+	
 	m_screenPreviewCallback = com_ptr<IDeckLinkScreenPreviewCallback>(CreateCocoaScreenPreview((__bridge void*)m_previewView));
 
 	m_deviceManager->setMediaReader(m_mediaReader);

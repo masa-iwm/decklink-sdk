@@ -27,6 +27,7 @@
 
 #import <cstdint>
 #import <functional>
+#import <mutex>
 #import <string>
 #import <AVFoundation/AVFoundation.h>
 #import "DeckLinkAPI.h"
@@ -68,6 +69,7 @@ private:
 	bool			m_init;
 	AVAsset*		m_avAsset;
 	AVAssetReader*	m_avAssetReader;
+	std::mutex		m_avAssetReaderMutex;
 	ReaderState		m_readerState;
 	std::string		m_filePath;
 

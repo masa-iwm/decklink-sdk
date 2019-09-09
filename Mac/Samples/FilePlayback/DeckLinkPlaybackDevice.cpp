@@ -26,9 +26,13 @@
  */
 
 #include <chrono>
+#include <vector>
+#include <set>
 #include "DeckLinkPlaybackDevice.h"
 #include "DeckLinkCoreMediaVideoFrame.h"
-#include "DeckLinkUtil.h"
+
+static const BMDPixelFormat kDevicePixelFormat	= bmdFormat10BitYUV;
+static const BMDPixelFormat kDecoderPixelFormat	= bmdFormat8BitBGRA;
 
 static const uint32_t	kBufferedAudioLevel	= (bmdAudioSampleRate48kHz / 2); // 0.5 seconds
 
@@ -48,6 +52,7 @@ m_errorListener(nullptr),
 m_deviceState(kDeviceIOIdle),
 m_deckLink(deckLink),
 m_deckLinkOutput(nullptr),
+m_deckLinkVideoConversion(nullptr),
 m_frameRate(0.0),
 m_frameDuration(0),
 m_videoOutputDisplayMode(bmdModeUnknown),
@@ -60,7 +65,8 @@ m_mediaReader(nullptr),
 m_playbackStopping(false),
 m_playbackStopped(true),
 m_lastScheduledFrame(0),
-m_isAvailable(true)
+m_isAvailable(true),
+m_convertToDevicePixelFormat(true)
 {
 	com_ptr<IDeckLinkProfileAttributes>	attributes(IID_IDeckLinkProfileAttributes, m_deckLink);
 	if (!m_deckLink || !attributes)
@@ -132,18 +138,29 @@ HRESULT DeckLinkPlaybackDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame* com
 
 	if (completedFrame)
 	{
-		if (!((DeckLinkCoreMediaVideoFrame*)completedFrame)->getStreamTime(&frameTime, nullptr, m_timeScale))
+		if (m_deckLinkOutput->GetScheduledStreamTime(m_timeScale, &frameTime, nullptr) != S_OK)
 			goto bail;
 
+		if (result == bmdOutputFrameDisplayedLate)
+		{
+			if (!m_playbackStopping)
+			{
+				m_playbackStopping = true;
+				notifyError(kFrameDisplayedLate);
+				dispatch_async(dispatch_get_main_queue(), ^{ stop(0, m_timeScale); });
+			}
+			goto bail;
+		}
+	
 		if (result != bmdOutputFrameFlushed)
-			m_streamTime = frameTime;
+			m_streamTime = frameTime + m_streamTimeOffset;
 
 		notifyStatus(kPlaybackStreamTimeUpdated);
 	}
 
 	if (m_playbackStopping)
 	{
-		if (frameTime == m_lastScheduledFrame - m_frameDuration)
+		if (m_streamTime >= m_lastScheduledFrame - m_frameDuration)
 			dispatch_async(dispatch_get_main_queue(), ^{ stop(0, m_timeScale); });
 
 		goto bail;
@@ -225,6 +242,10 @@ bool DeckLinkPlaybackDevice::init(const std::shared_ptr<DeckLinkMediaReader>& me
 	com_ptr<IDeckLinkProfileManager> profileManager(IID_IDeckLinkProfileManager, m_deckLink);
 	if (profileManager)
 		profileManager->SetCallback(this);
+	
+	m_deckLinkVideoConversion = CreateVideoConversionInstance();
+	if (!m_deckLinkVideoConversion)
+		return false;
 	
 	update();
 	
@@ -316,13 +337,22 @@ void DeckLinkPlaybackDevice::enableOutput(com_ptr<IDeckLinkScreenPreviewCallback
 		goto bail;
 	}
 
-	if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, bmdFormat10BitYUV, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport) != S_OK)
+	m_convertToDevicePixelFormat = false;
+	// Check if the device supports this video mode in the decoder pixel format, 8-bit BGRA
+	if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, kDecoderPixelFormat, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport) != S_OK)
 		|| !displayModeSupport)
 	{
-		error = kVideoDisplayModeNotSupported;
-		goto bail;
+		// If the decoder pixel format is not supported, check the device pixel format, 10-bit YUV
+		if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, kDevicePixelFormat, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport) != S_OK)
+			|| !displayModeSupport)
+		{
+			error = kVideoDisplayModeNotSupported;
+			goto bail;
+		}
+		// The device pixel format is supported, but pixel conversion is required
+		m_convertToDevicePixelFormat = true;
 	}
-
+	
 	m_deckLinkOutput->DisableVideoOutput();
 
 	if (m_deckLinkOutput->EnableVideoOutput(displayMode, bmdVideoOutputFlagDefault) != S_OK)
@@ -367,6 +397,7 @@ void DeckLinkPlaybackDevice::disableOutput()
 void DeckLinkPlaybackDevice::preview(com_ptr<IDeckLinkScreenPreviewCallback> previewCallback, const std::string& filePath, BMDTimeValue streamTime, BMDTimeScale streamTimeScale)
 {
 	com_ptr<IDeckLinkVideoFrame>	previewFrame;
+	com_ptr<IDeckLinkVideoFrame>	convertedFrame;
 	std::set<BMDDisplayMode>		validDisplayModes;
 
 	DeviceIOState	deviceState				= kFileIOError;
@@ -388,7 +419,7 @@ void DeckLinkPlaybackDevice::preview(com_ptr<IDeckLinkScreenPreviewCallback> pre
 		goto bail;
 
 	// Find a display mode that matches the video frame
-	displayMode = DeckLinkUtil::GetDisplayMode(m_frameRate, previewFrame->GetWidth(), previewFrame->GetHeight());
+	displayMode = getOutputDisplayMode(m_frameRate, previewFrame->GetWidth(), previewFrame->GetHeight());
 	if (displayMode == bmdModeUnknown)
 		goto bail;
 
@@ -407,8 +438,11 @@ void DeckLinkPlaybackDevice::preview(com_ptr<IDeckLinkScreenPreviewCallback> pre
 	// For simplicity, adjust to start of last frame
 	m_streamDuration	= streamDuration - m_frameDuration;
 
+	// Convert the frame if required
+	convertVideoFrame(previewFrame, convertedFrame);
+	
 	// Send the frame out
-	if (m_deckLinkOutput->DisplayVideoFrameSync(previewFrame.get()) != S_OK)
+	if (m_deckLinkOutput->DisplayVideoFrameSync(convertedFrame.get()) != S_OK)
 	{
 		deviceState = kDeviceIOError;
 		deviceError = kFrameOutputFailed;
@@ -441,7 +475,7 @@ void DeckLinkPlaybackDevice::play(BMDTimeValue streamTime, BMDTimeScale timeScal
 	m_streamTimeOffset = streamTime;
 	m_mediaReader->reset(streamTime, timeScale);
 
-	m_streamTime			= 0;
+	m_streamTime			= streamTime;
 	m_audioStreamTime		= 0;
 	m_lastScheduledFrame	= 0;
 
@@ -566,12 +600,44 @@ void DeckLinkPlaybackDevice::disable()
 	setState(kDeviceIOIdle);
 }
 
+bool DeckLinkPlaybackDevice::convertVideoFrame(com_ptr<IDeckLinkVideoFrame> sourceFrame, com_ptr<IDeckLinkVideoFrame>& targetFrame)
+{
+	if (!sourceFrame)
+		return false;
+
+	// If there is no need to convert the pixel format, reuse the source frame instead
+	if (!m_convertToDevicePixelFormat || sourceFrame->GetPixelFormat() == kDevicePixelFormat)
+	{
+		// Add a reference to the source frame (during construction QueryInterface adds a reference)
+		targetFrame = com_ptr<IDeckLinkVideoFrame>(IID_IDeckLinkVideoFrame, sourceFrame);
+		return true;
+	}
+	
+	// Convert to device pixel format, 10-bit YUV
+	com_ptr<IDeckLinkMutableVideoFrame> tempFrame;
+	int32_t width 		= (int32_t)sourceFrame->GetWidth();
+	int32_t height		= (int32_t)sourceFrame->GetHeight();
+	int32_t rowBytes	= ((width + 47) / 48) * 128; // 10-bit YUV, refer to SDK manual for other pixel formats
+	
+	if (m_deckLinkOutput->CreateVideoFrame(width, height, rowBytes, kDevicePixelFormat, sourceFrame->GetFlags(), tempFrame.releaseAndGetAddressOf()) != S_OK)
+		return false;
+	
+	if (!m_deckLinkVideoConversion || m_deckLinkVideoConversion->ConvertFrame(sourceFrame.get(), tempFrame.get()) != S_OK)
+		return false;
+	
+	// Set the target frame
+	targetFrame = com_ptr<IDeckLinkVideoFrame>(IID_IDeckLinkVideoFrame, tempFrame);
+	
+	return true;
+}
+
 bool DeckLinkPlaybackDevice::scheduleVideo()
 {
 	bool			success		= false;
 	BMDTimeValue	frameTime	= 0;
 
 	com_ptr<IDeckLinkVideoFrame> deckLinkVideoFrame;
+	com_ptr<IDeckLinkVideoFrame> convertedVideoFrame;
 
 	if (!m_mediaReader || !m_mediaReader->readVideo(deckLinkVideoFrame) || !deckLinkVideoFrame)
 		goto bail;
@@ -579,7 +645,10 @@ bool DeckLinkPlaybackDevice::scheduleVideo()
 	if (!((DeckLinkCoreMediaVideoFrame*)deckLinkVideoFrame.get())->getStreamTime(&frameTime, nullptr, m_timeScale))
 		goto bail;
 
-	if (m_deckLinkOutput->ScheduleVideoFrame(deckLinkVideoFrame.get(), frameTime - m_streamTimeOffset, m_frameDuration, m_timeScale) != S_OK)
+	if (!convertVideoFrame(deckLinkVideoFrame, convertedVideoFrame))
+		goto bail;
+	
+	if (m_deckLinkOutput->ScheduleVideoFrame(convertedVideoFrame.get(), frameTime - m_streamTimeOffset, m_frameDuration, m_timeScale) != S_OK)
 		goto bail;
 
 	m_lastScheduledFrame = frameTime;
@@ -608,7 +677,54 @@ std::string DeckLinkPlaybackDevice::filePath()
 	return m_mediaReader->filePath();
 }
 
-void DeckLinkPlaybackDevice::queryDisplayModes(DeckLinkDisplayModeQueryFunc func)
+BMDDisplayMode	DeckLinkPlaybackDevice::getOutputDisplayMode(float frameRate, long frameWidth, long frameHeight)
+{
+	BMDDisplayMode								bmdDisplayMode = bmdModeUnknown;
+	std::vector<com_ptr<IDeckLinkDisplayMode> > candidateModes;
+
+	// Create a list of all supported display modes that have a frame rate that is acceptably close to the target frame rate
+	queryDisplayModes([frameRate, &candidateModes](com_ptr<IDeckLinkDisplayMode>& deckLinkDisplayMode)
+	{
+		BMDTimeValue frameDuration;
+		BMDTimeScale timeScale;
+		if (deckLinkDisplayMode->GetFrameRate(&frameDuration, &timeScale) != S_OK)
+			return;
+
+		auto modeFrameRate = (float)timeScale / (float)frameDuration;
+		if ((modeFrameRate - 0.01 < frameRate) && (modeFrameRate + 0.01 > frameRate))
+		{
+			// For simplicity, assume SD modes are interlaced and HD modes are progressive
+			auto fieldDominance = deckLinkDisplayMode->GetFieldDominance();
+			if ((deckLinkDisplayMode->GetWidth() > 720 && fieldDominance != bmdProgressiveFrame) ||
+				(deckLinkDisplayMode->GetWidth() <= 720 && fieldDominance != bmdLowerFieldFirst && fieldDominance != bmdUpperFieldFirst))
+				return;
+
+			candidateModes.push_back(deckLinkDisplayMode);
+		}
+	});
+
+	// Sort candidate modes in ascending order by frame size
+	std::sort(candidateModes.begin(), candidateModes.end(),
+		[](com_ptr<IDeckLinkDisplayMode> &t1, com_ptr<IDeckLinkDisplayMode> &t2) {
+			return (
+				((t1->GetWidth() < t2->GetWidth()) && (t1->GetHeight() <= t2->GetHeight())) ||
+				((t1->GetHeight() < t2->GetHeight()) && (t1->GetWidth() <= t2->GetWidth()))
+			);
+		});
+
+	// Try to find the best fit (first mode where frame size >= target frame size)
+	for (auto candidateMode : candidateModes)
+	{
+		if (candidateMode->GetWidth() >= frameWidth && candidateMode->GetHeight() >= frameHeight)
+		{
+			bmdDisplayMode = candidateMode->GetDisplayMode();
+			break;
+		}
+	}
+	return bmdDisplayMode;
+}
+
+void DeckLinkPlaybackDevice::queryDisplayModes(DeckLinkDisplayModeQueryFunc func, bool active)
 {
 	com_ptr<IDeckLinkDisplayModeIterator>	displayModeIterator;
 
@@ -620,7 +736,7 @@ void DeckLinkPlaybackDevice::queryDisplayModes(DeckLinkDisplayModeQueryFunc func
 	com_ptr<IDeckLinkDisplayMode> displayMode;
 	while (displayModeIterator->Next(displayMode.releaseAndGetAddressOf()) == S_OK)
 	{
-		if (displayMode->GetDisplayMode() == m_videoOutputDisplayMode)
+		if (!active || displayMode->GetDisplayMode() == m_videoOutputDisplayMode)
 			func(displayMode);
 	}
 }

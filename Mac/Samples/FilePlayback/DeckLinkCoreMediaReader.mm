@@ -53,18 +53,17 @@ DeckLinkCoreMediaReader::~DeckLinkCoreMediaReader()
 
 bool DeckLinkCoreMediaReader::init(const std::string& filePath, BMDTimeValue streamTime, BMDTimeScale streamTimeScale)
 {
+	std::lock_guard<std::mutex> lock(m_avAssetReaderMutex);
+	
 	bool			success		= false;
 	NSError*		error		= nullptr;
 	NSArray*		audioTracks	= nullptr;
 	AVAssetTrack*	audioTrack	= nullptr;
 	NSArray*		videoTracks	= nullptr;
 	AVAssetTrack*	videoTrack	= nullptr;
-	BMDTimeValue	startTime	= 0;
+	BMDTimeValue	startTime	= streamTime;
 
 	NSDictionary *avAssetOptions = @{AVURLAssetPreferPreciseDurationAndTimingKey: @YES};
-
-	if (streamTime)
-		startTime = streamTime;
 
 	m_avAsset = [[AVURLAsset alloc] initWithURL:[NSURL fileURLWithFileSystemRepresentation:filePath.c_str() isDirectory:FALSE relativeToURL:nullptr] options:avAssetOptions];
 
@@ -183,6 +182,8 @@ bool DeckLinkCoreMediaReader::previewFrame(com_ptr<IDeckLinkVideoFrame>& preview
 
 bool DeckLinkCoreMediaReader::readVideo(com_ptr<IDeckLinkVideoFrame>& videoFrame)
 {
+	std::lock_guard<std::mutex> lock(m_avAssetReaderMutex);
+	
 	bool success = false;
 	CMSampleBufferRef sampleBuffer = nullptr;
 
@@ -226,6 +227,8 @@ bail:
 
 bool DeckLinkCoreMediaReader::readAudio(std::unique_ptr<PCMAudioBuffer>& pcmAudioBuffer)
 {
+	std::lock_guard<std::mutex> lock(m_avAssetReaderMutex);
+	
 	bool success = false;
 	CMSampleBufferRef sampleBuffer = nullptr;
 
@@ -259,6 +262,7 @@ bool DeckLinkCoreMediaReader::complete()
 {
 	if (m_avAssetReader)
 	{
+		std::lock_guard<std::mutex> lock(m_avAssetReaderMutex);
 		[m_avAssetReader cancelReading];
 		m_avAssetReader = nullptr;
 	}

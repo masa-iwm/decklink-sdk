@@ -32,7 +32,6 @@
 #include <string>
 #include "DeckLinkDeviceState.h"
 #include "DeckLinkMediaReader.h"
-#include "DeckLinkUtil.h"
 #include "com_ptr.h"
 
 static const intptr_t kInvalidDevice = 0;
@@ -90,20 +89,22 @@ public:
 
 	// Device status
 	std::string	filePath();
-	void		queryDisplayModes(DeckLinkDisplayModeQueryFunc func);
+	void		queryDisplayModes(DeckLinkDisplayModeQueryFunc func, bool active = false);
 	bool		streamTime(BMDTimeValue& streamTime, BMDTimeValue& streamDuration, BMDTimeScale& frameScale);
 	void		setState(DeviceIOState deviceState);
-	bool			isAvailable() const;
+	bool		isAvailable() const;
 
 private:
 	typedef std::map<BMDDisplayMode, com_ptr<IDeckLinkDisplayMode>> DisplayModeMap;
 
 	// Device control
-	void enableOutput(com_ptr<IDeckLinkScreenPreviewCallback> previewCallback, BMDDisplayMode displayMode);
-	void disableOutput();
-	void stopScheduledPlayback(BMDTimeValue stopPlaybackAtTime, BMDTimeValue* actualStopTime, BMDTimeScale timeScale);
-	bool scheduleVideo();
-	bool scheduleAudio(void* data, uint32_t frameCount);
+	void 			enableOutput(com_ptr<IDeckLinkScreenPreviewCallback> previewCallback, BMDDisplayMode displayMode);
+	void			disableOutput();
+	void			stopScheduledPlayback(BMDTimeValue stopPlaybackAtTime, BMDTimeValue* actualStopTime, BMDTimeScale timeScale);
+	bool			convertVideoFrame(com_ptr<IDeckLinkVideoFrame> sourceFrame, com_ptr<IDeckLinkVideoFrame>& targetFrame);
+	bool			scheduleVideo();
+	bool			scheduleAudio(void* data, uint32_t frameCount);
+	BMDDisplayMode	getOutputDisplayMode(float frameRate, long frameWidth, long frameHeight);
 
 	std::atomic<ULONG>						m_refCount;
 	bool									m_init;
@@ -115,6 +116,7 @@ private:
 	std::atomic<DeviceIOState>				m_deviceState;
 	com_ptr<IDeckLink>						m_deckLink;
 	com_ptr<IDeckLinkOutput>				m_deckLinkOutput;
+	com_ptr<IDeckLinkVideoConversion>		m_deckLinkVideoConversion;
 	float									m_frameRate;
 	BMDTimeValue							m_frameDuration;
 	BMDDisplayMode							m_videoOutputDisplayMode;
@@ -129,4 +131,5 @@ private:
 	bool									m_playbackStopped;
 	BMDTimeValue							m_lastScheduledFrame;
 	std::atomic<bool>						m_isAvailable;
+	bool									m_convertToDevicePixelFormat;
 };

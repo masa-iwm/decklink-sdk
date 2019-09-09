@@ -26,7 +26,6 @@
  */
 #include "DeckLinkPlaybackDevice.h"
 #include "DeviceManager.h"
-#include "DeckLinkUtil.h"
 #include "com_ptr.h"
 
 DeviceManager::DeviceManager() :

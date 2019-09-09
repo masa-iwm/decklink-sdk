@@ -57,5 +57,6 @@ enum DeviceError
 	kEnableAudioOutputFailed,
 	kFrameOutputFailed,
 	kMediaFileReadFailed,
+	kFrameDisplayedLate,
 	kErrorCount
 };

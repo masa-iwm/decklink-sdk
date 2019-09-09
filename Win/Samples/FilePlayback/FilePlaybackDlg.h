@@ -46,6 +46,7 @@
 #define WM_OUTPUT_DISABLED_MESSAGE				(WM_APP + 6)
 #define WM_SCHEDULED_PLAYBACK_STOPPED_MESSAGE	(WM_APP + 7)
 #define WM_READ_SAMPLE_ERROR_MESSAGE			(WM_APP + 8)
+#define WM_FRAME_DISPLAYED_LATE_MESSAGE			(WM_APP + 9)
 
 // Forward declarations
 class DeckLinkDeviceDiscovery;
@@ -80,6 +81,7 @@ public:
 	afx_msg LRESULT	OnOutputDisabled(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT	OnScheduledPlaybackStopped(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT	OnReadSampleError(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnFrameDisplayedLate(WPARAM wParam, LPARAM lParam);
 
 protected:
 	virtual void	DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
@@ -128,6 +130,7 @@ private:
 	void			StartScheduledPlayback(void);
 	void			StopScheduledPlayback(void);
 	void			SeekPosition(void);
+	BMDDisplayMode	LookupDisplayMode(void);
 
 	void			AddDevice(CComPtr<IDeckLink> deckLink);
 	void			RemoveDevice(CComPtr<IDeckLink> deckLink);

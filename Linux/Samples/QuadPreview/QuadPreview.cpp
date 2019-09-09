@@ -177,7 +177,6 @@ void QuadPreview::addDevice(com_ptr<IDeckLink>& deckLink)
 	bool active = isDeviceActive(deckLink);
 
 	m_inputDevices[deckLink] = (active ? DeviceState::Available : DeviceState::Inactive);
-	deckLink->AddRef();
 
 	for (auto& devicePage : m_devicePages)
 		devicePage->addDevice(deckLink, active);

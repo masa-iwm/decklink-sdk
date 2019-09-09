@@ -33,55 +33,6 @@ struct FourCCNameMapping
 	const char* name;
 };
 
-// Display mode mappings
-static FourCCNameMapping kDisplayModeMappings[] =
-{
-	{ bmdModeNTSC,			"525i59.94 NTSC" },
-	{ bmdModeNTSC2398,		"525i47.96 NTSC" },
-	{ bmdModePAL,			"625i50 PAL" },
-	{ bmdModeNTSCp,			"525p29.97 NTSC" },
-	{ bmdModePALp,			"625p25 PAL" },
-
-	{ bmdModeHD1080p2398,	"1080p23.98" },
-	{ bmdModeHD1080p24,		"1080p24" },
-	{ bmdModeHD1080p25,		"1080p25" },
-	{ bmdModeHD1080p2997,	"1080p29.97" },
-	{ bmdModeHD1080p30,		"1080p30" },
-	{ bmdModeHD1080i50,		"1080i50" },
-	{ bmdModeHD1080i5994,	"1080i59.94" },
-	{ bmdModeHD1080i6000,	"1080i60" },
-	{ bmdModeHD1080p50,		"1080p50" },
-	{ bmdModeHD1080p5994,	"1080p59.94" },
-	{ bmdModeHD1080p6000,	"1080p60" },
-
-	{ bmdModeHD720p50,		"720p50" },
-	{ bmdModeHD720p5994,	"720p59.94" },
-	{ bmdModeHD720p60,		"720p60" },
-
-	{ bmdMode2k2398,		"2K 23.98p" },
-	{ bmdMode2k24,			"2K 24p" },
-	{ bmdMode2k25,			"2K 25p" },
-
-	{ bmdMode2kDCI2398,		"2K DCI 23.98p" },
-	{ bmdMode2kDCI24,		"2K DCI 24p" },
-	{ bmdMode2kDCI25,		"2K DCI 25p" },
-
-	{ bmdMode4K2160p2398,	"2160p23.98" },
-	{ bmdMode4K2160p24,		"2160p24" },
-	{ bmdMode4K2160p25,		"2160p25" },
-	{ bmdMode4K2160p2997,	"2160p29.97" },
-	{ bmdMode4K2160p30,		"2160p30" },
-	{ bmdMode4K2160p50,		"2160p50" },
-	{ bmdMode4K2160p5994,	"2160p59.94" },
-	{ bmdMode4K2160p60,		"2160p60" },
-
-	{ bmdMode4kDCI2398,		"4K DCI 23.98p" },
-	{ bmdMode4kDCI24,		"4K DCI 24p" },
-	{ bmdMode4kDCI25,		"4K DCI 25p" },
-
-	{ 0, NULL }
-};
-
 // Pixel format mappings
 static FourCCNameMapping kPixelFormatMappings[] =
 {
@@ -109,6 +60,58 @@ static const char* getFourCCName(FourCCNameMapping* mappings, INT32_UNSIGNED fou
 	}
 
 	return "Unknown";
+}
+
+static std::string getInputDisplayModeName(IDeckLinkStatus* deckLinkStatus, BMDDisplayMode displayMode)
+{
+	IDeckLinkInput*			deckLinkInput = NULL;
+	IDeckLinkDisplayMode*	deckLinkDisplayMode = NULL;
+	STRINGOBJ				displayModeString;
+	std::string				modeName = "Unknown";
+
+	if (deckLinkStatus->QueryInterface(IID_IDeckLinkInput, (void**)&deckLinkInput) != S_OK)
+		goto bail;
+
+	if (deckLinkInput->GetDisplayMode(displayMode, &deckLinkDisplayMode) != S_OK)
+		goto bail;
+
+	if (deckLinkDisplayMode->GetName(&displayModeString) == S_OK)
+	{
+		StringToStdString(displayModeString, modeName);
+		STRINGFREE(displayModeString);
+	}
+
+bail:
+	if (deckLinkInput)
+		deckLinkInput->Release();
+
+	return modeName;
+}
+
+static std::string getOutputDisplayModeName(IDeckLinkStatus* deckLinkStatus, BMDDisplayMode displayMode)
+{
+	IDeckLinkOutput*		deckLinkOutput = NULL;
+	IDeckLinkDisplayMode*	deckLinkDisplayMode = NULL;
+	STRINGOBJ				displayModeString;
+	std::string				modeName = "Unknown";
+
+	if (deckLinkStatus->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput) != S_OK)
+		goto bail;
+
+	if (deckLinkOutput->GetDisplayMode(displayMode, &deckLinkDisplayMode) != S_OK)
+		goto bail;
+
+	if (deckLinkDisplayMode->GetName(&displayModeString) == S_OK)
+	{
+		StringToStdString(displayModeString, modeName);
+		STRINGFREE(displayModeString);
+	}
+
+bail:
+	if (deckLinkOutput)
+		deckLinkOutput->Release();
+
+	return modeName;
 }
 
 static void printHex(INT8_UNSIGNED* buffer, INT32_UNSIGNED size)
@@ -194,7 +197,7 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 				break;
 
 			printf("%-40s %s\n", "Detected Video Input Mode:",
-				getFourCCName(kDisplayModeMappings, (BMDDisplayMode)intVal));
+				getInputDisplayModeName(deckLinkStatus, (BMDDisplayMode)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusDetectedVideoInputFlags:
@@ -207,7 +210,7 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 
 		case bmdDeckLinkStatusCurrentVideoInputMode:
 			printf("%-40s %s\n", "Current Video Input Mode:",
-				getFourCCName(kDisplayModeMappings, (BMDDisplayMode)intVal));
+				getInputDisplayModeName(deckLinkStatus, (BMDDisplayMode)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusCurrentVideoInputFlags:
@@ -222,7 +225,7 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 
 		case bmdDeckLinkStatusCurrentVideoOutputMode:
 			printf("%-40s %s\n", "Current Video Output Mode:",
-				getFourCCName(kDisplayModeMappings, (BMDDisplayMode)intVal));
+				getOutputDisplayModeName(deckLinkStatus, (BMDDisplayMode)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusCurrentVideoOutputFlags:
@@ -247,7 +250,7 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 
 		case bmdDeckLinkStatusReferenceSignalMode:
 			printf("%-40s %s\n", "Reference Signal Mode:",
-				getFourCCName(kDisplayModeMappings, (BMDDisplayMode)intVal));
+				getOutputDisplayModeName(deckLinkStatus, (BMDDisplayMode)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusBusy:

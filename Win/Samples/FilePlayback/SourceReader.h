@@ -78,8 +78,10 @@ public:
 
 	HRESULT						ConfigureVideoDecoder(void);
 	HRESULT						ConfigureAudioDecoder(void);
-	
-	BMDDisplayMode				LookupDisplayMode(void) const;
+
+	uint32_t					GetVideoFrameWidth(void) const { return m_frameWidth; }
+	uint32_t					GetVideoFrameHeight(void) const { return m_frameHeight; }
+	float						GetVideoFrameRate(void) const { return (float)m_frameRateNumerator / m_frameRateDenominator; }
 	BMDAudioSampleType			GetAudioBitsPerSample(void) const;
 	uint32_t					GetAudioChannelCount(void) const;
 	BMDPixelFormat				GetVideoPixelFormat(void) const;

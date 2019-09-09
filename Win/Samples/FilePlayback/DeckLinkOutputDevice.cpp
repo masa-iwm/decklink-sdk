@@ -138,11 +138,23 @@ HRESULT	DeckLinkOutputDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame* compl
 {
 	HRESULT hr = S_OK;
 
-	if ((completedFrame) && (m_updateStreamTimeCallback != nullptr))
+	if (completedFrame)
 	{
-		// Get stream time to update UI
-		if (m_deckLinkOutput->GetScheduledStreamTime(m_frameTimescale, &m_currentStreamTime, nullptr) == S_OK)
-			m_updateStreamTimeCallback();
+		if (result == bmdOutputFrameDisplayedLate)
+		{
+			// Output frame scheduling has fallen behind frame rate, stop playback and notify UI
+			StopScheduledPlayback();
+
+			if (m_frameDisplayedLateCallback != nullptr)
+				m_frameDisplayedLateCallback();
+		}
+
+		if ((result != bmdOutputFrameFlushed) && (m_updateStreamTimeCallback != nullptr))
+		{
+			// Get stream time to update UI
+			if (m_deckLinkOutput->GetScheduledStreamTime(m_frameTimescale, &m_currentStreamTime, nullptr) == S_OK)
+				m_updateStreamTimeCallback();
+		}
 	}
 
 	// Get buffered video frame count and update thread
@@ -376,6 +388,23 @@ bool DeckLinkOutputDevice::DisplayPreviewFrame(CComPtr<PlaybackVideoFrame>& vide
 		return false;
 
 	return (m_deckLinkOutput->DisplayVideoFrameSync(outputVideoFrame) == S_OK);
+}
+
+void DeckLinkOutputDevice::QueryDisplayModes(std::function<void(CComPtr<IDeckLinkDisplayMode>&)> func)
+{
+	CComPtr<IDeckLinkDisplayModeIterator>	displayModeIterator;
+	CComPtr<IDeckLinkDisplayMode>			displayMode;
+
+	std::lock_guard<std::mutex> lock(m_playbackMutex);
+
+	if (m_deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
+		return;
+
+	while (displayModeIterator->Next(&displayMode) == S_OK)
+	{
+		func(displayMode);
+		displayMode.Release();
+	}
 }
 
 bool DeckLinkOutputDevice::ScheduleNextVideoFrame(CComPtr<PlaybackVideoFrame>& videoFrame, bool endOfStream)

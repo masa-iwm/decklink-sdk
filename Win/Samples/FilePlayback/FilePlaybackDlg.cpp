@@ -33,8 +33,6 @@
 #include "FilePlaybackDlg.h"
 #include "SourceReader.h"
 
-const unsigned long		kAudioWaterlevel = 48000;
-
 static const BMDAudioSampleType	kAudioSampleType	= bmdAudioSampleType16bitInteger;
 static const uint32_t			kAudioChannelCount	= 2;
 
@@ -97,6 +95,7 @@ BEGIN_MESSAGE_MAP(CFilePlaybackDlg, CDialog)
 	ON_MESSAGE(WM_OUTPUT_DISABLED_MESSAGE, &CFilePlaybackDlg::OnOutputDisabled)
 	ON_MESSAGE(WM_SCHEDULED_PLAYBACK_STOPPED_MESSAGE, &CFilePlaybackDlg::OnScheduledPlaybackStopped)
 	ON_MESSAGE(WM_READ_SAMPLE_ERROR_MESSAGE, &CFilePlaybackDlg::OnReadSampleError)
+	ON_MESSAGE(WM_FRAME_DISPLAYED_LATE_MESSAGE, &CFilePlaybackDlg::OnFrameDisplayedLate)
 	ON_WM_HSCROLL()
 	ON_WM_CLOSE()
 END_MESSAGE_MAP()
@@ -311,6 +310,7 @@ void CFilePlaybackDlg::OnNewDeviceSelected()
 		m_selectedDevice->OnUpdateStreamTime(nullptr);
 		m_selectedDevice->OnOutputStateChanged(nullptr);
 		m_selectedDevice->OnScheduledPlaybackStopped(nullptr);
+		m_selectedDevice->OnFrameDisplayedLate(nullptr);
 
 		m_selectedDevice.Release();
 	}
@@ -324,18 +324,26 @@ void CFilePlaybackDlg::OnNewDeviceSelected()
 		if (profileManager != nullptr)
 			profileManager->SetCallback(m_profileCallback);
 
-		m_selectedDevice->OnUpdateStreamTime([this]() {
+		m_selectedDevice->OnUpdateStreamTime([this]() 
+		{
 			// Update UI with new profile
 			PostMessage(WM_UPDATE_STREAM_TIME_MESSAGE, 0, 0);
 		});
 
-		m_selectedDevice->OnOutputStateChanged([this](bool enabled) {
+		m_selectedDevice->OnOutputStateChanged([this](bool enabled)
+		{
 			PostMessage(enabled ? WM_OUTPUT_ENABLED_MESSAGE : WM_OUTPUT_DISABLED_MESSAGE, 0, 0);
 		});
 
-		m_selectedDevice->OnScheduledPlaybackStopped([this](bool endOfStream) {
+		m_selectedDevice->OnScheduledPlaybackStopped([this](bool endOfStream) 
+		{
 			m_endOfStream = endOfStream;
 			PostMessage(WM_SCHEDULED_PLAYBACK_STOPPED_MESSAGE, 0, 0);
+		});
+
+		m_selectedDevice->OnFrameDisplayedLate([this]() 
+		{
+			PostMessage(WM_FRAME_DISPLAYED_LATE_MESSAGE, 0, 0);
 		});
 
 		if (m_sourceReader->IsInitialized())
@@ -442,8 +450,9 @@ void	CFilePlaybackDlg::EnableVideoOutput()
 	if (!m_sourceReader)
 		return;
 
-	if (!m_selectedDevice->EnableOutput(m_sourceReader->LookupDisplayMode(), m_sourceReader->GetVideoPixelFormat(),
-		m_sourceReader->GetAudioBitsPerSample(), m_sourceReader->GetAudioChannelCount(), m_previewWindow))
+	if (!m_selectedDevice->EnableOutput(LookupDisplayMode(), m_sourceReader->GetVideoPixelFormat(), 
+										m_sourceReader->GetAudioBitsPerSample(), m_sourceReader->GetAudioChannelCount(), 
+										m_previewWindow))
 	{
 		MessageBox(_T("Unable to enable video output with the video mode of the file."), _T("Unable to enable video output"));
 		return;
@@ -482,6 +491,55 @@ void	CFilePlaybackDlg::SeekPosition()
 	m_sourceReader->SetPosition(m_filePosition);
 	m_sourceReader->ReadVideoFrame(std::bind(&DeckLinkOutputDevice::DisplayPreviewFrame, m_selectedDevice, std::placeholders::_1, std::placeholders::_2));
 	m_sourceReader->ReadAudioPacket(nullptr);
+}
+
+BMDDisplayMode CFilePlaybackDlg::LookupDisplayMode(void)
+{
+	BMDDisplayMode								bmdDisplayMode = bmdModeUnknown;
+	std::vector<CComPtr<IDeckLinkDisplayMode>>	candidateModes;
+	float										frameRate = m_sourceReader->GetVideoFrameRate();
+
+	// Create a list of all supported display modes that have a frame rate that is acceptably close to the target frame rate
+	m_selectedDevice->QueryDisplayModes([frameRate, &candidateModes](CComPtr<IDeckLinkDisplayMode>& deckLinkDisplayMode)
+	{
+		BMDTimeValue frameDuration;
+		BMDTimeScale timeScale;
+		if (deckLinkDisplayMode->GetFrameRate(&frameDuration, &timeScale) != S_OK)
+			return;
+
+		auto modeFrameRate = (float)timeScale / (float)frameDuration;
+		if ((modeFrameRate - 0.01 < frameRate) && (modeFrameRate + 0.01 > frameRate))
+		{
+			// For simplicity, assume SD modes are interlaced and HD modes are progressive
+			auto fieldDominance = deckLinkDisplayMode->GetFieldDominance();
+			if ((deckLinkDisplayMode->GetWidth() > 720 && fieldDominance != bmdProgressiveFrame) ||
+				(deckLinkDisplayMode->GetWidth() <= 720 && fieldDominance != bmdLowerFieldFirst && fieldDominance != bmdUpperFieldFirst))
+				return;
+
+			candidateModes.push_back(deckLinkDisplayMode);
+		}
+	});
+
+	// Sort candidate modes in ascending order by frame size
+	std::sort(candidateModes.begin(), candidateModes.end(),
+		[](CComPtr<IDeckLinkDisplayMode> &t1, CComPtr<IDeckLinkDisplayMode> &t2) {
+		return (
+			((t1->GetWidth() < t2->GetWidth()) && (t1->GetHeight() <= t2->GetHeight())) ||
+			((t1->GetHeight() < t2->GetHeight()) && (t1->GetWidth() <= t2->GetWidth()))
+			);
+	});
+
+	// Try to find the best fit (first mode where frame size >= target frame size)
+	for (auto candidateMode : candidateModes)
+	{
+		if (candidateMode->GetWidth() >= m_sourceReader->GetVideoFrameWidth() && 
+			candidateMode->GetHeight() >= m_sourceReader->GetVideoFrameHeight())
+		{
+			bmdDisplayMode = candidateMode->GetDisplayMode();
+			break;
+		}
+	}
+	return bmdDisplayMode;
 }
 
 LRESULT CFilePlaybackDlg::OnAddDevice(WPARAM wParam, LPARAM lParam)
@@ -557,6 +615,12 @@ LRESULT CFilePlaybackDlg::OnReadSampleError(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+LRESULT CFilePlaybackDlg::OnFrameDisplayedLate(WPARAM wParam, LPARAM lParam)
+{
+	MessageBox(_T("The system may not be fast enough to play this file."), _T("Frame Displayed Late"));
+	OnOutputDisabled(0, 0);
+	return 0;
+}
 
 void CFilePlaybackDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar * pScrollBar)
 {

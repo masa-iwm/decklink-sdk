@@ -18,7 +18,6 @@
 		C10B0E6E20B693D000BAE417 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C10B0E6B20B693D000BAE417 /* CoreAudio.framework */; };
 		C10B0E6F20B693D000BAE417 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C10B0E6C20B693D000BAE417 /* CoreMedia.framework */; };
 		C10B0E7820BB78BD00BAE417 /* DeckLinkDeviceDiscovery.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C10B0E7720BB78BD00BAE417 /* DeckLinkDeviceDiscovery.cpp */; };
-		C1741FEA20BE3C3A00BD4565 /* DeckLinkUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C1741FE820BE3C3A00BD4565 /* DeckLinkUtil.cpp */; };
 		C174373420CF4DA1000A2153 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C174373320CF4DA1000A2153 /* DeckLinkAPIDispatch.cpp */; };
 		C1E30A0E20B62F0400A14DDB /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = C1E30A0D20B62F0400A14DDB /* main.m */; };
 		C1E30A1020B62F0400A14DDB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E30A0F20B62F0400A14DDB /* Assets.xcassets */; };
@@ -46,8 +45,6 @@
 		C10B0E6C20B693D000BAE417 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		C10B0E7620BB78BD00BAE417 /* DeckLinkDeviceDiscovery.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkDeviceDiscovery.h; sourceTree = "<group>"; };
 		C10B0E7720BB78BD00BAE417 /* DeckLinkDeviceDiscovery.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeckLinkDeviceDiscovery.cpp; sourceTree = "<group>"; };
-		C1741FE820BE3C3A00BD4565 /* DeckLinkUtil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeckLinkUtil.cpp; sourceTree = "<group>"; };
-		C1741FE920BE3C3A00BD4565 /* DeckLinkUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkUtil.h; sourceTree = "<group>"; };
 		C1741FEB20BE711F00BD4565 /* DeckLinkDeviceState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkDeviceState.h; sourceTree = "<group>"; };
 		C174373320CF4DA1000A2153 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../include/DeckLinkAPIDispatch.cpp; sourceTree = "<group>"; };
 		C180240120D35CFD0084E73A /* com_ptr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = com_ptr.h; sourceTree = "<group>"; };
@@ -121,8 +118,6 @@
 				C10B0E6020B68CC900BAE417 /* DeckLinkMediaReader.h */,
 				C10B0E4D20B6793C00BAE417 /* DeckLinkPlaybackDevice.h */,
 				C10B0E4E20B6793C00BAE417 /* DeckLinkPlaybackDevice.cpp */,
-				C1741FE820BE3C3A00BD4565 /* DeckLinkUtil.cpp */,
-				C1741FE920BE3C3A00BD4565 /* DeckLinkUtil.h */,
 				C10B0E5720B679D800BAE417 /* DeviceManager.h */,
 				C10B0E5820B679D800BAE417 /* DeviceManager.cpp */,
 				C10B0E6520B68E3000BAE417 /* PCMAudioBuffer.h */,
@@ -197,6 +192,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -237,7 +233,6 @@
 				C10B0E4C20B64ABA00BAE417 /* AppDelegate.mm in Sources */,
 				C10B0E6620B68E3000BAE417 /* CoreMediaPCMAudioBuffer.mm in Sources */,
 				C10B0E6920B6923F00BAE417 /* DeckLinkCoreMediaVideoFrame.mm in Sources */,
-				C1741FEA20BE3C3A00BD4565 /* DeckLinkUtil.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

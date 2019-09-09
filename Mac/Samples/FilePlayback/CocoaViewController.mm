@@ -45,6 +45,7 @@ static const DeviceErrorMessage kDeviceErrorMessage[] =
 	{ CFSTR("Playback Initialization Error"),	CFSTR("Failed to enable audio output in the required display mode.") },
 	{ CFSTR("Video Output Error"),				CFSTR("Failed to output video frame.") },
 	{ CFSTR("Media Read Error"),				CFSTR("Failed to read media file.") },
+	{ CFSTR("Frame Displayed Late"),			CFSTR("The system may not be fast enough to play this file.") },
 };
 
 CocoaViewController::CocoaViewController(AppDelegate* appDelegate) :
@@ -120,7 +121,7 @@ void CocoaViewController::updateDeviceState(com_ptr<DeckLinkPlaybackDevice> devi
 		displayMode->GetName(&displayModeName);
 		[m_appDelegate setDisplayModeName:(NSInteger)displayMode->GetDisplayMode() displayModeName:displayModeName];
 		CFRelease(displayModeName);
-	});
+	}, true);
 }
 
 void CocoaViewController::updateStreamTime(com_ptr<DeckLinkPlaybackDevice> device)

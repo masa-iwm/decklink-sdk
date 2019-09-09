@@ -43,6 +43,8 @@ class DeckLinkOutputDevice : public IDeckLinkVideoOutputCallback, public IDeckLi
 	using UpdateStreamTimeCallback				= std::function<void(void)>;
 	using ScheduledPlaybackStoppedCallback		= std::function<void(bool)>;
 	using OutputStateChangeCallback				= std::function<void(bool)>;
+	using FrameDisplayedLateCallback			= std::function<void(void)>;
+	using DeckLinkDisplayModeQueryFunc			= std::function<void(CComPtr<IDeckLinkDisplayMode>&)>;
 
 public:
 	DeckLinkOutputDevice(CComPtr<IDeckLink> deckLink);
@@ -67,8 +69,8 @@ public:
 	virtual HRESULT __stdcall			Notify(BMDNotifications topic, ULONGLONG param1, ULONGLONG param2) override;
 
 	HRESULT								GetDeviceName(CString& deviceName);
-	CComPtr<IDeckLink>					GetDeckLinkInstance() { return m_deckLink; }
-	CComPtr<IDeckLinkProfileManager>	GetDeviceProfileManager() { return m_deckLinkProfileManager; }
+	CComPtr<IDeckLink>					GetDeckLinkInstance(void) const { return m_deckLink; }
+	CComPtr<IDeckLinkProfileManager>	GetDeviceProfileManager(void) const { return m_deckLinkProfileManager; }
 	HRESULT								GetDisplayModeName(CString& displayModeName);
 	BMDTimeValue						GetCurrentStreamTime(BMDTimeScale timescale);
 
@@ -78,10 +80,12 @@ public:
 	void								SchedulePlaybackThread(CComPtr<SourceReader>& sourceReader);
 	void								StopScheduledPlayback(void);
 	bool								DisplayPreviewFrame(CComPtr<PlaybackVideoFrame>& videoFrame, bool endOfStream);
+	void								QueryDisplayModes(std::function<void(CComPtr<IDeckLinkDisplayMode>&)> func);
 
 	void								OnUpdateStreamTime(const UpdateStreamTimeCallback& callback) { m_updateStreamTimeCallback = callback; }
 	void								OnScheduledPlaybackStopped(const ScheduledPlaybackStoppedCallback& callback) { m_scheduledPlaybackStoppedCallback = callback; }
 	void								OnOutputStateChanged(const OutputStateChangeCallback& callback) { m_outputStateChangeCallback = callback; }
+	void								OnFrameDisplayedLate(const FrameDisplayedLateCallback& callback) { m_frameDisplayedLateCallback = callback; }
 
 private:
 	std::atomic<ULONG>					m_refCount;
@@ -110,6 +114,7 @@ private:
 	UpdateStreamTimeCallback			m_updateStreamTimeCallback;
 	ScheduledPlaybackStoppedCallback	m_scheduledPlaybackStoppedCallback;
 	OutputStateChangeCallback			m_outputStateChangeCallback;
+	FrameDisplayedLateCallback			m_frameDisplayedLateCallback;
 
 	bool								m_stopPlayback;
 	bool								m_scheduledPlaybackStopped;
