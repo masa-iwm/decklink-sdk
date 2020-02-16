@@ -176,7 +176,11 @@ void DeckLinkInputPage::removeDevice(com_ptr<IDeckLink>& deckLink)
 	if (indexToRemove > 0)
 	{
 		removingCurrentDevice = (indexToRemove == m_deviceListCombo->currentIndex());
+
+		// Prevent signal on removeItem, so that we don't refresh connector/video mode for removed device
+		bool blocked = m_deviceListCombo->blockSignals(true);
 		m_deviceListCombo->removeItem(indexToRemove);
+		m_deviceListCombo->blockSignals(blocked);
 	}
 
 	if (removingCurrentDevice)

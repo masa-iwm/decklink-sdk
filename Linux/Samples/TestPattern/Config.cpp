@@ -39,6 +39,7 @@ BMDConfig::BMDConfig() :
 	m_audioSampleDepth(16),
 	m_outputFlags(bmdVideoOutputFlagDefault),
 	m_pixelFormat(bmdFormat8BitYUV),
+	m_output444(false),
 	m_deckLinkName(),
 	m_displayModeName()
 {
@@ -93,9 +94,9 @@ bool BMDConfig::ParseArguments(int argc,  char** argv)
 			case 'p':
 				switch(atoi(optarg))
 				{
-					case 0: m_pixelFormat = bmdFormat8BitYUV; break;
-					case 1: m_pixelFormat = bmdFormat10BitYUV; break;
-					case 2: m_pixelFormat = bmdFormat10BitRGB; break;
+					case 0: m_pixelFormat = bmdFormat8BitYUV;  m_output444 = false; break;
+					case 1: m_pixelFormat = bmdFormat10BitYUV; m_output444 = false; break;
+					case 2: m_pixelFormat = bmdFormat10BitRGB; m_output444 = true;  break;
 					default:
 						fprintf(stderr, "Invalid argument: Pixel format %d is not valid", atoi(optarg));
 						return false;
@@ -142,7 +143,7 @@ bool BMDConfig::ParseArguments(int argc,  char** argv)
 			m_displayModeName = strdup("Invalid");
 		}
 
-		deckLink->GetModelName((const char**)&m_deckLinkName);
+		deckLink->GetDisplayName((const char**)&m_deckLinkName);
 		deckLink->Release();
 	}
 	else
@@ -242,7 +243,7 @@ void BMDConfig::DisplayUsage(int status)
 	while (deckLinkIterator->Next(&deckLink) == S_OK)
 	{
 		char *deckLinkName;
-		result = deckLink->GetModelName((const char**)&deckLinkName);
+		result = deckLink->GetDisplayName((const char**)&deckLinkName);
 		if (result == S_OK)
 		{
 			fprintf(stderr,
@@ -269,7 +270,7 @@ void BMDConfig::DisplayUsage(int status)
 	deckLinkName = NULL;
 
 	if (deckLinkSelected != NULL)
-		deckLinkSelected->GetModelName((const char**)&deckLinkName);
+		deckLinkSelected->GetDisplayName((const char**)&deckLinkName);
 
 	fprintf(stderr,
 		"    -m <mode id>: (%s)\n",

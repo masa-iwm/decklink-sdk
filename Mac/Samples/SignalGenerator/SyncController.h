@@ -29,6 +29,7 @@
 //  Signal Generator
 //
 
+#include <atomic>
 #include <vector>
 #include <Cocoa/Cocoa.h>
 #include "DeckLinkAPI.h"
@@ -122,9 +123,10 @@ class PlaybackDelegate : public IDeckLinkVideoOutputCallback,
 						 public IDeckLinkAudioOutputCallback
 {
 private:
-	int32_t						m_refCount;
+	std::atomic<ULONG>			m_refCount;
 	SyncController*				m_controller;
 	IDeckLinkOutput*			m_deckLinkOutput;
+	IDeckLinkConfiguration*		m_deckLinkConfiguration;
 	IDeckLink*					m_deckLink;
 	IDeckLinkProfileManager*	m_deckLinkProfileManager;
 	CFStringRef					m_deviceName;
@@ -148,13 +150,12 @@ public:
 	virtual HRESULT		RenderAudioSamples (bool preroll);
 	
 
-	NSString*			getDeviceName() { return (NSString*)m_deviceName; };
+	NSString*			getDeviceName() { return (NSString*)m_deviceName; }
 
-	IDeckLinkOutput*	getDeviceOutput() { return m_deckLinkOutput; };
-
-	IDeckLink*			getDeckLinkDevice() { return m_deckLink; };
-	
-	IDeckLinkProfileManager*	getDeckLinkProfileManager() { return m_deckLinkProfileManager; };
+	IDeckLinkOutput*			getDeviceOutput() { return m_deckLinkOutput; }
+	IDeckLinkConfiguration*		getDeviceConfiguration() { return m_deckLinkConfiguration; }
+	IDeckLink*					getDeckLinkDevice() { return m_deckLink; }
+	IDeckLinkProfileManager*	getDeckLinkProfileManager() { return m_deckLinkProfileManager; }
 
 };
 
@@ -162,7 +163,7 @@ class ProfileCallback : public IDeckLinkProfileCallback
 {
 private:
 	SyncController*				m_controller;
-	int32_t						m_refCount;
+	std::atomic<ULONG>			m_refCount;
 	
 public:
 	ProfileCallback(SyncController* owner);
@@ -183,7 +184,7 @@ class DeckLinkDeviceDiscovery : public IDeckLinkDeviceNotificationCallback
 private:
 	IDeckLinkDiscovery*		m_deckLinkDiscovery;
 	SyncController*			m_uiDelegate;
-	int32_t					m_refCount;
+	std::atomic<ULONG>		m_refCount;
 
 public:
 	DeckLinkDeviceDiscovery(SyncController* uiDelegate);

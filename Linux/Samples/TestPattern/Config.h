@@ -48,6 +48,7 @@ public:
 
 	BMDVideoOutputFlags		m_outputFlags;
 	BMDPixelFormat			m_pixelFormat;
+	bool					m_output444;
 
 	const char*				m_videoOutputFile;
 	const char*				m_audioOutputFile;

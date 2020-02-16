@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Check display mode is supported with given options
-	result = g_deckLinkInput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode->GetDisplayMode(), g_config.m_pixelFormat, bmdSupportedVideoModeDefault, &supported);
+	result = g_deckLinkInput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode->GetDisplayMode(), g_config.m_pixelFormat, bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
 	if (result != S_OK)
 		goto bail;
 

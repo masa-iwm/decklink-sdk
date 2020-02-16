@@ -102,6 +102,7 @@ TestPattern::TestPattern(BMDConfig *config) :
 	m_running(false),
 	m_deckLink(),
 	m_deckLinkOutput(),
+	m_deckLinkConfiguration(),
 	m_displayMode(),
 	m_videoFrameBlack(),
 	m_videoFrameBars(),
@@ -148,6 +149,10 @@ bool TestPattern::Run()
 
 	// Get the output (display) interface of the DeckLink device
 	if (m_deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deckLinkOutput) != S_OK)
+		goto bail;
+
+	// Get the configuration interface of the DeckLink device
+	if (m_deckLink->QueryInterface(IID_IDeckLinkConfiguration, (void**)&m_deckLinkConfiguration) != S_OK)
 		goto bail;
 
 	// Get the display mode
@@ -221,6 +226,9 @@ bail:
 	if (displayModeIterator != NULL)
 		displayModeIterator->Release();
 
+	if (m_deckLinkConfiguration != NULL)
+		m_deckLinkConfiguration->Release();
+
 	if (m_deckLinkOutput != NULL)
 		m_deckLinkOutput->Release();
 
@@ -246,6 +254,15 @@ void TestPattern::StartRunning()
 
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	m_framesPerSecond = (unsigned long)((m_frameTimescale + (m_frameDuration-1))  /  m_frameDuration);
+
+	// Set the output to 444 if RGB mode is selected
+	result = m_deckLinkConfiguration->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, m_config->m_output444);
+	// If a device without SDI output is used (eg Intensity Pro 4K), then SetFlags will return E_NOTIMPL
+	if ((result != S_OK) && (result != E_NOTIMPL))
+	{
+		fprintf(stderr, "Failed to write to 444 output configuration flag\n");
+		goto bail;
+	}
 
 	// Set the video output mode
 	result = m_deckLinkOutput->EnableVideoOutput(m_displayMode->GetDisplayMode(), m_config->m_outputFlags);

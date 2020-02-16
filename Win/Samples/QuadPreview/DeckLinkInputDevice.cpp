@@ -230,7 +230,7 @@ void DeckLinkInputDevice::querySupportedVideoModes(DeckLinkDisplayModeQueryFunc 
 		dlbool_t			supported = false;
 		BMDDisplayMode		mode = displayMode->GetDisplayMode();
 
-		if ((m_deckLinkInput->DoesSupportVideoMode(m_selectedInputConnection, mode, bmdFormatUnspecified, bmdSupportedVideoModeDefault, &supported) == S_OK)
+		if ((m_deckLinkInput->DoesSupportVideoMode(m_selectedInputConnection, mode, bmdFormatUnspecified, bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, NULL, &supported) == S_OK)
 			&& supported)
 		{
 			func(displayMode.get());

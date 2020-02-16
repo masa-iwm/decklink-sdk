@@ -31,6 +31,8 @@
 #include <string>
 #include "platform.h"
 
+#define kMaxHeaderLength 128
+
 // List of known pixel formats and their matching display names
 static const std::list<std::pair<BMDPixelFormat, std::string>> gPixelFormats =
 {
@@ -47,12 +49,13 @@ static const std::list<std::pair<BMDPixelFormat, std::string>> gPixelFormats =
 
 static const std::list<std::pair<BMDVideoConnection, std::string>> gConnections =
 {
-	{ bmdVideoConnectionSDI,        "SDI" },
-	{ bmdVideoConnectionHDMI,       "HDMI" },
-	{ bmdVideoConnectionOpticalSDI, "Optical SDI" },
-	{ bmdVideoConnectionComponent,  "Component" },
-	{ bmdVideoConnectionComposite,  "Composite" },
-	{ bmdVideoConnectionSVideo,     "S-Video" },
+	{ bmdVideoConnectionUnspecified, "Unspecified Connection" },
+	{ bmdVideoConnectionSDI,         "SDI" },
+	{ bmdVideoConnectionHDMI,        "HDMI" },
+	{ bmdVideoConnectionOpticalSDI,  "Optical SDI" },
+	{ bmdVideoConnectionComponent,   "Component" },
+	{ bmdVideoConnectionComposite,   "Composite" },
+	{ bmdVideoConnectionSVideo,      "S-Video" },
 };
 
 static const std::list<std::pair<BMDSupportedVideoModeFlags, std::string>> gSDILinks =
@@ -70,14 +73,50 @@ static const std::map<uint32_t, const char*> gDuplexModes =
 	{ bmdDuplexHalf, 		"Half" },
 };
 
+static const std::list<std::pair<BMDVideoOutputConversionMode, std::string>> gOutputConversions =
+{
+	{ bmdNoVideoOutputConversion,                             "No Conversion" },
+	{ bmdVideoOutputLetterboxDownconversion,                  "Down-Conversion Letterbox (Software)" },
+	{ bmdVideoOutputAnamorphicDownconversion,                 "Down-Conversion Anamorphic (Software)" },
+	{ bmdVideoOutputHD720toHD1080Conversion,                  "Cross-Conversion 720 to 1080 (Software)" },
+	{ bmdVideoOutputHardwareLetterboxDownconversion,          "Down-Conversion Letterbox (Hardware)" },
+	{ bmdVideoOutputHardwareAnamorphicDownconversion,         "Down-Conversion Anamorphic (Hardware)" },
+	{ bmdVideoOutputHardwareCenterCutDownconversion,          "Down-Conversion Center Cut (Hardware)" },
+	{ bmdVideoOutputHardware720p1080pCrossconversion,         "Cross-Conversion 720p to/from 1080i (Hardware)" },
+	{ bmdVideoOutputHardwareAnamorphic720pUpconversion,       "Up-Conversion to 720p Anamorphic (Hardware)" },
+	{ bmdVideoOutputHardwareAnamorphic1080iUpconversion,      "Up-Conversion to 1080i Anamorphic (Hardware)" },
+	{ bmdVideoOutputHardwareAnamorphic149To720pUpconversion,  "Up-Conversion to 720p 14:9 Zoom (Hardware)" },
+	{ bmdVideoOutputHardwareAnamorphic149To1080iUpconversion, "Up-Conversion to 1080i 14:9 Zoom (Hardware)" },
+	{ bmdVideoOutputHardwarePillarbox720pUpconversion,        "Up-Conversion to 720p Pillarbox (Hardware)" },
+	{ bmdVideoOutputHardwarePillarbox1080iUpconversion,       "Up-Conversion to 1080i Pillarbox (Hardware)" },
+};
+
+static const std::list<std::pair<BMDVideoInputConversionMode, std::string>> gInputConversions =
+{
+	{ bmdNoVideoInputConversion,                       "No Conversion" },
+	{ bmdVideoInputLetterboxDownconversionFromHD1080,  "Down-Conversion from 1080 Letterbox (Software)" },
+	{ bmdVideoInputAnamorphicDownconversionFromHD1080, "Down-Conversion from 1080 Anamorphic (Software)" },
+	{ bmdVideoInputLetterboxDownconversionFromHD720,   "Down-Conversion from 720 Letterbox (Software)" },
+	{ bmdVideoInputAnamorphicDownconversionFromHD720,  "Down-Conversion from 720 Anamorphic (Software)" },
+	{ bmdVideoInputLetterboxUpconversion,              "Up-Conversion 16:9 Zoom (Software)" },
+	{ bmdVideoInputAnamorphicUpconversion,             "Up-Conversion Anamorphic (Software)" },
+};
+
+enum PrintFlags : uint32_t
+{
+	kPrintDisplayModeConnections = (1 << 0),
+	kPrintDisplayModeConversions = (1 << 1),
+};
+
+void	parse_arguments(int argc, char** argv, uint32_t& printFlags);
 void	print_attributes (IDeckLink* deckLink, bool showConnectorAttributes);
 void	mode_name(IDeckLinkDisplayMode *displayMode, std::string& modeName);
-void	print_output_mode(IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode *displayMode);
-void	print_output_modes_for_setup (IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags);
-void	print_output_modes (IDeckLink* deckLink);
-void	print_input_mode(IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode* displayMode, const char* nameSuffix);
-void	print_input_modes_for_setup (IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, const char* nameSuffix);
-void	print_input_modes (IDeckLink* deckLink);
+void	print_output_mode(IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDVideoOutputConversionMode conversion, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode *displayMode, const char*& header);
+void	print_output_modes_for_setup (IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDVideoOutputConversionMode conversion, BMDSupportedVideoModeFlags flags, const char* header);
+void	print_output_modes (IDeckLink* deckLink, uint32_t printFlags);
+void	print_input_mode(IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDVideoInputConversionMode conversion, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode* displayMode, const char* nameSuffix, const char*& header);
+void	print_input_modes_for_setup (IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDVideoInputConversionMode conversion, BMDSupportedVideoModeFlags flags, const char* nameSuffix, const char* header);
+void	print_input_modes (IDeckLink* deckLink, uint32_t printFlags);
 
 
 int		main (int argc, char** argv)
@@ -87,7 +126,10 @@ int		main (int argc, char** argv)
 	IDeckLink*					deckLink;
 	IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
 	int							numDevices = 0;
+	uint32_t					printFlags = 0;
 	HRESULT						result;
+
+	parse_arguments(argc, argv, printFlags);
 	
 	// Create an IDeckLinkIterator object to enumerate all DeckLink cards in the system
 	result = GetDeckLinkIterator(&deckLinkIterator);
@@ -151,19 +193,31 @@ int		main (int argc, char** argv)
 			showIOinfo = false;
 		}
 
+		int64_t videoIOSupport;
+		result = deckLinkAttributes->GetInt(BMDDeckLinkVideoIOSupport, &videoIOSupport);
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Could not get BMDDeckLinkVideoIOSupport attribute - result = %08x\n", result);
+			continue;
+		}
+
 		deckLinkAttributes->Release();
 		
 		print_attributes(deckLink, showIOinfo);
 		
 		if (showIOinfo)
 		{
-		
-			// ** List the video output display modes supported by the card
-			print_output_modes(deckLink);
-			
-			// ** List the video input display modes supported by the card
-			print_input_modes(deckLink);
-			
+			if (videoIOSupport & bmdDeviceSupportsPlayback)
+			{
+				// ** List the video output display modes supported by the card
+				print_output_modes(deckLink, printFlags);
+			}
+
+			if (videoIOSupport & bmdDeviceSupportsCapture)
+			{
+				// ** List the video input display modes supported by the card
+				print_input_modes(deckLink, printFlags);
+			}			
 		}
 		
 		// Release the IDeckLink instance when we've finished with it to prevent leaks
@@ -178,6 +232,32 @@ int		main (int argc, char** argv)
 	printf("\n");
 	
 	return 0;
+}
+
+void	parse_arguments(int argc, char** argv, uint32_t& printFlags)
+{
+	for (int i = 1; i < argc; ++i)
+	{
+		if (strcmp(argv[i], "--connections") == 0 || strcmp(argv[i], "-c") == 0)
+			printFlags |= kPrintDisplayModeConnections;
+		else if (strcmp(argv[i], "--conversions") == 0|| strcmp(argv[i], "-v") == 0)
+			printFlags |= kPrintDisplayModeConversions;
+		else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
+		{
+			printf("%s [options]\n"
+			       "\n"
+			       "Options:\n"
+			       "    -h, --help           Display this help message\n"
+			       "    -c, --connections    Display the supported modes for each connection type\n"
+			       "    -v, --conversions    Display the supported modes for each conversion type\n", argv[0]);
+			exit(0);
+		}
+		else
+		{
+			fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+			exit(1);
+		}
+	}
 }
 
 void	print_attributes (IDeckLink* deckLink, bool showConnectorAttributes)
@@ -363,7 +443,7 @@ void mode_name(IDeckLinkDisplayMode *displayMode, std::string& modeName)
 	DeleteString(displayModeString);
 }
 
-void print_output_mode(IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode *displayMode)
+void print_output_mode(IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDVideoOutputConversionMode conversion, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode *displayMode, const char*& header)
 {
 	std::string				modeName;
 	int						modeWidth;
@@ -379,8 +459,19 @@ void print_output_mode(IDeckLinkOutput* deckLinkOutput, BMDVideoConnection conne
 	for (auto pixelFormat: gPixelFormats)
 	{
 		dlbool_t supported;
-		if (deckLinkOutput->DoesSupportVideoMode(connection, requestedMode, pixelFormat.first, flags, &actualMode, &supported) == S_OK && supported)
+		BMDDisplayMode retMode;
+
+		if (deckLinkOutput->DoesSupportVideoMode(connection, requestedMode, pixelFormat.first, conversion, flags, &retMode, &supported) == S_OK && supported)
 		{
+			if (retMode != bmdModeUnknown)
+				actualMode = retMode;
+
+			if (header)
+			{
+				printf("%s\n", header);
+				header = NULL;
+			}
+
 			if (! printedMode)
 			{
 				// Mode properties
@@ -437,7 +528,7 @@ void print_output_mode(IDeckLinkOutput* deckLinkOutput, BMDVideoConnection conne
 	}
 }
 
-void	print_output_modes_for_setup (IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags)
+void	print_output_modes_for_setup (IDeckLinkOutput* deckLinkOutput, BMDVideoConnection connection, BMDVideoOutputConversionMode conversion, BMDSupportedVideoModeFlags flags, const char* header)
 {
 	IDeckLinkDisplayModeIterator*	displayModeIterator = NULL;
 	IDeckLinkDisplayMode*			displayMode = NULL;
@@ -453,20 +544,21 @@ void	print_output_modes_for_setup (IDeckLinkOutput* deckLinkOutput, BMDVideoConn
 	
 	while (displayModeIterator->Next(&displayMode) == S_OK)
 	{
-		print_output_mode(deckLinkOutput, connection, flags, displayMode);
+		print_output_mode(deckLinkOutput, connection, conversion, flags, displayMode, header);
 		displayMode->Release();
 	}
 	
 	displayModeIterator->Release();
 }
 
-void	print_output_modes (IDeckLink* deckLink)
+void	print_output_modes (IDeckLink* deckLink, uint32_t printFlags)
 {
 	IDeckLinkOutput*					deckLinkOutput = NULL;
 	IDeckLinkProfileAttributes*			deckLinkAttributes = NULL;
 	HRESULT								result;
 	int64_t								ports;
 	dlbool_t							keyingSupported;
+	char								header[kMaxHeaderLength];
 
 	// Query the DeckLink for its output interface
 	result = deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput);
@@ -489,56 +581,67 @@ void	print_output_modes (IDeckLink* deckLink)
 		result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsExternalKeying, &keyingSupported);
 
 	// List all supported output display modes
-	printf("Supported video output display modes:\n\n");
+	printf("Supported video output display modes:\n");
 
 	result = deckLinkAttributes->GetInt(BMDDeckLinkVideoOutputConnections, &ports);
 
 	if (result != S_OK)
 		goto bail;
 
-	for (auto connection: gConnections)
+	for (const auto& connection: gConnections)
 	{
-		if (ports & connection.first)
+		if (connection.first == bmdVideoConnectionUnspecified || (ports & connection.first))
 		{
-			if (connection.first == bmdVideoConnectionSDI || connection.first == bmdVideoConnectionOpticalSDI)
+			if (((printFlags & kPrintDisplayModeConnections) == 0) != (connection.first == bmdVideoConnectionUnspecified))
+				continue;
+
+			for (const auto& conversion: gOutputConversions)
 			{
-				for (std::list<std::pair<BMDSupportedVideoModeFlags, std::string>>::const_reverse_iterator links = gSDILinks.rbegin(); links != gSDILinks.rend(); links++)
+				if (((printFlags & kPrintDisplayModeConversions) == 0) != (conversion.first == bmdNoVideoOutputConversion))
+					continue;
+
+				if (connection.first == bmdVideoConnectionSDI || connection.first == bmdVideoConnectionOpticalSDI)
 				{
-					dlbool_t multilinkSupported = false;
-					if (links->first & bmdSupportedVideoModeSDIDualLink)
+					for (std::list<std::pair<BMDSupportedVideoModeFlags, std::string>>::const_reverse_iterator links = gSDILinks.rbegin(); links != gSDILinks.rend(); links++)
 					{
-						if (FAILED(deckLinkAttributes->GetFlag(BMDDeckLinkSupportsDualLinkSDI, &multilinkSupported)) || ! multilinkSupported)
-							continue;
+						dlbool_t multilinkSupported = false;
+						if (links->first & bmdSupportedVideoModeSDIDualLink)
+						{
+							if (FAILED(deckLinkAttributes->GetFlag(BMDDeckLinkSupportsDualLinkSDI, &multilinkSupported)) || ! multilinkSupported)
+								continue;
+						}
+						else if (links->first & bmdSupportedVideoModeSDIQuadLink)
+						{
+							if (FAILED(deckLinkAttributes->GetFlag(BMDDeckLinkSupportsQuadLinkSDI, &multilinkSupported)) || ! multilinkSupported)
+								continue;
+						}
+
+						if (conversion.first == bmdNoVideoOutputConversion)
+							snprintf(header, kMaxHeaderLength, "\n%s %s output:", connection.second.c_str(), links->second.c_str());
+						else
+							snprintf(header, kMaxHeaderLength, "\n%s %s %s output:", connection.second.c_str(), links->second.c_str(), conversion.second.c_str());
+						print_output_modes_for_setup(deckLinkOutput, connection.first, conversion.first, links->first, header);
+
+						if (multilinkSupported)
+							print_output_modes_for_setup(deckLinkOutput, connection.first, conversion.first, (BMDSupportedVideoModeFlags)(links->first | bmdSupportedVideoModeDualStream3D), header);
 					}
-					else if (links->first & bmdSupportedVideoModeSDIQuadLink)
+
+					if (keyingSupported && conversion.first == bmdNoVideoOutputConversion)
 					{
-						if (FAILED(deckLinkAttributes->GetFlag(BMDDeckLinkSupportsQuadLinkSDI, &multilinkSupported)) || ! multilinkSupported)
-							continue;
+						snprintf(header, kMaxHeaderLength, "\n%s fill and key outputs:", connection.second.c_str());
+						print_output_modes_for_setup(deckLinkOutput, connection.first, conversion.first, bmdSupportedVideoModeKeying, header);
 					}
-					
-					printf("%s %s output:\n", connection.second.c_str(), links->second.c_str());
-					print_output_modes_for_setup(deckLinkOutput, connection.first, links->first);
-					if (multilinkSupported)
-						print_output_modes_for_setup(deckLinkOutput, connection.first, (BMDSupportedVideoModeFlags)(links->first | bmdSupportedVideoModeDualStream3D));
-					printf("\n");
 				}
-				
-				if (keyingSupported)
+				else
 				{
-					printf("%s fill and key outputs:\n", connection.second.c_str());
-					print_output_modes_for_setup(deckLinkOutput, connection.first, bmdSupportedVideoModeKeying);
-					printf("\n");
+					if (conversion.first == bmdNoVideoOutputConversion)
+						snprintf(header, kMaxHeaderLength, "\n%s output:", connection.second.c_str());
+					else
+						snprintf(header, kMaxHeaderLength, "\n%s %s output:", connection.second.c_str(), conversion.second.c_str());
+
+					print_output_modes_for_setup(deckLinkOutput, connection.first, conversion.first, bmdSupportedVideoModeDefault, header);
+					print_output_modes_for_setup(deckLinkOutput, connection.first, conversion.first, bmdSupportedVideoModeDualStream3D, header);
 				}
-				
-			}
-			else
-			{
-				
-				printf("%s output:\n", connection.second.c_str());
-				print_output_modes_for_setup(deckLinkOutput, connection.first, bmdSupportedVideoModeDefault);
-				print_output_modes_for_setup(deckLinkOutput, connection.first, bmdSupportedVideoModeDualStream3D);
-				printf("\n");
-				
 			}
 		 }
 	}
@@ -553,7 +656,7 @@ bail:
 	printf("\n");
 }
 
-void print_input_mode(IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode* displayMode, const char* nameSuffix)
+void print_input_mode(IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDVideoInputConversionMode conversion, BMDSupportedVideoModeFlags flags, IDeckLinkDisplayMode* displayMode, const char* nameSuffix, const char*& header)
 {
 	std::string				modeName;
 	int						modeWidth;
@@ -562,14 +665,26 @@ void print_input_mode(IDeckLinkInput* deckLinkInput, BMDVideoConnection connecti
 	BMDTimeScale			frameRateScale;
 	bool					printedMode = false;
 	int						unsupportedCount = 0;
-	
+	BMDDisplayMode			requestedMode = displayMode->GetDisplayMode();
+	BMDDisplayMode			actualMode = requestedMode;
+
 	// Print the supported pixel formats for this display mode
 	for (auto pixelFromat: gPixelFormats)
 	{
 		dlbool_t supported;
+		BMDDisplayMode retMode;
 
-		if (deckLinkInput->DoesSupportVideoMode(connection, displayMode->GetDisplayMode(), pixelFromat.first, flags, &supported) == S_OK && supported)
+		if (deckLinkInput->DoesSupportVideoMode(connection, requestedMode, pixelFromat.first, conversion, flags, &retMode, &supported) == S_OK && supported)
 		{
+			if (retMode != bmdModeUnknown)
+				actualMode = retMode;
+
+			if (header)
+			{
+				printf("%s\n", header);
+				header = NULL;
+			}
+
 			if (! printedMode)
 			{
 				// Mode properties
@@ -601,10 +716,23 @@ void print_input_mode(IDeckLinkInput* deckLinkInput, BMDVideoConnection connecti
 	}
 	
 	if (printedMode)
+	{
+		if (actualMode != requestedMode)
+		{
+			// Append converted-to mode
+			if (deckLinkInput->GetDisplayMode(actualMode, &displayMode) == S_OK)
+			{
+				mode_name(displayMode, modeName);
+				displayMode->Release();
+				printf("* Converted to %s", modeName.c_str());
+			}
+		}
+
 		printf("\n");
+	}
 }
 
-void	print_input_modes_for_setup (IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDSupportedVideoModeFlags flags, const char* nameSuffix)
+void	print_input_modes_for_setup (IDeckLinkInput* deckLinkInput, BMDVideoConnection connection, BMDVideoInputConversionMode conversion, BMDSupportedVideoModeFlags flags, const char* nameSuffix, const char* header)
 {
 	IDeckLinkDisplayModeIterator*   displayModeIterator = NULL;
 	IDeckLinkDisplayMode*           displayMode = NULL;
@@ -620,19 +748,20 @@ void	print_input_modes_for_setup (IDeckLinkInput* deckLinkInput, BMDVideoConnect
 	
 	while (displayModeIterator->Next(&displayMode) == S_OK)
 	{
-		print_input_mode(deckLinkInput, connection, flags, displayMode, nameSuffix);
+		print_input_mode(deckLinkInput, connection, conversion, flags, displayMode, nameSuffix, header);
 		displayMode->Release();
 	}
 	
 	displayModeIterator->Release();
 }
 
-void	print_input_modes (IDeckLink* deckLink)
+void	print_input_modes (IDeckLink* deckLink, uint32_t printFlags)
 {
 	IDeckLinkInput*					deckLinkInput = NULL;
 	IDeckLinkProfileAttributes*		deckLinkAttributes = NULL;
 	HRESULT							result;
 	int64_t							ports;
+	char							header[kMaxHeaderLength];
 
 	// Query the DeckLink for its input interface
 	result = deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&deckLinkInput);
@@ -655,17 +784,27 @@ void	print_input_modes (IDeckLink* deckLink)
 		goto bail;
 
 
-	printf("Supported video input display modes:\n\n");
+	printf("Supported video input display modes:\n");
 	for (auto connection: gConnections)
 	{
-		if (ports & connection.first)
+		if (connection.first == bmdVideoConnectionUnspecified || (ports & connection.first))
 		{
-			printf("%s input:\n", connection.second.c_str());
+			if (((printFlags & kPrintDisplayModeConnections) == 0) != (connection.first == bmdVideoConnectionUnspecified))
+				continue;
 
-			print_input_modes_for_setup(deckLinkInput, connection.first, bmdSupportedVideoModeDefault, "");
-			print_input_modes_for_setup(deckLinkInput, connection.first, bmdSupportedVideoModeDualStream3D, "3D");
-			
-			printf("\n");
+			for (const auto& conversion: gInputConversions)
+			{
+				if (((printFlags & kPrintDisplayModeConversions) == 0) != (conversion.first == bmdNoVideoInputConversion))
+					continue;
+
+				if (conversion.first == bmdNoVideoInputConversion)
+					snprintf(header, kMaxHeaderLength, "\n%s input:", connection.second.c_str());
+				else
+					snprintf(header, kMaxHeaderLength, "\n%s %s input:", connection.second.c_str(), conversion.second.c_str());
+
+				print_input_modes_for_setup(deckLinkInput, connection.first, conversion.first, bmdSupportedVideoModeDefault, "", header);
+				print_input_modes_for_setup(deckLinkInput, connection.first, conversion.first, bmdSupportedVideoModeDualStream3D, "3D", header);
+			}
 		}
 	}
 		

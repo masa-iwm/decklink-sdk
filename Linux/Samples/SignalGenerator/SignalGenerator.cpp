@@ -34,6 +34,7 @@
 #include "DeckLinkDeviceDiscovery.h"
 #include "ProfileCallback.h"
 
+#include <map>
 #include <math.h>
 #include <stdio.h>
 
@@ -56,13 +57,13 @@ static uint32_t gHD75pcColourBars[8] =
 // Audio channels supported
 static const int gAudioChannels[] = { 2, 8, 16 };
 
-// Supported pixel formats
-static const QVector<QPair<BMDPixelFormat, QString>> kPixelFormats =
+// Supported pixel formats map to string representation and boolean if RGB format
+static const std::map<BMDPixelFormat, std::pair<QString, bool>> kPixelFormats =
 {
-	qMakePair(bmdFormat8BitYUV,		QString("8-bit YUV")),
-	qMakePair(bmdFormat10BitYUV,	QString("10-bit YUV")),
-	qMakePair(bmdFormat8BitARGB,	QString("8-bit RGB")),
-	qMakePair(bmdFormat10BitRGB,	QString("10-bit RGB")),
+	std::make_pair(bmdFormat8BitYUV,	std::make_pair(QString("8-bit YUV"), false)),
+	std::make_pair(bmdFormat10BitYUV,	std::make_pair(QString("10-bit YUV"), false)),
+	std::make_pair(bmdFormat8BitARGB,	std::make_pair(QString("8-bit RGB"), true)),
+	std::make_pair(bmdFormat10BitRGB,	std::make_pair(QString("10-bit RGB"), true)),
 };
 
 class CDeckLinkGLWidget : public QGLWidget, public IDeckLinkScreenPreviewCallback
@@ -172,6 +173,7 @@ SignalGenerator::SignalGenerator()
 	deckLinkDiscovery = NULL;
 	profileCallback = NULL;
 	selectedDisplayMode = bmdModeUnknown;
+	selectedPixelFormat = bmdFormatUnspecified;
 	videoFrameBlack = NULL;
 	videoFrameBars = NULL;
 	audioBuffer = NULL;
@@ -323,7 +325,7 @@ void SignalGenerator::refreshDisplayModeMenu(void)
 		bool					supported = false;
 		BMDDisplayMode			mode = deckLinkDisplayMode->GetDisplayMode();
 
-		if ((deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, mode, bmdFormatUnspecified, bmdSupportedVideoModeDefault, nullptr, &supported) == S_OK) && supported)
+		if (deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, mode, bmdFormatUnspecified, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &supported) == S_OK && supported)
 		{
 			if (deckLinkDisplayMode->GetName(const_cast<const char**>(&modeName)) == S_OK)
 			{
@@ -351,11 +353,15 @@ void SignalGenerator::refreshPixelFormatMenu(void)
 	for (auto& pixelFormat : kPixelFormats)
 	{
 		bool supported = false;
-		HRESULT hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, pixelFormat.first, bmdSupportedVideoModeDefault, NULL, &supported);
+		QString pixelFormatString;
+
+		std::tie(pixelFormatString, std::ignore) = pixelFormat.second;
+
+		HRESULT hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, pixelFormat.first, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
 		if (hr != S_OK || ! supported)
 			continue;
 
-		ui->pixelFormatPopup->addItem(QString(pixelFormat.second), QVariant::fromValue((unsigned int)pixelFormat.first));
+		ui->pixelFormatPopup->addItem(pixelFormatString, QVariant::fromValue((unsigned int)pixelFormat.first));
 	}
 
 	ui->pixelFormatPopup->setCurrentIndex(0);
@@ -497,13 +503,11 @@ IDeckLinkMutableVideoFrame *SignalGenerator::CreateOutputFrame(std::function<voi
 	IDeckLinkMutableVideoFrame*		referenceFrame	= NULL;
 	IDeckLinkMutableVideoFrame*		scheduleFrame	= NULL;
 	HRESULT							hr;
-	BMDPixelFormat					pixelFormat;
 	int								bytesPerRow;
 	int								referenceBytesPerRow;
 	IDeckLinkVideoConversion*		frameConverter	= NULL;
 
-	pixelFormat = (BMDPixelFormat)ui->pixelFormatPopup->itemData(ui->pixelFormatPopup->currentIndex()).value<int>();
-	bytesPerRow = GetRowBytes(pixelFormat, frameWidth);
+	bytesPerRow = GetRowBytes(selectedPixelFormat, frameWidth);
 	referenceBytesPerRow = GetRowBytes(bmdFormat8BitYUV, frameWidth);
 
 	deckLinkOutput = selectedDevice->GetDeviceOutput();
@@ -518,7 +522,7 @@ IDeckLinkMutableVideoFrame *SignalGenerator::CreateOutputFrame(std::function<voi
 
 	fillFrame(referenceFrame);
 
-	if (pixelFormat == bmdFormat8BitYUV)
+	if (selectedPixelFormat == bmdFormat8BitYUV)
 	{
 		// Frame is already 8-bit YUV, no conversion required
 		scheduleFrame = referenceFrame;
@@ -526,7 +530,7 @@ IDeckLinkMutableVideoFrame *SignalGenerator::CreateOutputFrame(std::function<voi
 	}
 	else
 	{
-		hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, bytesPerRow, pixelFormat, bmdFrameFlagDefault, &scheduleFrame);
+		hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, bytesPerRow, selectedPixelFormat, bmdFrameFlagDefault, &scheduleFrame);
 		if (hr != S_OK)
 			goto bail;
 
@@ -557,6 +561,8 @@ void SignalGenerator::startRunning()
 	IDeckLinkProfileAttributes*	deckLinkAttributes	= nullptr;
 	bool						success				= false;
 	BMDVideoOutputFlags			videoOutputFlags	= 0;
+	bool						output444;
+	HRESULT						result;
 	QVariant v;
 	
 	deckLinkOutput->SetScreenPreviewCallback(previewView);
@@ -617,6 +623,22 @@ void SignalGenerator::startRunning()
 		delete timeCode;
 	timeCode = new Timecode(framesPerSecond, dropFrames);
 
+	selectedPixelFormat = (BMDPixelFormat)ui->pixelFormatPopup->itemData(ui->pixelFormatPopup->currentIndex()).value<int>();
+	
+	// Set the output to 444 if RGB mode is selected
+	try
+	{
+		std::tie(std::ignore, output444) = kPixelFormats.at(selectedPixelFormat);
+	}
+	catch (std::out_of_range)
+	{
+		goto bail;
+	}
+
+	result = selectedDevice->GetDeviceConfiguration()->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
+	// If a device without SDI output is used (eg Intensity Pro 4K), then SetFlags will return E_NOTIMPL
+	if ((result != S_OK) && (result != E_NOTIMPL))
+		goto bail;
 
 	// Set the video output mode
 	if (deckLinkOutput->EnableVideoOutput(selectedDisplayMode, videoOutputFlags) != S_OK)

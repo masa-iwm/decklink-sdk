@@ -7,297 +7,344 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		66896F6C103CD68D00E82688 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 66896F6A103CD68D00E82688 /* MainMenu.xib */; };
-		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
-		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
-		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		B15E5FA60D07780600350752 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B15E5FA50D07780600350752 /* DeckLinkAPIDispatch.cpp */; };
-		B15E5FAF0D077B3000350752 /* MyController.mm in Sources */ = {isa = PBXBuildFile; fileRef = B15E5FAE0D077B3000350752 /* MyController.mm */; };
+		161F5DF4230FC55A00E27165 /* LatencyStatistics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 161F5DF3230FC55A00E27165 /* LatencyStatistics.cpp */; };
+		16B79BB6228B9E09002D1633 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16B79BB5228B9E09002D1633 /* platform.cpp */; };
+		16B79BBC228B9E28002D1633 /* InputLoopThrough.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16B79BB8228B9E28002D1633 /* InputLoopThrough.cpp */; };
+		16B79BBD228B9E28002D1633 /* DeckLinkInputDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16B79BBA228B9E28002D1633 /* DeckLinkInputDevice.cpp */; };
+		16B79BBE228B9E28002D1633 /* DeckLinkOutputDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16B79BBB228B9E28002D1633 /* DeckLinkOutputDevice.cpp */; };
+		16B79BC2228B9E5F002D1633 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16B79BC1228B9E5E002D1633 /* DeckLinkAPIDispatch.cpp */; };
+		16B79BC8228B9E9F002D1633 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16B79BC7228B9E9F002D1633 /* CoreFoundation.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		16EFEB2D228B9DA200E58F82 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		089C165DFE840E0CC02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
-		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
-		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
-		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
-		32CA4F630368D1EE00C91783 /* InputLoopThrough_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputLoopThrough_Prefix.pch; sourceTree = "<group>"; };
-		66896F6B103CD68D00E82688 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MainMenu.xib; sourceTree = "<group>"; };
-		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		8D1107320486CEB800E47090 /* InputLoopThrough.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InputLoopThrough.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		B15E5FA50D07780600350752 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../include/DeckLinkAPIDispatch.cpp; sourceTree = SOURCE_ROOT; };
-		B15E5FA70D07780A00350752 /* DeckLinkAPI.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = DeckLinkAPI.h; path = ../../include/DeckLinkAPI.h; sourceTree = SOURCE_ROOT; };
-		B15E5FAD0D077B3000350752 /* MyController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MyController.h; sourceTree = "<group>"; };
-		B15E5FAE0D077B3000350752 /* MyController.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; path = MyController.mm; sourceTree = "<group>"; };
+		1604D9B5230BA101006F141C /* DispatchQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DispatchQueue.h; sourceTree = SOURCE_ROOT; };
+		161F5DF3230FC55A00E27165 /* LatencyStatistics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LatencyStatistics.cpp; sourceTree = SOURCE_ROOT; };
+		161F5DF62316087F00E27165 /* LoopThroughVideoFrame.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LoopThroughVideoFrame.h; sourceTree = SOURCE_ROOT; };
+		161F5DF8231661D400E27165 /* LoopThroughAudioPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LoopThroughAudioPacket.h; sourceTree = SOURCE_ROOT; };
+		16B79BB4228B9E09002D1633 /* platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = SOURCE_ROOT; };
+		16B79BB5228B9E09002D1633 /* platform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = platform.cpp; sourceTree = SOURCE_ROOT; };
+		16B79BB7228B9E28002D1633 /* DeckLinkOutputDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkOutputDevice.h; sourceTree = SOURCE_ROOT; };
+		16B79BB8228B9E28002D1633 /* InputLoopThrough.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InputLoopThrough.cpp; sourceTree = SOURCE_ROOT; };
+		16B79BB9228B9E28002D1633 /* DeckLinkInputDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkInputDevice.h; sourceTree = SOURCE_ROOT; };
+		16B79BBA228B9E28002D1633 /* DeckLinkInputDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeckLinkInputDevice.cpp; sourceTree = SOURCE_ROOT; };
+		16B79BBB228B9E28002D1633 /* DeckLinkOutputDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeckLinkOutputDevice.cpp; sourceTree = SOURCE_ROOT; };
+		16B79BC0228B9E5E002D1633 /* DeckLinkAPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeckLinkAPI.h; path = ../../../../Mac/include/DeckLinkAPI.h; sourceTree = "<group>"; };
+		16B79BC1228B9E5E002D1633 /* DeckLinkAPIDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DeckLinkAPIDispatch.cpp; path = ../../../../Mac/include/DeckLinkAPIDispatch.cpp; sourceTree = "<group>"; };
+		16B79BC4228B9E83002D1633 /* com_ptr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = com_ptr.h; sourceTree = SOURCE_ROOT; };
+		16B79BC5228B9E83002D1633 /* SampleQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleQueue.h; sourceTree = SOURCE_ROOT; };
+		16B79BC7228B9E9F002D1633 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		16D937B1230D3DE200959A6D /* LatencyStatistics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LatencyStatistics.h; sourceTree = SOURCE_ROOT; };
+		16EFEB2F228B9DA200E58F82 /* InputLoopThrough */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = InputLoopThrough; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		8D11072E0486CEB800E47090 /* Frameworks */ = {
+		16EFEB2C228B9DA200E58F82 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */,
+				16B79BC8228B9E9F002D1633 /* CoreFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		080E96DDFE201D6D7F000001 /* Classes */ = {
+		16B79BB3228B9DED002D1633 /* Platform */ = {
 			isa = PBXGroup;
 			children = (
-				B15E5FAD0D077B3000350752 /* MyController.h */,
-				B15E5FAE0D077B3000350752 /* MyController.mm */,
+				16B79BB5228B9E09002D1633 /* platform.cpp */,
+				16B79BB4228B9E09002D1633 /* platform.h */,
 			);
-			name = Classes;
+			path = Platform;
 			sourceTree = "<group>";
 		};
-		1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */ = {
+		16B79BBF228B9E2D002D1633 /* DeckLinkAPI */ = {
 			isa = PBXGroup;
 			children = (
-				1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */,
+				16B79BC0228B9E5E002D1633 /* DeckLinkAPI.h */,
+				16B79BC1228B9E5E002D1633 /* DeckLinkAPIDispatch.cpp */,
 			);
-			name = "Linked Frameworks";
+			path = DeckLinkAPI;
 			sourceTree = "<group>";
 		};
-		1058C7A2FEA54F0111CA2CBB /* Other Frameworks */ = {
+		16B79BC3228B9E71002D1633 /* Common */ = {
 			isa = PBXGroup;
 			children = (
-				29B97324FDCFA39411CA2CEA /* AppKit.framework */,
-				13E42FB307B3F0F600E4EEF1 /* CoreData.framework */,
-				29B97325FDCFA39411CA2CEA /* Foundation.framework */,
+				16B79BC4228B9E83002D1633 /* com_ptr.h */,
+				1604D9B5230BA101006F141C /* DispatchQueue.h */,
+				16D937B1230D3DE200959A6D /* LatencyStatistics.h */,
+				161F5DF3230FC55A00E27165 /* LatencyStatistics.cpp */,
+				16B79BC5228B9E83002D1633 /* SampleQueue.h */,
 			);
-			name = "Other Frameworks";
+			path = Common;
 			sourceTree = "<group>";
 		};
-		19C28FACFE9D520D11CA2CBB /* Products */ = {
+		16B79BC6228B9E9F002D1633 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				8D1107320486CEB800E47090 /* InputLoopThrough.app */,
+				16B79BC7228B9E9F002D1633 /* CoreFoundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		16EFEB26228B9DA200E58F82 = {
+			isa = PBXGroup;
+			children = (
+				16B79BC3228B9E71002D1633 /* Common */,
+				16B79BBF228B9E2D002D1633 /* DeckLinkAPI */,
+				16B79BC6228B9E9F002D1633 /* Frameworks */,
+				16EFEB31228B9DA200E58F82 /* InputLoopThrough */,
+				16B79BB3228B9DED002D1633 /* Platform */,
+				16EFEB30228B9DA200E58F82 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		16EFEB30228B9DA200E58F82 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				16EFEB2F228B9DA200E58F82 /* InputLoopThrough */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		29B97314FDCFA39411CA2CEA /* InputLoopThrough */ = {
+		16EFEB31228B9DA200E58F82 /* InputLoopThrough */ = {
 			isa = PBXGroup;
 			children = (
-				B15E5FA70D07780A00350752 /* DeckLinkAPI.h */,
-				B15E5FA50D07780600350752 /* DeckLinkAPIDispatch.cpp */,
-				080E96DDFE201D6D7F000001 /* Classes */,
-				29B97315FDCFA39411CA2CEA /* Other Sources */,
-				29B97317FDCFA39411CA2CEA /* Resources */,
-				29B97323FDCFA39411CA2CEA /* Frameworks */,
-				19C28FACFE9D520D11CA2CBB /* Products */,
+				16B79BBA228B9E28002D1633 /* DeckLinkInputDevice.cpp */,
+				16B79BB9228B9E28002D1633 /* DeckLinkInputDevice.h */,
+				16B79BBB228B9E28002D1633 /* DeckLinkOutputDevice.cpp */,
+				16B79BB7228B9E28002D1633 /* DeckLinkOutputDevice.h */,
+				16B79BB8228B9E28002D1633 /* InputLoopThrough.cpp */,
+				161F5DF8231661D400E27165 /* LoopThroughAudioPacket.h */,
+				161F5DF62316087F00E27165 /* LoopThroughVideoFrame.h */,
 			);
-			name = InputLoopThrough;
-			sourceTree = "<group>";
-		};
-		29B97315FDCFA39411CA2CEA /* Other Sources */ = {
-			isa = PBXGroup;
-			children = (
-				32CA4F630368D1EE00C91783 /* InputLoopThrough_Prefix.pch */,
-				29B97316FDCFA39411CA2CEA /* main.m */,
-			);
-			name = "Other Sources";
-			sourceTree = "<group>";
-		};
-		29B97317FDCFA39411CA2CEA /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				8D1107310486CEB800E47090 /* Info.plist */,
-				089C165CFE840E0CC02AAC07 /* InfoPlist.strings */,
-				66896F6A103CD68D00E82688 /* MainMenu.xib */,
-			);
-			name = Resources;
-			sourceTree = "<group>";
-		};
-		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */,
-				1058C7A2FEA54F0111CA2CBB /* Other Frameworks */,
-			);
-			name = Frameworks;
+			path = InputLoopThrough;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		8D1107260486CEB800E47090 /* InputLoopThrough */ = {
+		16EFEB2E228B9DA200E58F82 /* InputLoopThrough */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "InputLoopThrough" */;
+			buildConfigurationList = 16EFEB36228B9DA200E58F82 /* Build configuration list for PBXNativeTarget "InputLoopThrough" */;
 			buildPhases = (
-				8D1107290486CEB800E47090 /* Resources */,
-				8D11072C0486CEB800E47090 /* Sources */,
-				8D11072E0486CEB800E47090 /* Frameworks */,
+				16EFEB2B228B9DA200E58F82 /* Sources */,
+				16EFEB2C228B9DA200E58F82 /* Frameworks */,
+				16EFEB2D228B9DA200E58F82 /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = InputLoopThrough;
-			productInstallPath = "$(HOME)/Applications";
 			productName = InputLoopThrough;
-			productReference = 8D1107320486CEB800E47090 /* InputLoopThrough.app */;
-			productType = "com.apple.product-type.application";
+			productReference = 16EFEB2F228B9DA200E58F82 /* InputLoopThrough */;
+			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		29B97313FDCFA39411CA2CEA /* Project object */ = {
+		16EFEB27228B9DA200E58F82 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0430;
+				LastUpgradeCheck = 1020;
+				ORGANIZATIONNAME = "Blackmagic Design";
+				TargetAttributes = {
+					16EFEB2E228B9DA200E58F82 = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
+				};
 			};
-			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "InputLoopThrough" */;
+			buildConfigurationList = 16EFEB2A228B9DA200E58F82 /* Build configuration list for PBXProject "InputLoopThrough" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
-			hasScannedForEncodings = 1;
+			hasScannedForEncodings = 0;
 			knownRegions = (
 				English,
-				Japanese,
-				French,
-				German,
+				en,
 			);
-			mainGroup = 29B97314FDCFA39411CA2CEA /* InputLoopThrough */;
+			mainGroup = 16EFEB26228B9DA200E58F82;
+			productRefGroup = 16EFEB30228B9DA200E58F82 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				8D1107260486CEB800E47090 /* InputLoopThrough */,
+				16EFEB2E228B9DA200E58F82 /* InputLoopThrough */,
 			);
 		};
 /* End PBXProject section */
 
-/* Begin PBXResourcesBuildPhase section */
-		8D1107290486CEB800E47090 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */,
-				66896F6C103CD68D00E82688 /* MainMenu.xib in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
-		8D11072C0486CEB800E47090 /* Sources */ = {
+		16EFEB2B228B9DA200E58F82 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8D11072D0486CEB800E47090 /* main.m in Sources */,
-				B15E5FA60D07780600350752 /* DeckLinkAPIDispatch.cpp in Sources */,
-				B15E5FAF0D077B3000350752 /* MyController.mm in Sources */,
+				161F5DF4230FC55A00E27165 /* LatencyStatistics.cpp in Sources */,
+				16B79BBC228B9E28002D1633 /* InputLoopThrough.cpp in Sources */,
+				16B79BC2228B9E5F002D1633 /* DeckLinkAPIDispatch.cpp in Sources */,
+				16B79BB6228B9E09002D1633 /* platform.cpp in Sources */,
+				16B79BBD228B9E28002D1633 /* DeckLinkInputDevice.cpp in Sources */,
+				16B79BBE228B9E28002D1633 /* DeckLinkOutputDevice.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXVariantGroup section */
-		089C165CFE840E0CC02AAC07 /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				089C165DFE840E0CC02AAC07 /* English */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
-		66896F6A103CD68D00E82688 /* MainMenu.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				66896F6B103CD68D00E82688 /* English */,
-			);
-			name = MainMenu.xib;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
-
 /* Begin XCBuildConfiguration section */
-		C01FCF4B08A954540054247B /* Debug */ = {
+		16EFEB34228B9DA200E58F82 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_MODEL_TUNING = G5;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				INFOPLIST_FILE = Info.plist;
-				INSTALL_PATH = "$(HOME)/Applications";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_NAME = InputLoopThrough;
 				SDKROOT = macosx;
 				VALID_ARCHS = x86_64;
-				WRAPPER_EXTENSION = app;
-				ZERO_LINK = YES;
 			};
 			name = Debug;
 		};
-		C01FCF4C08A954540054247B /* Release */ = {
+		16EFEB35228B9DA200E58F82 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
-				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_MODEL_TUNING = G5;
-				INFOPLIST_FILE = Info.plist;
-				INSTALL_PATH = "$(HOME)/Applications";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				PRODUCT_NAME = InputLoopThrough;
+				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
 				VALID_ARCHS = x86_64;
-				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
 		};
-		C01FCF4F08A954540054247B /* Debug */ = {
+		16EFEB37228B9DA200E58F82 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				SDKROOT = macosx;
-				VALID_ARCHS = x86_64;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.inputloopthrough";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
 		};
-		C01FCF5008A954540054247B /* Release */ = {
+		16EFEB38228B9DA200E58F82 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				SDKROOT = macosx;
-				VALID_ARCHS = x86_64;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.inputloopthrough";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "InputLoopThrough" */ = {
+		16EFEB2A228B9DA200E58F82 /* Build configuration list for PBXProject "InputLoopThrough" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				C01FCF4B08A954540054247B /* Debug */,
-				C01FCF4C08A954540054247B /* Release */,
+				16EFEB34228B9DA200E58F82 /* Debug */,
+				16EFEB35228B9DA200E58F82 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "InputLoopThrough" */ = {
+		16EFEB36228B9DA200E58F82 /* Build configuration list for PBXNativeTarget "InputLoopThrough" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				C01FCF4F08A954540054247B /* Debug */,
-				C01FCF5008A954540054247B /* Release */,
+				16EFEB37228B9DA200E58F82 /* Debug */,
+				16EFEB38228B9DA200E58F82 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 29B97313FDCFA39411CA2CEA /* Project object */;
+	rootObject = 16EFEB27228B9DA200E58F82 /* Project object */;
 }

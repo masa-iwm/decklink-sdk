@@ -40,18 +40,18 @@
 #import "HDRVideoFrame.h"
 
 // Define conventional display primaries and reference white for colorspace
-static const ChromaticityCoordinates kDefaultRec709Colorimetrics = { 0.640, 0.330, 0.300, 0.600, 0.150, 0.060, 0.3127, 0.3290 };
+static const ChromaticityCoordinates kDefaultRec2020Colorimetrics = { 0.708, 0.292, 0.170, 0.797, 0.131, 0.046, 0.3127, 0.3290 };
 
 static const double kDefaultMaxDisplayMasteringLuminance	= 1000.0;
 static const double kDefaultMinDisplayMasteringLuminance	= 0.0001;
 static const double kDefaultMaxCLL							= 1000.0;
 static const double kDefaultMaxFALL							= 50.0;
 
-// Supported pixel formats
-static const std::vector<std::pair<BMDPixelFormat, NSString*>> kPixelFormats = {
-	std::make_pair(bmdFormat10BitYUV,	@"10-bit YUV (Video-range)"),
-	std::make_pair(bmdFormat10BitRGB,	@"10-bit RGB (Video-range)"),
-	std::make_pair(bmdFormat12BitRGBLE,	@"12-bit RGB (Full-range)"),
+// Supported pixel formats map to string representation and boolean if RGB format
+static const std::map<BMDPixelFormat, std::pair<NSString*, bool>> kPixelFormats = {
+	std::make_pair(bmdFormat10BitYUV,	std::make_pair(@"10-bit YUV (Video-range)",	false)),
+	std::make_pair(bmdFormat10BitRGB,	std::make_pair(@"10-bit RGB (Video-range)",	true)),
+	std::make_pair(bmdFormat12BitRGBLE,	std::make_pair(@"12-bit RGB (Full-range)",	true)),
 };
 
 // Supported EOTFs
@@ -71,7 +71,7 @@ static const std::vector<std::pair<EOTF, NSString*>> kSupportedEOTF = {
 	bool								attributeFlag = false;
 	com_ptr<IDeckLinkProfileAttributes>	deckLinkAttributes(IID_IDeckLinkProfileAttributes, deckLink);
 	
-	if (deckLinkAttributes.get() == nullptr)
+	if (!deckLinkAttributes)
 		return;
 	
 	// Check that device has playback interface
@@ -203,13 +203,16 @@ static const std::vector<std::pair<EOTF, NSString*>> kSupportedEOTF = {
 	{
 		HRESULT		hr;
 		bool		displayModeSupport = false;
+		NSString*	pixelFormatString;
 		
-		hr = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdSupportedVideoModeDefault, NULL, &displayModeSupport);
+		std::tie(pixelFormatString, std::ignore) = pixelFormat.second;
+		
+		hr = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, NULL, &displayModeSupport);
 		if (hr != S_OK || !displayModeSupport)
 			continue;
 		
 		// Add this item to the pixel format poup menu
-		[pixelFormatPopup addItemWithTitle:(NSString*)pixelFormat.second];
+		[pixelFormatPopup addItemWithTitle:pixelFormatString];
 		[[pixelFormatPopup lastItem] setTag:(NSInteger)pixelFormat.first];
 	}
 
@@ -244,7 +247,13 @@ static const std::vector<std::pair<EOTF, NSString*>> kSupportedEOTF = {
 	// Get output interface
 	selectedDeckLinkOutput = com_ptr<IDeckLinkOutput>(IID_IDeckLinkOutput, selectedDeckLink);
 	
-	if (selectedDeckLinkOutput.get() == nullptr)
+	if (!selectedDeckLinkOutput)
+		return;
+	
+	// Get configuration interface
+	selectedDeckLinkConfiguration = com_ptr<IDeckLinkConfiguration>(IID_IDeckLinkConfiguration, selectedDeckLink);
+	
+	if (!selectedDeckLinkConfiguration)
 		return;
 	
 	// Update the display mode popup menu
@@ -365,7 +374,7 @@ bail:
 	//
 	// Create and initialise DeckLink device discovery and preview objects
 	deckLinkDiscovery = new DeckLinkDeviceDiscovery(self);
-	if (deckLinkDiscovery.get() != nullptr)
+	if (deckLinkDiscovery)
 	{
 		deckLinkDiscovery->enable();
 	}
@@ -379,7 +388,7 @@ bail:
 	}
 
 	selectedHDRParameters = { static_cast<int64_t>(EOTF::PQ),
-								kDefaultRec709Colorimetrics,
+								kDefaultRec2020Colorimetrics,
 								kDefaultMaxDisplayMasteringLuminance,
 								kDefaultMinDisplayMasteringLuminance,
 								kDefaultMaxCLL,
@@ -657,6 +666,24 @@ bail:
 
 - (void)startRunning
 {
+	bool		output444;
+	HRESULT		result;
+	
+	// Set the output to 444 if RGB mode is selected
+	try
+	{
+		std::tie(std::ignore, output444) = kPixelFormats.at(selectedPixelFormat);
+	}
+	catch (std::out_of_range)
+	{
+		goto bail;
+	}
+	
+	// If a device without SDI output is used, then SetFlags will return E_NOTIMPL
+	result = selectedDeckLinkConfiguration->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
+	if ((result != S_OK) && (result != E_NOTIMPL))
+		goto bail;
+	
 	// Set the video output mode
 	if (selectedDeckLinkOutput->EnableVideoOutput(selectedDisplayMode->GetDisplayMode(), bmdVideoOutputFlagDefault) != S_OK)
 		goto bail;
@@ -688,7 +715,8 @@ bail:
 
 - (void)stopRunning
 {
-	selectedDeckLinkOutput->DisableVideoOutput();
+	if (selectedDeckLinkOutput)
+		selectedDeckLinkOutput->DisableVideoOutput();
 
 	// Success; update the UI
 	running = NO;

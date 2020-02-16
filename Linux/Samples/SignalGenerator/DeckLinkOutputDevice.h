@@ -40,8 +40,9 @@ class DeckLinkOutputDevice : public IDeckLinkVideoOutputCallback, public IDeckLi
 private:
 	QAtomicInt					m_refCount;
 	SignalGenerator*			m_uiDelegate;
-	IDeckLinkOutput*			m_deckLinkOutput;
 	IDeckLink*					m_deckLink;
+	IDeckLinkOutput*			m_deckLinkOutput;
+	IDeckLinkConfiguration*		m_deckLinkConfiguration;
 	IDeckLinkProfileManager*	m_deckLinkProfileManager;
 	QString						m_deviceName;
 
@@ -49,7 +50,7 @@ public:
 	DeckLinkOutputDevice(SignalGenerator* owner, IDeckLink* deckLink);
 	virtual ~DeckLinkOutputDevice();
 
-	bool                Init();
+	bool				Init();
 
 	// IUnknown
 	virtual HRESULT		QueryInterface(REFIID iid, LPVOID *ppv);
@@ -63,10 +64,10 @@ public:
 	// IDeckLinkAudioOutputCallback
 	virtual HRESULT		RenderAudioSamples(bool preroll);
 
-	const QString		GetDeviceName() { return m_deviceName; };
-
-	IDeckLinkOutput*    GetDeviceOutput() { return m_deckLinkOutput; };
-	IDeckLink*			GetDeckLinkInstance() { return m_deckLink; };
-	IDeckLinkProfileManager*	GetProfileManager() { return m_deckLinkProfileManager; }
+	const QString				GetDeviceName() const { return m_deviceName; };
+	IDeckLinkOutput*			GetDeviceOutput() const { return m_deckLinkOutput; }
+	IDeckLinkConfiguration*		GetDeviceConfiguration() const { return m_deckLinkConfiguration; }
+	IDeckLink*					GetDeckLinkInstance() const { return m_deckLink; }
+	IDeckLinkProfileManager*	GetProfileManager() const { return m_deckLinkProfileManager; }
 };
 

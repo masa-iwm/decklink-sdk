@@ -99,9 +99,8 @@ static const BMDPixelFormat kPixelFormat = bmdFormat8BitARGB;
 	while(displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
 	{
 		bool supported;
-		HRESULT hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(),
-														  kPixelFormat, bmdSupportedVideoModeKeying, nullptr, &supported);
-		if (FAILED(hr) || !supported)
+		HRESULT hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), kPixelFormat, bmdNoVideoOutputConversion, bmdSupportedVideoModeKeying, nullptr, &supported);
+        if (FAILED(hr) || !supported)
 			continue;
 		
 		CFStringRef		modeName;

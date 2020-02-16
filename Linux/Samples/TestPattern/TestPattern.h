@@ -46,6 +46,7 @@ private:
 	bool					m_running;
 	IDeckLink*				m_deckLink;
 	IDeckLinkOutput*		m_deckLinkOutput;
+	IDeckLinkConfiguration*	m_deckLinkConfiguration;
 	IDeckLinkDisplayMode*	m_displayMode;
 
 	unsigned long			m_frameWidth;

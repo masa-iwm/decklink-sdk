@@ -78,12 +78,12 @@ HRESULT SignalGenerator3DVideoFrame::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG SignalGenerator3DVideoFrame::AddRef(void)
 {
-	return OSAtomicIncrement32(&m_refCount);
+	return ++m_refCount;
 }
 
 ULONG SignalGenerator3DVideoFrame::Release(void)
 {
-	ULONG newRefValue = OSAtomicDecrement32(&m_refCount);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
 		delete this;
 	return newRefValue;

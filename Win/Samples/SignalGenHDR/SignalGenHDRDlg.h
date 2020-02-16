@@ -106,6 +106,7 @@ private:
 	CComPtr<DeckLinkDeviceDiscovery>	m_deckLinkDiscovery;
 	CComPtr<IDeckLinkDisplayMode>		m_selectedDisplayMode;
 	CComQIPtr<IDeckLinkOutput>			m_selectedDeckLinkOutput;
+	CComQIPtr<IDeckLinkConfiguration>	m_selectedDeckLinkConfiguration;
 	CComPtr<HDRVideoFrame>				m_videoFrameBars;
 	BMDPixelFormat						m_selectedPixelFormat;
 	HDRMetadata							m_selectedHDRParameters;

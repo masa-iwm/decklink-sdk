@@ -85,12 +85,16 @@ namespace SignalGenCSharp
 
         public bool IsVideoModeSupported(IDeckLinkDisplayMode displayMode, _BMDPixelFormat pixelFormat)
         {
-            _BMDDisplayModeSupport displayModeSupport;
-            IDeckLinkDisplayMode resultDisplayMode;
+            try
+            {
+                m_deckLinkOutput.DoesSupportVideoMode((_BMDVideoConnection)0, displayMode.GetDisplayMode(), pixelFormat, _BMDVideoOutputConversionMode.bmdNoVideoOutputConversion, _BMDSupportedVideoModeFlags.bmdSupportedVideoModeDefault, out _BMDDisplayMode resultDisplayMode, out int supported);
+            }
+            catch (Exception)
+            {
+                supported = 0;
+            }
 
-            m_deckLinkOutput.DoesSupportVideoMode(displayMode.GetDisplayMode(), pixelFormat, _BMDVideoOutputFlags.bmdVideoOutputFlagDefault, out displayModeSupport, out resultDisplayMode);
-
-            return (displayModeSupport == _BMDDisplayModeSupport.bmdDisplayModeSupported);
+            return Convert.ToBoolean(supported);       
         }
 
         public void RemoveAllListeners()

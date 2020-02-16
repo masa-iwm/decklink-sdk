@@ -276,11 +276,11 @@ bool DeckLinkOutputDevice::EnableOutput(BMDDisplayMode displayMode, BMDPixelForm
 	CComPtr<IDeckLinkDisplayMode>	deckLinkDisplayMode;
 	BOOL							displayModeSupported;
 
-	if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, pixelFormat, bmdSupportedVideoModeDefault, nullptr, &displayModeSupported) != S_OK) ||
+	if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, pixelFormat, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &displayModeSupported) != S_OK) ||
 		!displayModeSupported)
 	{
 		// Video mode is unsupported, check whether we can support with format conversion
-		if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, kConvertedPixelFormat, bmdSupportedVideoModeDefault, nullptr, &displayModeSupported) != S_OK) ||
+		if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, kConvertedPixelFormat, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &displayModeSupported) != S_OK) ||
 			!displayModeSupported)
 			return false;
 

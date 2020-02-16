@@ -1,6 +1,6 @@
 {\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf600
 \cocoascreenfonts1{\fonttbl\f0\fnil\fcharset0 LucidaGrande-Bold;\f1\fnil\fcharset0 LucidaGrande;\f2\froman\fcharset0 Times-Bold;
-\f3\fswiss\fcharset0 Helvetica-Bold;\f4\fswiss\fcharset0 Helvetica;\f5\fnil\fcharset0 HelveticaNeue;
+\f3\fswiss\fcharset0 Helvetica;\f4\fswiss\fcharset0 Helvetica-Bold;\f5\fnil\fcharset0 HelveticaNeue;
 \f6\froman\fcharset0 Times-Roman;}
 {\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red0\green0\blue0;\red21\green21\blue21;
 \red22\green22\blue21;\red38\green38\blue38;}
@@ -13,7 +13,7 @@
 \deftab720
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\tx13563\pardeftab720\partightenfactor0
 
-\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 11.4\
+\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 11.5\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\partightenfactor0
 \cf0 \
 
@@ -21,7 +21,92 @@
 \
 \pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 11.4\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 11.5\
+\
+	- Updated Interfaces\
+		\
+		
+\f1\b0 - 
+\f0\b IDeckLinkOutput\
+\
+
+\f1\b0 			- The 
+\f0\b DoesSupportVideoMode
+\f1\b0  method parameter list has been modified to check support with output conversion\
+
+\f0\b \
+		
+\f1\b0 - 
+\f0\b IDeckLinkInput\
+\
+
+\f1\b0 			- The 
+\f0\b DoesSupportVideoMode
+\f1\b0  method parameter list has been modified to check support with input conversion\
+
+\f0\b \
+	- Updated Types\
+\
+		- \cf2 \expnd0\expndtw0\kerning0
+BMDDeckLinkAttributeID
+\f2\fs26\fsmilli13333  \
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0\fs24 \cf2 \
+\pard\pardeftab720\partightenfactor0
+\cf3 \kerning1\expnd0\expndtw0 			- added 
+\f0\b BMDDeckLinkMinimumPrerollFrames
+\f1\b0 \
+				- Integer that specifies the minimum number of preroll frames required for scheduled playback on an output device\
+\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+			- added 
+\f0\b BMDDeckLinkSupportedDynamicRange
+\f3\b0 \
+
+\f1 				- Attribute that specifies which HDR transfer functions are supported by the device\cf3 \kerning1\expnd0\expndtw0 \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+	- Updated Samples\
+\
+
+\f1\b0 		- 
+\f0\b DeviceList\
+			\
+
+\f1\b0 			- Modified with command-line arguments to print display modes per connection and display modes per conversion\
+\
+		- 
+\f0\b InputLoopThrough\
+			\
+
+\f1\b0 			- The existing Mac/Windows samples have been replaced by cross-platform command-line loop though with latency measurements\
+\
+		- 
+\f0\b SignalGenHDR\
+			\
+
+\f1\b0 			- Use Rec.2020 chromaticity coordinates for default values\
+			- (Linux) Fixed issue when changing selected output device\
+\
+		- 
+\f0\b QuadPreview\
+			\
+
+\f1\b0 			- Improved message handling on device disconnects\
+
+\f0\b \
+
+\f1\b0 		- 
+\f0\b SignalGenerator, SignalGenHDR, TestPattern\
+			\
+
+\f1\b0 			- SDI output is configured either 422 or 444 colorspace, to match the selected pixel format \
+
+\f0\b \
+Changes in Blackmagic DeckLink SDK 11.4\
 \
 	- Updated Interfaces\
 		\
@@ -211,7 +296,7 @@ BMDHDMITimecodePacking\
 \
 	
 \f0\b - Updated Types
-\f3 \
+\f4 \
 
 \f0 \cf0 \kerning1\expnd0\expndtw0 \
 		- BMDDisplayMode\
@@ -318,7 +403,7 @@ BMDHDMITimecodePacking\
 \f1\b0 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 - added 
 \f0\b \cf2 \expnd0\expndtw0\kerning0
 \CocoaLigature1 bmdMode2560x1600p60
-\f4\b0 \
+\f3\b0 \
 \pard\pardeftab720\partightenfactor0
 
 \f0\b \cf0 \kerning1\expnd0\expndtw0 \
@@ -2525,7 +2610,7 @@ Changes in Blackmagic DeckLink SDK 10.3\
 \f0\b  BMDPixelFormat\
 \pard\pardeftab720\partightenfactor0
 
-\f4\b0 \cf0 \
+\f3\b0 \cf0 \
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b \cf0 \CocoaLigature0 					- 
@@ -2703,7 +2788,7 @@ Changes in Blackmagic DeckLink SDK 9.8\
 \f0\b  BMDPixelFormat\
 \pard\pardeftab720\partightenfactor0
 
-\f4\b0 \cf0 \
+\f3\b0 \cf0 \
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 
 \f0\b \cf0 \CocoaLigature0 					- 
@@ -2723,7 +2808,7 @@ Changes in Blackmagic DeckLink SDK 9.8\
 \pard\tx480\pardeftab480\pardirnatural\partightenfactor0
 \cf0 \CocoaLigature0 					- 
 \f1\b0 added 
-\f3\b \CocoaLigature1 bmdDeckLinkConfigUseDedicatedLTCInput
+\f4\b \CocoaLigature1 bmdDeckLinkConfigUseDedicatedLTCInput
 \f1\b0 \
 \pard\pardeftab720\partightenfactor0
 
@@ -2820,7 +2905,7 @@ Changes in Blackmagic DeckLink SDK 9.6.4\
 \f0\b Added Interfaces\
 \pard\pardeftab720\partightenfactor0
 
-\f4\b0 \cf0 \
+\f3\b0 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \f1 \cf0 		- 
@@ -2905,7 +2990,7 @@ Changes in Blackmagic DeckLink SDK 9.5\
 
 \f1\b0 \
 	- 
-\f4 Custom allocators for both capture and playback now allow full control over all video frame memory allocations
+\f3 Custom allocators for both capture and playback now allow full control over all video frame memory allocations
 \f1 \
 \
 	- 
@@ -3331,7 +3416,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 
 \f1\b0 \
 				- frame packing is only supported on HDMI 1.4a
-\f4 \
+\f3 \
 
 \f1 \
 
@@ -3470,7 +3555,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \f0\b \
 
 \f1\b0 			- new\'a0enumeration of the\'a0dual preview formats available for the DeckLink GL screen preview helper.\'a0
-\f4 \
+\f3 \
 
 \f1 \
 
@@ -3480,7 +3565,7 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \f0\b \
 
 \f1\b0 			- new\'a0enumeration\'a0of the standard modes where two frames are packed into one
-\f4 \
+\f3 \
 
 \f0\b \
 		-\'a0BMDAudioOutputAnalogAES
@@ -4025,6 +4110,6 @@ Some applications may use third party code under license. For details please ref
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\pardirnatural\partightenfactor0
 
 \fs18 \cf0 \
-\'a9 2019 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
+\'a9 2020 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
 \
-Updated September 09, 2019.}
+Updated February 19, 2020.}

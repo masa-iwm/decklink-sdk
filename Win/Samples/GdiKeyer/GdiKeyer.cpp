@@ -215,13 +215,13 @@ int _tmain(int argc, _TCHAR* argv[])
 		if (result == S_OK) 
 		{	
 			_bstr_t deviceName(deviceNameBSTR);		
-
+			SysFreeString(deviceNameBSTR);
 			printf("Found Blackmagic device: %s\n", (char*)deviceName);
 			attributeResult = deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes);
 			if (attributeResult != S_OK)
 			{
 				fprintf(stderr, "Could not obtain the IDeckLinkProfileAttributes interface");
-				return 1;
+				goto bail;
 			}
 			else
 			{
@@ -260,7 +260,7 @@ int _tmain(int argc, _TCHAR* argv[])
 									BMDTimeScale	frameRateScale;
 
 									if (deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(),
-																			 bmdFormat8BitARGB, bmdSupportedVideoModeKeying, nullptr, &modeSupported) != S_OK || !modeSupported)
+																			 bmdFormat8BitARGB, bmdNoVideoOutputConversion, bmdSupportedVideoModeKeying, nullptr, &modeSupported) != S_OK || !modeSupported)
 									{
 										// Keying not supported in this mode
 									}
@@ -275,6 +275,7 @@ int _tmain(int argc, _TCHAR* argv[])
 										if (deckLinkDisplayMode->GetName(&displayModeBSTR) == S_OK)
 										{
 											_bstr_t			modeName(displayModeBSTR, false);
+											SysFreeString(displayModeBSTR);
 											printf("%d %-20s \t %d x %d \t %g FPS\n", index, (char*)modeName, modeWidth, modeHeight, (double)frameRateScale / (double)frameRateDuration);					
 										}
 										index++;
@@ -301,7 +302,7 @@ int _tmain(int argc, _TCHAR* argv[])
 										while(displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
 										{
 											if (deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(),
-																			 		 bmdFormat8BitARGB, bmdSupportedVideoModeKeying, nullptr, &modeSupported) == S_OK && modeSupported)
+																			 		 bmdFormat8BitARGB, bmdNoVideoOutputConversion, bmdSupportedVideoModeKeying, nullptr, &modeSupported) == S_OK && modeSupported)
 											{
 												if (selectedMode == modeCount)
 												{
@@ -332,6 +333,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				_getch();
 			}		
 		}		 
+bail:				 
 		deckLink->Release(); // Release the IDeckLink instance when we've finished with it to prevent leaks
  	} 
 

@@ -30,7 +30,7 @@
 #include <QMessageBox>
 #include <cmath>
 #include <utility>
-#include <vector>
+#include <map>
 
 #include "ColorBars.h"
 #include "HDRVideoFrame.h"
@@ -38,17 +38,17 @@
 #include "ui_SignalGenHDR.h"
 
 // Define conventional display primaries and reference white for colorspace
-static const ChromaticityCoordinates kDefaultRec709Colorimetrics		= { 0.640, 0.330, 0.300, 0.600, 0.150, 0.060, 0.3127, 0.3290 };
+static const ChromaticityCoordinates kDefaultRec2020Colorimetrics		= { 0.708, 0.292, 0.170, 0.797, 0.131, 0.046, 0.3127, 0.3290 };
 static const double kDefaultMaxDisplayMasteringLuminance	= 1000.0;
 static const double kDefaultMinDisplayMasteringLuminance	= 0.0001;
 static const double kDefaultMaxCLL							= 1000.0;
 static const double kDefaultMaxFALL							= 50.0;
 
-// Supported pixel formats
-static const std::vector<std::pair<BMDPixelFormat, QString>> kPixelFormats = {
-	std::make_pair(bmdFormat10BitYUV,	QString("10-bit YUV (Video-range)")),
-	std::make_pair(bmdFormat10BitRGB,	QString("10-bit RGB (Video-range)")),
-	std::make_pair(bmdFormat12BitRGBLE, QString("12-bit RGB (Full-range)")),
+// Supported pixel formats map to string representation and boolean if RGB format
+static const std::map<BMDPixelFormat, std::pair<QString, bool>> kPixelFormats = {
+	std::make_pair(bmdFormat10BitYUV,	std::make_pair(QString("10-bit YUV (Video-range)"), false)),
+	std::make_pair(bmdFormat10BitRGB,	std::make_pair(QString("10-bit RGB (Video-range)"), true)),
+	std::make_pair(bmdFormat12BitRGBLE, std::make_pair(QString("12-bit RGB (Full-range)"), true)),
 };
 
 // Supported EOTFs
@@ -121,7 +121,7 @@ SignalGenHDR::SignalGenHDR(QWidget *parent) :
 	connect(ui->maxFALLSlider, SIGNAL(valueChanged(int)), this, SLOT(MaxFALLSliderChanged(int)));
 
 	m_selectedHDRParameters = { static_cast<int64_t>(EOTF::PQ),
-								kDefaultRec709Colorimetrics,
+								kDefaultRec2020Colorimetrics,
 								kDefaultMaxDisplayMasteringLuminance,
 								kDefaultMinDisplayMasteringLuminance,
 								kDefaultMaxCLL,
@@ -157,7 +157,7 @@ void SignalGenHDR::setup()
 {
 	// Create and initialise DeckLink device discovery
 	m_deckLinkDiscovery = new DeckLinkDeviceDiscovery(this);
-	if (m_deckLinkDiscovery.get() != nullptr)
+	if (m_deckLinkDiscovery)
 	{
 		if (!m_deckLinkDiscovery->enable())
 		{
@@ -183,7 +183,7 @@ void SignalGenHDR::customEvent(QEvent *event)
 void SignalGenHDR::closeEvent(QCloseEvent *)
 {
 	// Stop output signal
-	if (m_selectedDeckLinkOutput.get() && m_running)
+	if (m_selectedDeckLinkOutput && m_running)
 		StopRunning();
 
 	// Disable DeckLink device discovery
@@ -195,7 +195,7 @@ void SignalGenHDR::closeEvent(QCloseEvent *)
 
 void SignalGenHDR::ToggleStart()
 {
-	if (m_selectedDeckLinkOutput.get() == nullptr)
+	if (!m_selectedDeckLinkOutput)
 		return;
 
 	if (!m_running)
@@ -206,6 +206,24 @@ void SignalGenHDR::ToggleStart()
 
 void SignalGenHDR::StartRunning()
 {
+	bool		output444;
+	HRESULT		result;
+
+	// Set the output to 444 if RGB mode is selected
+	try
+	{
+		std::tie(std::ignore, output444) = kPixelFormats.at(m_selectedPixelFormat);
+	}
+	catch (std::out_of_range)
+	{
+		goto bail;
+	}
+	
+	result = m_selectedDeckLinkConfiguration->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
+	// If a device without SDI output is used (eg Intensity Pro 4K), then SetFlags will return E_NOTIMPL
+	if ((result != S_OK) && (result != E_NOTIMPL))
+		goto bail;
+
 	// Set the video output mode
 	if (m_selectedDeckLinkOutput->EnableVideoOutput(m_selectedDisplayMode->GetDisplayMode(), bmdVideoOutputFlagDefault) != S_OK)
 		goto bail;
@@ -314,12 +332,15 @@ void SignalGenHDR::RefreshPixelFormatMenu(void)
 	{
 		HRESULT		hr;
 		bool		displayModeSupport = false;
+		QString		pixelFormatString;
+		
+		std::tie(pixelFormatString, std::ignore) = pixelFormat.second;
 
-		hr = m_selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport);
+		hr = m_selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport);
 		if (hr != S_OK || !displayModeSupport)
 			continue;
 
-		ui->pixelFormatComboBox->addItem(pixelFormat.second, QVariant::fromValue(pixelFormat.first));
+		ui->pixelFormatComboBox->addItem(pixelFormatString, QVariant::fromValue(pixelFormat.first));
 	}
 
 	ui->pixelFormatComboBox->setCurrentIndex(0);
@@ -348,7 +369,7 @@ void SignalGenHDR::AddDevice(com_ptr<IDeckLink> deckLink)
 	bool								attributeFlag = false;
 	com_ptr<IDeckLinkProfileAttributes>	deckLinkAttributes(IID_IDeckLinkProfileAttributes, deckLink);
 
-	if (deckLinkAttributes.get() == nullptr)
+	if (!deckLinkAttributes)
 		return;
 
 	// Check that device has playback interface
@@ -436,7 +457,13 @@ void SignalGenHDR::OutputDeviceChanged(int selectedDeviceIndex)
 	// Get output interface
 	m_selectedDeckLinkOutput = com_ptr<IDeckLinkOutput>(IID_IDeckLinkOutput, selectedDeckLink);
 
-	if (m_selectedDeckLinkOutput.get() == nullptr)
+	if (!m_selectedDeckLinkOutput)
+		return;
+
+	// Get configuration interface
+	m_selectedDeckLinkConfiguration = com_ptr<IDeckLinkConfiguration>(IID_IDeckLinkConfiguration, selectedDeckLink);
+
+	if (!m_selectedDeckLinkConfiguration)
 		return;
 
 	// Update the  display mode popup menu

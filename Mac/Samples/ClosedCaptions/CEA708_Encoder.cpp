@@ -373,8 +373,9 @@ Encoder& Encoder::operator<<(const char* captionText)
 	size_t len = strlen(captionText);
 	for (size_t i = 0; i < len; ++i)
 	{
-		// In production this must map from the active locale to the CEA-708 code space (7.1 Code Space Organization)
-		// This sample performs no conversion and is thus limited to the ASCII subset which overlaps UTF-8, ASCII and CEA-708 G0 (7.1.6 G0 Code Set - ASCII Printable Characters)
+		// captionText can only consist of characters in CEA-708's code space (7.1 Code Space Organization), which incorporates
+		// at least ASCII. For other locales an extended encoding scheme may be requried. How to achieve this is beyond the
+		// scope of this sample.
 		const uint8_t ch = captionText[i];
 		m_serviceBlockEncoder.push(&ch, 1);
 	}

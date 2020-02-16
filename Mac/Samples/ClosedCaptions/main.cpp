@@ -29,6 +29,9 @@
 #include <cstdio>
 #include <libkern/OSAtomic.h>
 
+// The DeckLinkAPI enables the insertion of arbitrary data into the vertical blanking of the SDI. This sample implements
+// basic encoding of caption data using the CEA 708 spec, before passing that data to the DeckLinkAPI. Other caption
+// encodings used by receiving equipment, or more advanced usage of CEA-708, are out of the scope of this sample.
 #include "CEA708_Encoder.h"
 
 // Video mode parameters

@@ -31,8 +31,13 @@
 
 #include "DeckLinkOutputDevice.h"
 
-DeckLinkOutputDevice::DeckLinkOutputDevice(SignalGenerator* owner, IDeckLink* deckLink) 
-	: m_refCount(1), m_uiDelegate(owner), m_deckLink(deckLink), m_deckLinkProfileManager(NULL)
+DeckLinkOutputDevice::DeckLinkOutputDevice(SignalGenerator* owner, IDeckLink* deckLink) : 
+	m_refCount(1), 
+	m_uiDelegate(owner), 
+	m_deckLink(deckLink), 
+	m_deckLinkOutput(NULL),
+	m_deckLinkConfiguration(NULL),
+	m_deckLinkProfileManager(NULL)
 {
 	m_deckLink->AddRef();
 }
@@ -43,6 +48,12 @@ DeckLinkOutputDevice::~DeckLinkOutputDevice()
 	{
 		m_deckLinkProfileManager->Release();
 		m_deckLinkProfileManager = NULL;
+	}
+
+	if (m_deckLinkConfiguration)
+	{
+		m_deckLinkConfiguration->Release();
+		m_deckLinkConfiguration = NULL;
 	}
 
 	if (m_deckLinkOutput)
@@ -67,6 +78,10 @@ bool DeckLinkOutputDevice::Init()
 
 	// Get output interface
 	if (m_deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deckLinkOutput) != S_OK)
+		return false;
+
+	// Get configuration interface
+	if (m_deckLink->QueryInterface(IID_IDeckLinkConfiguration, (void**)&m_deckLinkConfiguration) != S_OK)
 		return false;
 
 	// Get device name

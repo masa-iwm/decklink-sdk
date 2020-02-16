@@ -339,11 +339,11 @@ void DeckLinkPlaybackDevice::enableOutput(com_ptr<IDeckLinkScreenPreviewCallback
 
 	m_convertToDevicePixelFormat = false;
 	// Check if the device supports this video mode in the decoder pixel format, 8-bit BGRA
-	if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, kDecoderPixelFormat, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport) != S_OK)
+	if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, kDecoderPixelFormat, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport) != S_OK)
 		|| !displayModeSupport)
 	{
 		// If the decoder pixel format is not supported, check the device pixel format, 10-bit YUV
-		if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, kDevicePixelFormat, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport) != S_OK)
+		if ((m_deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, displayMode, kDevicePixelFormat, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport) != S_OK)
 			|| !displayModeSupport)
 		{
 			error = kVideoDisplayModeNotSupported;

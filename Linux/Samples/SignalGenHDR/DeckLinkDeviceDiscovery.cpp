@@ -40,7 +40,7 @@ DeckLinkDeviceDiscovery::DeckLinkDeviceDiscovery(SignalGenHDR* owner)
 
 DeckLinkDeviceDiscovery::~DeckLinkDeviceDiscovery()
 {
-	if (m_deckLinkDiscovery.get() != nullptr)
+	if (m_deckLinkDiscovery)
 	{
 		// Uninstall device arrival notifications and release discovery object
 		m_deckLinkDiscovery->UninstallDeviceNotifications();
@@ -52,7 +52,7 @@ bool DeckLinkDeviceDiscovery::enable()
 	HRESULT result = E_FAIL;
 
 	// Install device arrival notifications
-	if (m_deckLinkDiscovery.get() != nullptr)
+	if (m_deckLinkDiscovery)
 		result = m_deckLinkDiscovery->InstallDeviceNotifications(this);
 
 	return result == S_OK;
@@ -61,12 +61,13 @@ bool DeckLinkDeviceDiscovery::enable()
 void DeckLinkDeviceDiscovery::disable()
 {
 	// Uninstall device arrival notifications
-	if (m_deckLinkDiscovery.get() != nullptr)
+	if (m_deckLinkDiscovery)
 		m_deckLinkDiscovery->UninstallDeviceNotifications();
 }
 
 HRESULT DeckLinkDeviceDiscovery::DeckLinkDeviceArrived(/* in */ IDeckLink* deckLink)
 {
+	deckLink->AddRef();
 	// Update UI (add new device to menu) from main thread
 	QCoreApplication::postEvent(m_uiDelegate, new DeckLinkDeviceDiscoveryEvent(kAddDeviceEvent, deckLink));
 	return S_OK;
@@ -76,6 +77,7 @@ HRESULT DeckLinkDeviceDiscovery::DeckLinkDeviceRemoved(/* in */ IDeckLink* deckL
 {
 	// Update UI (remove new device to menu) from main thread
 	QCoreApplication::postEvent(m_uiDelegate, new DeckLinkDeviceDiscoveryEvent(kRemoveDeviceEvent, deckLink));
+	deckLink->Release();
 	return S_OK;
 }
 

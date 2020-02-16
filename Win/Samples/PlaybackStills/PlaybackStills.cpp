@@ -421,11 +421,11 @@ int main(int argc, char* argv[])
 				goto bail;
 
 			// Check display mode is supported with given options
-			result = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, ImageLoader::kImageLoaderPixelFormat, bmdSupportedVideoModeDefault, NULL, &displayModeSupported);
+			result = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, ImageLoader::kImageLoaderPixelFormat, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, NULL, &displayModeSupported);
 			if ((result != S_OK) || (!displayModeSupported))
 			{
 				// Video mode is unsupported, check whether we can support with format conversion
-				result = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, kConvertedPixelFormat, bmdSupportedVideoModeDefault, nullptr, &displayModeSupported);
+				result = selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, kConvertedPixelFormat, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &displayModeSupported);
 				if ((result != S_OK) || (!displayModeSupported))
 				{
 					fprintf(stderr, "The display mode %s is not supported by device\n", selectedDisplayModeName.c_str());

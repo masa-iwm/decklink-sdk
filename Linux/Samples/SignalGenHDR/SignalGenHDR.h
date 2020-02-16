@@ -89,6 +89,7 @@ private:
 	com_ptr<DeckLinkOpenGLWidget>		m_previewView;
 	com_ptr<IDeckLinkDisplayMode>		m_selectedDisplayMode;
 	com_ptr<IDeckLinkOutput>			m_selectedDeckLinkOutput;
+	com_ptr<IDeckLinkConfiguration>		m_selectedDeckLinkConfiguration;
 	com_ptr<HDRVideoFrame>				m_videoFrameBars;
 	BMDPixelFormat						m_selectedPixelFormat;
 	HDRMetadata							m_selectedHDRParameters;

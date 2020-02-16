@@ -58,6 +58,8 @@ static const NSDictionary* kPixelFormats = @{
 	[NSNumber numberWithInteger:bmdFormat10BitRGB]	: @"10-bit RGB"
 };
 
+constexpr bool PixelFormatIsRGB(BMDPixelFormat pf) { return (pf == bmdFormat8BitARGB) || (pf == bmdFormat10BitRGB); }
+
 @implementation SyncController
 
 @synthesize window;
@@ -72,7 +74,7 @@ static const NSDictionary* kPixelFormats = @{
 	{
 		NSAlert* alert = [[NSAlert alloc] init];
 		alert.messageText = @"Error initialising the new device";
-		alert.informativeText = @"This application is unable to initialise the new device";
+		alert.informativeText = @"This application is unable to initialise the new device\nAre you using a capture-only device (eg UltraStudio Mini Recorder)?";
 		[alert runModal];
 		[alert release];
 		device->Release();
@@ -185,7 +187,7 @@ static const NSDictionary* kPixelFormats = @{
 		bool					supported;
 
 		// Check that display mode is supported with the active profile
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdSupportedVideoModeDefault, NULL, &supported);
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
 		if (hr != S_OK || ! supported)
 			continue;
 
@@ -210,7 +212,7 @@ static const NSDictionary* kPixelFormats = @{
 		}
 		
 		// Check Dual Stream 3D support with any pixel format
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdSupportedVideoModeDualStream3D, NULL, &supported);
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoOutputConversion, bmdSupportedVideoModeDualStream3D, NULL, &supported);
 		if (hr != S_OK || ! supported)
 		{
 			CFRelease(modeName);
@@ -255,7 +257,7 @@ static const NSDictionary* kPixelFormats = @{
 		if ((selectedVideoOutputFlags & bmdVideoOutputDualStream3D) != 0)
 			videoModeFlags = bmdSupportedVideoModeDualStream3D;
 
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode->GetDisplayMode(), pixelFormat, videoModeFlags, NULL, &supported);
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode->GetDisplayMode(), pixelFormat, bmdNoVideoOutputConversion, videoModeFlags, NULL, &supported);
 		if (hr != S_OK || ! supported)
 			continue;
 
@@ -575,6 +577,9 @@ bail:
 - (void)startRunning
 {
 	IDeckLinkOutput*		deckLinkOutput;
+	IDeckLinkConfiguration*	deckLinkConfiguration;
+	bool					pixelFormatRGB;
+	HRESULT					result;
 
 	// Determine the audio and video properties for the output stream
 	outputSignal = (OutputSignal)[outputSignalPopup indexOfSelectedItem];
@@ -589,6 +594,14 @@ bail:
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	framesPerSecond = (frameTimescale + (frameDuration-1))  /  frameDuration;
 
+	// Set the SDI output to 444 if RGB mode is selected.
+	pixelFormatRGB = PixelFormatIsRGB([[pixelFormatPopup selectedItem] tag]);
+	deckLinkConfiguration = selectedDevice->getDeviceConfiguration();
+	result = deckLinkConfiguration->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, pixelFormatRGB);
+	// If a device without SDI output is used (eg Intensity Pro 4K), then SetFlags will return E_NOTIMPL
+	if ((result != S_OK) && (result != E_NOTIMPL))
+		goto bail;
+	
 	// Set the video output mode
 	deckLinkOutput = selectedDevice->getDeviceOutput();
 	if (deckLinkOutput->EnableVideoOutput(selectedDisplayMode->GetDisplayMode(), selectedVideoOutputFlags) != S_OK)
@@ -759,7 +772,9 @@ bail:
 	// Disable profile callback
 	if (selectedDevice != NULL)
 	{
-		selectedDevice->getDeckLinkProfileManager()->SetCallback(NULL);
+		IDeckLinkProfileManager* profileManager = selectedDevice->getDeckLinkProfileManager();
+		if (profileManager != NULL)
+			profileManager->SetCallback(NULL);
 	}
 	
 	// Release all DeckLinkDevice instances
@@ -817,6 +832,12 @@ PlaybackDelegate::~PlaybackDelegate()
 		m_deckLinkOutput = NULL;
 	}
 	
+	if (m_deckLinkConfiguration)
+	{
+		m_deckLinkConfiguration->Release();
+		m_deckLinkConfiguration = NULL;
+	}
+	
 	if (m_deckLink)
 	{
 		m_deckLink->Release();
@@ -831,6 +852,10 @@ bool PlaybackDelegate::init()
 {
 	// Get output interface
 	if (m_deckLink->QueryInterface(IID_IDeckLinkOutput, (void**) &m_deckLinkOutput) != S_OK)
+		return false;
+	
+	// Get configuration interface
+	if (m_deckLink->QueryInterface(IID_IDeckLinkConfiguration, (void**) &m_deckLinkConfiguration) != S_OK)
 		return false;
 
 	// Get device name
@@ -878,12 +903,12 @@ HRESULT	PlaybackDelegate::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG	PlaybackDelegate::AddRef(void)
 {
-	return OSAtomicIncrement32(&m_refCount);
+	return ++m_refCount;
 }
 
 ULONG	PlaybackDelegate::Release(void)
 {
-	ULONG newRefValue = OSAtomicDecrement32(&m_refCount);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
 		delete this;
 	return newRefValue;
@@ -968,19 +993,14 @@ HRESULT		ProfileCallback::QueryInterface (REFIID iid, LPVOID *ppv)
 
 ULONG		ProfileCallback::AddRef (void)
 {
-	return OSAtomicIncrement32(&m_refCount);
+	return ++m_refCount;
 }
 
 ULONG		ProfileCallback::Release (void)
 {
-	int32_t		newRefValue;
-	
-	newRefValue = OSAtomicDecrement32(&m_refCount);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 	
 	return newRefValue;
 }
@@ -1071,19 +1091,14 @@ HRESULT		DeckLinkDeviceDiscovery::QueryInterface (REFIID iid, LPVOID *ppv)
 
 ULONG		DeckLinkDeviceDiscovery::AddRef (void)
 {
-	return OSAtomicIncrement32(&m_refCount);
+	return ++m_refCount;
 }
 
 ULONG		DeckLinkDeviceDiscovery::Release (void)
 {
-	int32_t		newRefValue;
-
-	newRefValue = OSAtomicDecrement32(&m_refCount);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 
 	return newRefValue;
 }

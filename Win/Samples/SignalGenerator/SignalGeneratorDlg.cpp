@@ -28,7 +28,7 @@
 //
 
 #include "stdafx.h"
-#include <vector>
+#include <map>
 #include <utility>
 #include "SignalGenerator.h"
 #include "SignalGeneratorDlg.h"
@@ -62,12 +62,12 @@ static DWORD gHD75pcColourBars[8] =
 // Supported number audio channels
 static const int gAudioChannels[] = { 2, 8, 16 };
 
-// Supported pixel formats
-static const std::vector<std::pair<BMDPixelFormat, CString>> kPixelFormats = {
-	std::make_pair(bmdFormat8BitYUV, _T("8-bit YUV")),
-	std::make_pair(bmdFormat10BitYUV, _T("10-bit YUV")),
-	std::make_pair(bmdFormat8BitARGB, _T("8-bit RGB")),
-	std::make_pair(bmdFormat10BitRGB, _T("10-bit RGB")),
+// Supported pixel formats map to string represenatation and boolean if RGB format
+static const std::map<BMDPixelFormat, std::pair<CString, BOOL>> kPixelFormats = {
+	std::make_pair(bmdFormat8BitYUV,	std::make_pair(_T("8-bit YUV"), FALSE)),
+	std::make_pair(bmdFormat10BitYUV,	std::make_pair(_T("10-bit YUV"), FALSE)),
+	std::make_pair(bmdFormat8BitARGB,	std::make_pair(_T("8-bit RGB"), TRUE)),
+	std::make_pair(bmdFormat10BitRGB,	std::make_pair(_T("10-bit RGB"), TRUE)),
 };
 
 CSignalGeneratorDlg::CSignalGeneratorDlg(CWnd* pParent /*=NULL*/)
@@ -124,7 +124,7 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 	// Populate the display mode combo with a list of display modes supported by the installed DeckLink card
 	IDeckLinkDisplayModeIterator*	displayModeIterator;
 	IDeckLinkDisplayMode*			deckLinkDisplayMode;
-	IDeckLinkOutput*                deckLinkOutput;
+	IDeckLinkOutput*				deckLinkOutput;
 
 	for (int i = 1; i < m_videoFormatCombo.GetCount(); i++)
 	{
@@ -147,9 +147,12 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 		BMDSupportedVideoModeFlags	flags = bmdSupportedVideoModeDualStream3D;
 
 		// Check that display mode is supported with the active profile
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdSupportedVideoModeDefault, NULL, &supported);
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
 		if (hr != S_OK || !supported)
+		{
+			deckLinkDisplayMode->Release();
 			continue;
+		}
 
 		if (deckLinkDisplayMode->GetName(&modeName) != S_OK)
 		{
@@ -169,7 +172,7 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 		}
 
 		// Check Dual Stream 3D support with any pixel format
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, flags, NULL, &supported);
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoOutputConversion, flags, NULL, &supported);
 		if (hr != S_OK || ! supported)
 		{
 			SysFreeString(modeName);
@@ -205,13 +208,16 @@ void CSignalGeneratorDlg::RefreshPixelFormatMenu(void)
 		HRESULT					hr;
 		int						newIndex;
 		BOOL					supported;
+		CString					pixelFormatString;
 		BMDSupportedVideoModeFlags	flags = (m_selectedVideoOutputFlags == bmdVideoOutputDualStream3D) ? bmdSupportedVideoModeDualStream3D : bmdSupportedVideoModeDefault;
 
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, flags, NULL, &supported);
+		std::tie(pixelFormatString, std::ignore) = pixelFormat.second;
+
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdNoVideoOutputConversion, flags, NULL, &supported);
 		if (hr != S_OK || ! supported)
 			continue;
 
-		newIndex = m_pixelFormatCombo.AddString(pixelFormat.second);
+		newIndex = m_pixelFormatCombo.AddString(pixelFormatString);
 		m_pixelFormatCombo.SetItemData(newIndex, pixelFormat.first);
 	}
 
@@ -591,7 +597,9 @@ bail:
 
 void	CSignalGeneratorDlg::StartRunning ()
 {
-	IDeckLinkOutput*        deckLinkOutput;
+	IDeckLinkOutput*	deckLinkOutput;
+	BOOL				output444;
+	HRESULT				result;
 
 	// Determine the audio and video properties for the output stream
 	m_outputSignal = (OutputSignal)m_outputSignalCombo.GetCurSel();
@@ -606,6 +614,21 @@ void	CSignalGeneratorDlg::StartRunning ()
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	m_framesPerSecond = (unsigned long)((m_frameTimescale + (m_frameDuration-1))  /  m_frameDuration);
 	
+	// Set the output to 444 if RGB mode is selected
+	try
+	{
+		std::tie(std::ignore, output444) = kPixelFormats.at((BMDPixelFormat)m_pixelFormatCombo.GetItemData(m_pixelFormatCombo.GetCurSel()));
+	}
+	catch (std::out_of_range)
+	{
+		goto bail;
+	}
+
+	result = m_selectedDevice->GetDeviceConfiguration()->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
+	// If a device without SDI output is used, then SetFlags will return E_NOTIMPL
+	if ((result != S_OK) && (result != E_NOTIMPL))
+		goto bail;
+
 	// Set the video output mode
 	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
 	if (deckLinkOutput->EnableVideoOutput(m_selectedDisplayMode->GetDisplayMode(), m_selectedVideoOutputFlags) != S_OK)

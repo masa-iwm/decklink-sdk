@@ -38,17 +38,17 @@
 
 
 // Define conventional display primaries and reference white for colorspace
-static const ChromaticityCoordinates kDefaultRec709Colorimetrics		= { 0.640, 0.330, 0.300, 0.600, 0.150, 0.060, 0.3127, 0.3290 };
+static const ChromaticityCoordinates kDefaultRec2020Colorimetrics		= { 0.708, 0.292, 0.170, 0.797, 0.131, 0.046, 0.3127, 0.3290 };
 static const double kDefaultMaxDisplayMasteringLuminance	= 1000.0;
 static const double kDefaultMinDisplayMasteringLuminance	= 0.0001;
 static const double kDefaultMaxCLL							= 1000.0;
 static const double kDefaultMaxFALL							= 50.0;
 
-// Supported pixel formats
-static const std::vector<std::pair<BMDPixelFormat, CString>> kPixelFormats = {
-	std::make_pair(bmdFormat10BitYUV,	_T("10-bit YUV (Video-range)")),
-	std::make_pair(bmdFormat10BitRGB,	_T("10-bit RGB (Video-range)")),
-	std::make_pair(bmdFormat12BitRGBLE, _T("12-bit RGB (Full-range)")),
+// Supported pixel formats map to string representation and boolean if RGB format
+static const std::map<BMDPixelFormat, std::pair<CString, BOOL>> kPixelFormats = {
+	std::make_pair(bmdFormat10BitYUV,	std::make_pair(_T("10-bit YUV (Video-range)"), FALSE)),
+	std::make_pair(bmdFormat10BitRGB,	std::make_pair(_T("10-bit RGB (Video-range)"), TRUE)),
+	std::make_pair(bmdFormat12BitRGBLE, std::make_pair(_T("12-bit RGB (Full-range)"), TRUE)),
 };
 
 // Supported EOTFs
@@ -175,12 +175,15 @@ void CSignalGenHDRDlg::RefreshPixelFormatMenu(void)
 		HRESULT		hr;
 		int			newIndex;
 		BOOL		displayModeSupport = FALSE;
+		CString		pixelFormatString;
 
-		hr = m_selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport);
+		std::tie(pixelFormatString, std::ignore) = pixelFormat.second;
+
+		hr = m_selectedDeckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &displayModeSupport);
 		if (hr != S_OK || !displayModeSupport)
 			continue;
 
-		newIndex = m_pixelFormatCombo.AddString(pixelFormat.second);
+		newIndex = m_pixelFormatCombo.AddString(pixelFormatString);
 		m_pixelFormatCombo.SetItemData(newIndex, pixelFormat.first);
 	}
 
@@ -224,7 +227,7 @@ BOOL CSignalGenHDRDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	m_selectedHDRParameters.EOTF = static_cast<int64_t>(EOTF::PQ);
-	m_selectedHDRParameters.referencePrimaries = kDefaultRec709Colorimetrics;
+	m_selectedHDRParameters.referencePrimaries = kDefaultRec2020Colorimetrics;
 	m_selectedHDRParameters.maxDisplayMasteringLuminance = kDefaultMaxDisplayMasteringLuminance;
 	m_selectedHDRParameters.minDisplayMasteringLuminance = kDefaultMinDisplayMasteringLuminance;
 	m_selectedHDRParameters.maxCLL = kDefaultMaxCLL;
@@ -311,6 +314,11 @@ void CSignalGenHDRDlg::OnNewDeviceSelected()
 	// Get output interface
 	m_selectedDeckLinkOutput = selectedDeckLink;
 	if (!m_selectedDeckLinkOutput)
+		return;
+
+	// Get configuration interface
+	m_selectedDeckLinkConfiguration = selectedDeckLink;
+	if (!m_selectedDeckLinkConfiguration)
 		return;
 
 	// Update the video mode popup menu
@@ -552,6 +560,24 @@ HRESULT CSignalGenHDRDlg::CreateColorbarsFrame()
 
 void CSignalGenHDRDlg::StartRunning()
 {
+	BOOL		output444;
+	HRESULT		result;
+
+	// Set the output to 444 if RGB mode is selected
+	try
+	{
+		std::tie(std::ignore, output444) = kPixelFormats.at(m_selectedPixelFormat);
+	}
+	catch (std::out_of_range)
+	{
+		goto bail;
+	}
+
+	result = m_selectedDeckLinkConfiguration->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
+	// If a device without SDI output is used, then SetFlags will return E_NOTIMPL
+	if ((result != S_OK) && (result != E_NOTIMPL))
+		goto bail;
+
 	// Set the video output mode
 	if (m_selectedDeckLinkOutput->EnableVideoOutput(m_selectedDisplayMode->GetDisplayMode(), bmdVideoOutputFlagDefault) != S_OK)
 		goto bail;

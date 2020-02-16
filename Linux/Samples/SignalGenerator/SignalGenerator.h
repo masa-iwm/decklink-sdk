@@ -148,6 +148,7 @@ public:
 	DeckLinkOutputDevice* 		selectedDevice;
 	DeckLinkDeviceDiscovery*	deckLinkDiscovery;
 	BMDDisplayMode				selectedDisplayMode;
+	BMDPixelFormat				selectedPixelFormat;
 	ProfileCallback*			profileCallback;
 	
 	uint32_t					frameWidth;

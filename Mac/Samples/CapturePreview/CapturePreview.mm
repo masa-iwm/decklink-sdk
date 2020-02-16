@@ -371,7 +371,7 @@ static const NSDictionary* kInputConnections = @{
 		bool					supported;
 		HRESULT					hr;
 		
-		hr = deckLinkInput->DoesSupportVideoMode(selectedInputConnection, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdSupportedVideoModeDefault, &supported);
+		hr = deckLinkInput->DoesSupportVideoMode(selectedInputConnection, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
 		if (hr != S_OK || !supported)
 			continue;
 		

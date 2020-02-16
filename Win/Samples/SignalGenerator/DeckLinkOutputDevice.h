@@ -41,15 +41,16 @@ private:
 	int32_t						m_refCount;
 	CSignalGeneratorDlg*		m_uiDelegate;
 	IDeckLinkOutput*			m_deckLinkOutput;
+	IDeckLinkConfiguration*		m_deckLinkConfiguration;
 	IDeckLink*					m_deckLink;
 	IDeckLinkProfileManager*	m_deckLinkProfileManager;
-	CString                     m_deviceName;
+	CString						m_deviceName;
 
 public:
 	DeckLinkOutputDevice(CSignalGeneratorDlg* owner, IDeckLink* deckLink);
 	virtual ~DeckLinkOutputDevice();
 
-	bool                Init();
+	bool				Init();
 
 	// IUnknown
 	virtual HRESULT		STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
@@ -63,9 +64,10 @@ public:
 	// IDeckLinkAudioOutputCallback
 	virtual HRESULT		STDMETHODCALLTYPE RenderAudioSamples(BOOL preroll);
 
-	const CString&      GetDeviceName() { return m_deviceName; };
-	IDeckLinkOutput*    GetDeviceOutput() { return m_deckLinkOutput; };
-	IDeckLink*			GetDeckLinkInstance() { return m_deckLink; };
-	IDeckLinkProfileManager*	GetDeviceProfileManager() { return m_deckLinkProfileManager; };
+	const CString&				GetDeviceName() const { return m_deviceName; }
+	IDeckLinkOutput*			GetDeviceOutput() const { return m_deckLinkOutput; }
+	IDeckLinkConfiguration*		GetDeviceConfiguration() const { return m_deckLinkConfiguration; }
+	IDeckLink*					GetDeckLinkInstance() const { return m_deckLink; }
+	IDeckLinkProfileManager*	GetDeviceProfileManager() const { return m_deckLinkProfileManager; }
 };
 

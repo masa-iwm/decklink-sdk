@@ -32,6 +32,7 @@
 #ifndef SignalGenerator_SignalGenerator3DVideoFrame_h
 #define SignalGenerator_SignalGenerator3DVideoFrame_h
 
+#include <atomic>
 #include "DeckLinkAPI.h"
 
 /*
@@ -81,7 +82,7 @@ public:
 protected:
 	IDeckLinkMutableVideoFrame* m_frameLeft;
 	IDeckLinkMutableVideoFrame* m_frameRight;
-	int32_t						m_refCount;
+	std::atomic<ULONG>			m_refCount;
 };
 
 #endif

@@ -49,7 +49,7 @@ bool DeckLinkDeviceDiscovery::enable()
 	HRESULT		result = E_FAIL;
 	
 	// Install device arrival notifications
-	if (m_deckLinkDiscovery.get() != nullptr)
+	if (m_deckLinkDiscovery)
 		result = m_deckLinkDiscovery->InstallDeviceNotifications(this);
 	
 	return result == S_OK;
@@ -58,7 +58,7 @@ bool DeckLinkDeviceDiscovery::enable()
 void DeckLinkDeviceDiscovery::disable()
 {
 	// Uninstall device arrival notifications
-	if (m_deckLinkDiscovery.get() != nullptr)
+	if (m_deckLinkDiscovery)
 		m_deckLinkDiscovery->UninstallDeviceNotifications();
 }
 

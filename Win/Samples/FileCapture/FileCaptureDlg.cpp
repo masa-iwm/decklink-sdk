@@ -364,7 +364,7 @@ void CFileCaptureDlg::RefreshVideoModeList()
 		BOOL	supported;
 
 		// Check that display mode is supported with the active profile
-		hr = m_selectedDevice->GetDeckLinkInput()->DoesSupportVideoMode(m_selectedInputConnection, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdSupportedVideoModeDefault, &supported);
+		hr = m_selectedDevice->GetDeckLinkInput()->DoesSupportVideoMode(m_selectedInputConnection, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
 		if (hr != S_OK || !supported)
 		{
 			deckLinkDisplayMode.Release();

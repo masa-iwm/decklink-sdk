@@ -84,6 +84,7 @@ typedef std::map<BMDDisplayMode, com_ptr<IDeckLinkDisplayMode>> DisplayModeMap;
 
 	com_ptr<DeckLinkDeviceDiscovery>	deckLinkDiscovery;
 	com_ptr<IDeckLinkOutput>			selectedDeckLinkOutput;
+	com_ptr<IDeckLinkConfiguration>		selectedDeckLinkConfiguration;
 	com_ptr<IDeckLinkDisplayMode>		selectedDisplayMode;
 	com_ptr<HDRVideoFrame>				videoFrameBars;
 	

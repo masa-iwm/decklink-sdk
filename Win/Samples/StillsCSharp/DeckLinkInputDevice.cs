@@ -112,7 +112,7 @@ namespace StillsCSharp
 
             try
             {
-                m_deckLinkInput.DoesSupportVideoMode((_BMDVideoConnection)0, displayMode.GetDisplayMode(), pixelFormat, _BMDSupportedVideoModeFlags.bmdSupportedVideoModeDefault, out supported);
+                m_deckLinkInput.DoesSupportVideoMode((_BMDVideoConnection)0, displayMode.GetDisplayMode(), pixelFormat, _BMDVideoInputConversionMode.bmdNoVideoInputConversion, _BMDSupportedVideoModeFlags.bmdSupportedVideoModeDefault, null, out supported);
             }
             catch (Exception)
             {

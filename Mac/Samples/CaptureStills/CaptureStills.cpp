@@ -252,7 +252,9 @@ void DisplayUsage(DeckLinkInputDevice* selectedDeckLinkInput, const std::vector<
 			result = selectedDeckLinkInput->GetDeckLinkInput()->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
 																					 displayModes[selectedDisplayModeIndex]->GetDisplayMode(),
 																					 std::get<kPixelFormatValue>(kSupportedPixelFormats[i]),
+																					 bmdNoVideoInputConversion,
 																					 bmdSupportedVideoModeDefault,
+																					 NULL,
 																					 &displayModeSupported);
 
 			if ((result == S_OK) && (displayModeSupported))
@@ -469,7 +471,9 @@ int main(int argc, char* argv[])
 			result = selectedDeckLinkInput->GetDeckLinkInput()->DoesSupportVideoMode(bmdVideoConnectionUnspecified,
 																					 selectedDisplayMode,
 																					 std::get<kPixelFormatValue>(kSupportedPixelFormats[pixelFormatIndex]),
+																					 bmdNoVideoInputConversion,
 																					 bmdSupportedVideoModeDefault,
+																					 NULL,
 																					 &displayModeSupported);
 			if ((result != S_OK) || (!displayModeSupported))
 			{

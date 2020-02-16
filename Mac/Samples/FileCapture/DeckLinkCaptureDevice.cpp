@@ -512,7 +512,7 @@ void DeckLinkCaptureDevice::enableVideoInput(BMDDisplayMode displayMode, BMDPixe
 
 	bool displayModeSupported = true;
 	
-	if ((m_deckLinkInput->DoesSupportVideoMode((BMDVideoConnection)m_activeVideoInputConnection, displayMode, pixelFormat, bmdSupportedVideoModeDefault, &displayModeSupported) != S_OK)
+	if ((m_deckLinkInput->DoesSupportVideoMode((BMDVideoConnection)m_activeVideoInputConnection, displayMode, pixelFormat, bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, NULL, &displayModeSupported) != S_OK)
 		|| !displayModeSupported)
 		return;
 

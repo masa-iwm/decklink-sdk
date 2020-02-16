@@ -261,7 +261,7 @@ void CapturePreview::RefreshDisplayModeMenu(void)
 		bool					supported = false;
 		BMDDisplayMode			mode = displayMode->GetDisplayMode();
 		
-		if ((deckLinkInput->DoesSupportVideoMode(m_selectedInputConnection, mode, bmdFormatUnspecified, bmdSupportedVideoModeDefault, &supported) == S_OK)
+		if ((deckLinkInput->DoesSupportVideoMode(m_selectedInputConnection, mode, bmdFormatUnspecified, bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, NULL, &supported) == S_OK)
 			&& supported)
 		{
 			if (displayMode->GetName(const_cast<const char**>(&modeName)) == S_OK)

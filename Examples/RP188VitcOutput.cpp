@@ -349,7 +349,7 @@ int main(int argc, const char * argv[])
 	}
 
 	// Check the selected display mode/pixelformat can be output 
-	result = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, kDisplayMode, kPixelFormat, bmdSupportedVideoModeDefault, NULL, &supported);
+	result = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, kDisplayMode, kPixelFormat, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
 	if (result != S_OK)
 	{
 		fprintf(stderr, "Could not determine whether video mode is supported - result = %08x\n", result);
