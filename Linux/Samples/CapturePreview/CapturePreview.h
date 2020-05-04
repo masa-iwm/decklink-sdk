@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -39,19 +39,6 @@
 
 #include "ui_CapturePreview.h"
 
-// Define custom event type
-static const QEvent::Type kAddDeviceEvent			= static_cast<QEvent::Type>(QEvent::User + 1);
-static const QEvent::Type kRemoveDeviceEvent		= static_cast<QEvent::Type>(QEvent::User + 2);
-static const QEvent::Type kVideoFormatChangedEvent	= static_cast<QEvent::Type>(QEvent::User + 3);
-static const QEvent::Type kVideoFrameArrivedEvent	= static_cast<QEvent::Type>(QEvent::User + 4);
-static const QEvent::Type kProfileActivatedEvent	= static_cast<QEvent::Type>(QEvent::User + 5);
-
-
-// Forward declarations
-class DeckLinkDeviceDiscovery;
-class DeckLinkInputDevice;
-class ProfileCallback;
-
 class CapturePreview : public QDialog
 {
 	Q_OBJECT
@@ -64,32 +51,34 @@ public:
 	void closeEvent(QCloseEvent *event);
 
 	void setup();
-	void EnableInterface(bool);
+	void enableInterface(bool);
 
-	void StartCapture();
-	void StopCapture();
+	void startCapture();
+	void stopCapture();
 	
-	void RefreshDisplayModeMenu(void);
-	void RefreshInputConnectionMenu(void);
-	void AddDevice(IDeckLink* deckLink);
-	void RemoveDevice(IDeckLink* deckLink);
-	void VideoFormatChanged(BMDDisplayMode newDisplayMode);
-	void HaltStreams(void);
-	void UpdateProfile(IDeckLinkProfile* newProfile);
+	void refreshDisplayModeMenu(void);
+	void refreshInputConnectionMenu(void);
+	void addDevice(com_ptr<IDeckLink>& deckLink);
+	void removeDevice(com_ptr<IDeckLink>& deckLink);
+	void videoFormatChanged(BMDDisplayMode newDisplayMode);
+	void haltStreams(void);
+	void updateProfile(com_ptr<IDeckLinkProfile>& newProfile);
 
 private:
 	Ui::CapturePreviewDialog*		ui;
 	QGridLayout*					layout;
 
-	DeckLinkInputDevice*			m_selectedDevice;
-	DeckLinkDeviceDiscovery*		m_deckLinkDiscovery;
-	DeckLinkOpenGLWidget*			m_previewView;
-	ProfileCallback*				m_profileCallback;
-	AncillaryDataTable*				m_ancillaryDataTable;
-	BMDVideoConnection				m_selectedInputConnection;
+	com_ptr<DeckLinkInputDevice>		m_selectedDevice;
+	com_ptr<DeckLinkDeviceDiscovery>	m_deckLinkDiscovery;
+	DeckLinkOpenGLWidget*				m_previewView;
+	com_ptr<ProfileCallback>			m_profileCallback;
+	AncillaryDataTable*					m_ancillaryDataTable;
+	BMDVideoConnection					m_selectedInputConnection;
+
+	std::map<intptr_t, com_ptr<DeckLinkInputDevice>>		m_inputDevices;
 
 public slots:
-	void InputDeviceChanged(int selectedDeviceIndex);
-	void InputConnectionChanged(int selectedConnectionIndex);
-	void ToggleStart();
+	void inputDeviceChanged(int selectedDeviceIndex);
+	void inputConnectionChanged(int selectedConnectionIndex);
+	void toggleStart();
 };

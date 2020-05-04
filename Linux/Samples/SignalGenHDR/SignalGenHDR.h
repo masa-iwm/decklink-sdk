@@ -82,11 +82,11 @@ public:
 private:
 	Ui::SignalGenHDR*					ui;
 	QGridLayout*						layout;
+	DeckLinkOpenGLWidget*				m_previewView;
 
 	bool								m_running;
 
 	com_ptr<DeckLinkDeviceDiscovery>	m_deckLinkDiscovery;
-	com_ptr<DeckLinkOpenGLWidget>		m_previewView;
 	com_ptr<IDeckLinkDisplayMode>		m_selectedDisplayMode;
 	com_ptr<IDeckLinkOutput>			m_selectedDeckLinkOutput;
 	com_ptr<IDeckLinkConfiguration>		m_selectedDeckLinkConfiguration;

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,47 +24,49 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-// ProfileCallback.h : header file
-// DeckLink Device Profile Callback
-//
 
 #pragma once
 
+#include <atomic>
+#include <functional>
+#include "com_ptr.h"
+#include "CapturePreviewEvents.h"
 #include "DeckLinkAPI.h"
-#include "CapturePreview.h"
-
-// Forward declarations
-class CapturePreview;
 
 class ProfileCallback : public IDeckLinkProfileCallback
 {
-private:
-	CapturePreview*		m_uiDelegate;
-	QAtomicInt			m_refCount;
+	using ProfileChangingCallback = std::function<void(void)>;
 
 public:
-	ProfileCallback(CapturePreview* owner);
-	virtual ~ProfileCallback() {}
+	ProfileCallback(QObject* owner);
+	virtual ~ProfileCallback() = default;
 
 	// IDeckLinkProfileCallback interface
-	virtual HRESULT		STDMETHODCALLTYPE ProfileChanging(IDeckLinkProfile *profileToBeActivated, bool streamsWillBeForcedToStop);
-	virtual HRESULT		STDMETHODCALLTYPE ProfileActivated(IDeckLinkProfile *activatedProfile);
+	HRESULT		ProfileChanging(IDeckLinkProfile *profileToBeActivated, bool streamsWillBeForcedToStop) override;
+	HRESULT		ProfileActivated(IDeckLinkProfile *activatedProfile) override;
 
 	// IUnknown interface
-	virtual HRESULT		STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG		STDMETHODCALLTYPE AddRef();
-	virtual ULONG		STDMETHODCALLTYPE Release();
+	HRESULT		QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG		AddRef() override;
+	ULONG		Release() override;
+
+	void		onProfileChanging(const ProfileChangingCallback& callback) { m_profileChangingCallback = callback; }
+
+private:
+	QObject*					m_owner;
+	std::atomic<ULONG>			m_refCount;
+	ProfileChangingCallback		m_profileChangingCallback;
 };
 
-class DeckLinkProfileCallbackEvent : public QEvent
+class ProfileActivatedEvent : public QEvent
 {
-private:
-	IDeckLinkProfile* m_profile;
-
 public:
-	DeckLinkProfileCallbackEvent(QEvent::Type type, IDeckLinkProfile* profile)
-		: QEvent(type), m_profile(profile) { m_profile->AddRef(); }
-	virtual ~DeckLinkProfileCallbackEvent() { m_profile->Release(); }
+	ProfileActivatedEvent(IDeckLinkProfile* deckLinkProfile) :
+		QEvent(kProfileActivatedEvent), m_deckLinkProfile(deckLinkProfile) {}
+	virtual ~ProfileActivatedEvent() = default;
 
-	IDeckLinkProfile* Profile() const { return m_profile; }
+	com_ptr<IDeckLinkProfile> deckLinkProfile() const { return m_deckLinkProfile; }
+
+private:
+	com_ptr<IDeckLinkProfile> m_deckLinkProfile;
 };

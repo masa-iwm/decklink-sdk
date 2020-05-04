@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,75 +24,39 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  DeckLinkDeviceDiscovery.cpp
-//  DeckLink Device Discovery Callback
-//
 
 #include <QCoreApplication>
+#include "CapturePreviewEvents.h"
 #include "DeckLinkDeviceDiscovery.h"
 
-DeckLinkDeviceDiscovery::DeckLinkDeviceDiscovery(CapturePreview* owner)
-	: m_uiDelegate(owner), m_refCount(1)
+DeckLinkDeviceDiscovery::DeckLinkDeviceDiscovery(QObject* owner) : 
+	m_owner(owner), 
+	m_refCount(1)
 {
 	m_deckLinkDiscovery = CreateDeckLinkDiscoveryInstance();
 }
 
-
 DeckLinkDeviceDiscovery::~DeckLinkDeviceDiscovery()
 {
-	if (m_deckLinkDiscovery != NULL)
+	if (m_deckLinkDiscovery)
 	{
-		// Uninstall device arrival notifications and release discovery object
+		// Uninstall device arrival notifications 
 		m_deckLinkDiscovery->UninstallDeviceNotifications();
-		m_deckLinkDiscovery->Release();
-		m_deckLinkDiscovery = NULL;
 	}
 }
 
-bool DeckLinkDeviceDiscovery::enable()
-{
-	HRESULT result = E_FAIL;
-
-	// Install device arrival notifications
-	if (m_deckLinkDiscovery != NULL)
-		result = m_deckLinkDiscovery->InstallDeviceNotifications(this);
-
-	return result == S_OK;
-}
-
-void DeckLinkDeviceDiscovery::disable()
-{
-	// Uninstall device arrival notifications
-	if (m_deckLinkDiscovery != NULL)
-		m_deckLinkDiscovery->UninstallDeviceNotifications();
-}
-
-HRESULT DeckLinkDeviceDiscovery::DeckLinkDeviceArrived(IDeckLink* deckLink)
-{
-	// Update UI (add new device to menu) from main thread
-	QCoreApplication::postEvent(m_uiDelegate, new DeckLinkDeviceDiscoveryEvent(kAddDeviceEvent, deckLink));
-	return S_OK;
-}
-
-HRESULT DeckLinkDeviceDiscovery::DeckLinkDeviceRemoved(IDeckLink* deckLink)
-{
-	// Update UI (remove new device to menu) from main thread
-	QCoreApplication::postEvent(m_uiDelegate, new DeckLinkDeviceDiscoveryEvent(kRemoveDeviceEvent, deckLink));
-	return S_OK;
-}
-
+/// IUnknown methods
 
 HRESULT DeckLinkDeviceDiscovery::QueryInterface(REFIID iid, LPVOID *ppv)
 {
 	CFUUIDBytes		iunknown;
 	HRESULT			result = E_NOINTERFACE;
 
-	if (ppv == NULL)
+	if (ppv == nullptr)
 		return E_INVALIDARG;
 
 	// Initialise the return result
-	*ppv = NULL;
+	*ppv = nullptr;
 
 	// Obtain the IUnknown interface and compare it the provided REFIID
 	iunknown = CFUUIDGetUUIDBytes(IUnknownUUID);
@@ -114,17 +78,50 @@ HRESULT DeckLinkDeviceDiscovery::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG DeckLinkDeviceDiscovery::AddRef(void)
 {
-	return (ULONG) m_refCount.fetchAndAddAcquire(1);
+	return ++m_refCount;
 }
 
 ULONG DeckLinkDeviceDiscovery::Release(void)
 {
-	ULONG newRefValue = (ULONG) m_refCount.fetchAndAddAcquire(-1);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 
 	return newRefValue;
+}
+
+/// IDeckLinkDeviceArrivalNotificationCallback methods
+
+HRESULT DeckLinkDeviceDiscovery::DeckLinkDeviceArrived(/* in */ IDeckLink* deckLink)
+{
+	// Notify owner that device has been added
+	QCoreApplication::postEvent(m_owner, new DeckLinkDeviceDiscoveryEvent(kAddDeviceEvent, deckLink ) );
+	return S_OK;
+}
+
+HRESULT DeckLinkDeviceDiscovery::DeckLinkDeviceRemoved(/* in */ IDeckLink* deckLink)
+{
+	// Notify owner that device has been removed
+	QCoreApplication::postEvent(m_owner, new DeckLinkDeviceDiscoveryEvent(kRemoveDeviceEvent, deckLink ) );
+	return S_OK;
+}
+
+// Other methods
+
+bool DeckLinkDeviceDiscovery::enable()
+{
+	HRESULT result = E_FAIL;
+
+	// Install device arrival notifications
+	if (m_deckLinkDiscovery)
+		result = m_deckLinkDiscovery->InstallDeviceNotifications(this);
+
+	return result == S_OK;
+}
+
+void DeckLinkDeviceDiscovery::disable()
+{
+	// Uninstall device arrival notifications
+	if (m_deckLinkDiscovery)
+		m_deckLinkDiscovery->UninstallDeviceNotifications();
 }

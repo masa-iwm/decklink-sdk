@@ -295,19 +295,15 @@ HRESULT	STDMETHODCALLTYPE DeckLinkInputDevice::QueryInterface(REFIID iid, LPVOID
 
 ULONG STDMETHODCALLTYPE DeckLinkInputDevice::AddRef(void)
 {
-	return m_refCount.fetch_add(1);
+	return ++m_refCount;
 }
 
 ULONG STDMETHODCALLTYPE DeckLinkInputDevice::Release(void)
 {
-	int		newRefValue;
 
-	newRefValue = m_refCount.fetch_sub(1);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 
 	return newRefValue;
 }

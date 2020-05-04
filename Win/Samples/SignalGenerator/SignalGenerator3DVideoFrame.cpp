@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2013 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,10 +24,6 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  SignalGenerator3DVideoFrame.cpp
-//  Signal Generator
-//
 
 
 #include "stdafx.h"
@@ -37,57 +33,57 @@
 
 #define CompareREFIID(iid1, iid2)	(memcmp(&iid1, &iid2, sizeof(REFIID)) == 0)
 
-SignalGenerator3DVideoFrame::SignalGenerator3DVideoFrame(IDeckLinkMutableVideoFrame *left, IDeckLinkMutableVideoFrame *right) : m_frameLeft(left), m_frameRight(right), m_refCount(1)
+SignalGenerator3DVideoFrame::SignalGenerator3DVideoFrame(CComPtr<IDeckLinkMutableVideoFrame>& left, CComPtr<IDeckLinkMutableVideoFrame>& right) : m_frameLeft(left), m_frameRight(right), m_refCount(1)
 {
 	if (! m_frameLeft)
-		throw std::invalid_argument("at minimum a left frame must be defined");
-
-	m_frameLeft->AddRef();
-	if (m_frameRight)
-		m_frameRight->AddRef();
-}
-
-SignalGenerator3DVideoFrame::~SignalGenerator3DVideoFrame()
-{
-	m_frameLeft->Release();
-	m_frameLeft = NULL;
-
-	if (m_frameRight)
-		m_frameRight->Release();
-	m_frameRight = NULL;
+		throw std::invalid_argument("At minimum a left frame must be defined");
 }
 
 HRESULT SignalGenerator3DVideoFrame::QueryInterface(REFIID iid, LPVOID *ppv)
 {
-	IID iunknown = IID_IUnknown;
+	HRESULT result = E_NOINTERFACE;
 
-	if (CompareREFIID(iid, iunknown))
-		*ppv = static_cast<IDeckLinkVideoFrame*>(this);
-	else if (CompareREFIID(iid, IID_IDeckLinkVideoFrame))
-		*ppv = static_cast<IDeckLinkVideoFrame*>(this);
-	else if (CompareREFIID(iid, IID_IDeckLinkVideoFrame3DExtensions))
-		*ppv = static_cast<IDeckLinkVideoFrame3DExtensions*>(this);
-	else
+	if (!ppv)
+		return E_INVALIDARG;
+
+	// Initialise the return result
+	*ppv = nullptr;
+
+	// Obtain the IUnknown interface and compare it the provided REFIID
+	if (iid == IID_IUnknown)
 	{
-		*ppv = NULL;
-		return E_NOINTERFACE;
+		*ppv = static_cast<IUnknown*>(static_cast<IDeckLinkVideoFrame*>(this));;
+		AddRef();
+		result = S_OK;
+	}
+	else if (iid == IID_IDeckLinkVideoFrame)
+	{
+		*ppv = static_cast<IDeckLinkVideoFrame*>(this);
+		AddRef();
+		result = S_OK;
+	}
+	else if (iid == IID_IDeckLinkVideoFrame3DExtensions)
+	{
+		*ppv = static_cast<IDeckLinkVideoFrame3DExtensions*>(this);
+		AddRef();
+		result = S_OK;
 	}
 
-	AddRef();
-	return S_OK;
+	return result;
 }
 
 ULONG SignalGenerator3DVideoFrame::AddRef(void)
 {
-	return InterlockedIncrement((volatile long *)&m_refCount);
+	return ++m_refCount;
 }
 
 ULONG SignalGenerator3DVideoFrame::Release(void)
 {
-	ULONG newRefValue = InterlockedDecrement((volatile long*)&m_refCount);
+	ULONG newRefValue = --m_refCount;
 
 	if (newRefValue == 0)
 		delete this;
+
 	return newRefValue;
 }
 
@@ -116,19 +112,44 @@ BMDFrameFlags SignalGenerator3DVideoFrame::GetFlags(void)
 	return m_frameLeft->GetFlags();
 }
 
-HRESULT SignalGenerator3DVideoFrame::GetBytes(/* out */ void **buffer)
+HRESULT SignalGenerator3DVideoFrame::GetBytes(void **buffer)
 {
 	return m_frameLeft->GetBytes(buffer);
 }
 
-HRESULT SignalGenerator3DVideoFrame::GetTimecode(/* in */ BMDTimecodeFormat format, /* out */ IDeckLinkTimecode **timecode)
+HRESULT SignalGenerator3DVideoFrame::GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode **timecode)
 {
 	return m_frameLeft->GetTimecode(format, timecode);
 }
 
-HRESULT SignalGenerator3DVideoFrame::GetAncillaryData(/* out */ IDeckLinkVideoFrameAncillary **ancillary)
+HRESULT SignalGenerator3DVideoFrame::GetAncillaryData(IDeckLinkVideoFrameAncillary **ancillary)
 {
 	return m_frameLeft->GetAncillaryData(ancillary);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetFlags(BMDFrameFlags newFlags)
+{
+	return m_frameLeft->SetFlags(newFlags);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode* timecode)
+{
+	return m_frameLeft->SetTimecode(format, timecode);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetTimecodeFromComponents(BMDTimecodeFormat format, unsigned char hours, unsigned char minutes, unsigned char seconds, unsigned char frames, BMDTimecodeFlags flags)
+{
+	return m_frameLeft->SetTimecodeFromComponents(format, hours, minutes, seconds, frames, flags);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetAncillaryData(IDeckLinkVideoFrameAncillary* ancillary)
+{
+	return m_frameLeft->SetAncillaryData(ancillary);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetTimecodeUserBits(BMDTimecodeFormat format, BMDTimecodeUserBits userBits)
+{
+	return m_frameLeft->SetTimecodeUserBits(format, userBits);
 }
 
 BMDVideo3DPackingFormat SignalGenerator3DVideoFrame::Get3DPackingFormat(void)
@@ -136,10 +157,10 @@ BMDVideo3DPackingFormat SignalGenerator3DVideoFrame::Get3DPackingFormat(void)
 	return bmdVideo3DPackingLeftOnly;
 }
 
-HRESULT SignalGenerator3DVideoFrame::GetFrameForRightEye(/* out */ IDeckLinkVideoFrame* *rightEyeFrame)
+HRESULT SignalGenerator3DVideoFrame::GetFrameForRightEye(IDeckLinkVideoFrame** rightEyeFrame)
 {
-	if (m_frameRight)
-		return m_frameRight->QueryInterface(IID_IDeckLinkVideoFrame, (void**)rightEyeFrame);
-	else
+	if (!m_frameRight)
 		return S_FALSE;
+
+	return m_frameRight->QueryInterface(IID_IDeckLinkVideoFrame, (void**)rightEyeFrame);
 }

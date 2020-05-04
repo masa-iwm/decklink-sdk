@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,15 +24,24 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-// SignalGeneratorDlg.h : header file
-//
 
 #pragma once
 
+#include <condition_variable>
 #include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <vector>
 #include "Resource.h"
+
 #include "DeckLinkAPI_h.h"
+#include "DeckLinkDeviceDiscovery.h"
+#include "DeckLinkOutputDevice.h"
+#include "PreviewWindow.h"
+#include "ProfileCallback.h"
 #include "SignalGenerator3DVideoFrame.h"
+
 
 // Custom Messages
 #define WM_ADD_DEVICE_MESSAGE					(WM_APP + 1)
@@ -47,14 +56,13 @@ enum OutputSignal
 };
 
 // Forward declarations
-class DeckLinkDeviceDiscovery;
-class DeckLinkOutputDevice;
-class PreviewWindow;
-class ProfileCallback;
+class Timecode;
 
 // CSignalGeneratorDlg dialog
 class CSignalGeneratorDlg : public CDialog
 {
+	using FillFrameFunction = std::function<void(CComPtr<IDeckLinkMutableVideoFrame>&, bool)>;
+
 // Construction
 public:
 	explicit CSignalGeneratorDlg(CWnd* pParent = NULL);	// standard constructor
@@ -77,43 +85,55 @@ private:
 	CComboBox					m_audioSampleDepthCombo;
 	CComboBox					m_videoFormatCombo;
 	CComboBox					m_pixelFormatCombo;
-	
+	CSize						m_minDialogSize;
+
 	CStatic						m_previewBox;
-	PreviewWindow*				m_previewWindow;
+	CComPtr<PreviewWindow>		m_previewWindow;
 
 	bool						m_running;
 	
-	unsigned long				m_frameWidth;
-	unsigned long				m_frameHeight;
+	int							m_frameWidth;
+	int							m_frameHeight;
 	BMDTimeValue				m_frameDuration;
 	BMDTimeScale				m_frameTimescale;
 	unsigned long				m_framesPerSecond;
-	SignalGenerator3DVideoFrame*	m_videoFrameBlack;
-	SignalGenerator3DVideoFrame*	m_videoFrameBars;
 	unsigned long				m_totalFramesScheduled;
+	BMDFieldDominance			m_fieldDominance;
+
+	CComPtr<SignalGenerator3DVideoFrame>	m_videoFrameBlack;
+	CComPtr<SignalGenerator3DVideoFrame>	m_videoFrameBars;
 	
 	OutputSignal				m_outputSignal;
-	void*						m_audioBuffer;
+	std::vector<unsigned char>	m_audioBuffer;
+	unsigned long				m_audioBufferOffset;
 	unsigned long				m_audioBufferSampleLength;
 	unsigned long				m_audioSamplesPerFrame;
 	unsigned long				m_audioChannelCount;
 	BMDAudioSampleRate			m_audioSampleRate;
 	BMDAudioSampleType			m_audioSampleDepth;
-	unsigned long				m_totalAudioSecondsScheduled;
+	BMDTimeValue				m_audioStreamTime;
 
-	DeckLinkOutputDevice* 		m_selectedDevice;
-	DeckLinkDeviceDiscovery*	m_deckLinkDiscovery;
-	IDeckLinkDisplayMode*		m_selectedDisplayMode;
-	BMDVideoOutputFlags			m_selectedVideoOutputFlags;
-	ProfileCallback*			m_profileCallback;
+	CComPtr<DeckLinkOutputDevice> 		m_selectedDevice;
+	CComPtr<DeckLinkDeviceDiscovery>	m_deckLinkDiscovery;
+	BMDDisplayMode						m_selectedDisplayMode;
+	BMDVideoOutputFlags					m_selectedVideoOutputFlags;
+	CComPtr<ProfileCallback>			m_profileCallback;
+
+	std::map<IDeckLink*, CComPtr<DeckLinkOutputDevice>>		m_outputDevices;
 
 	bool						m_scheduledPlaybackStopped;
-	CRITICAL_SECTION			m_stopPlaybackLock;
-	CONDITION_VARIABLE			m_stopPlaybackCondition;
+	std::mutex					m_stopPlaybackMutex;
+	std::condition_variable		m_stopPlaybackCondition;
+
+	std::unique_ptr<Timecode>	m_timeCode;
+	BMDTimecodeFormat			m_timeCodeFormat;
+	unsigned int				m_dropFrames;
+	BOOL						m_hfrtcSupported;
 
 	// Generated message map functions
 	virtual BOOL	OnInitDialog();
-	void			EnableInterface (BOOL enable);
+	void			EnableInterface(BOOL enable);
+	afx_msg void	OnGetMinMaxInfo(MINMAXINFO* minMaxInfo);
 	afx_msg void	OnPaint();
 	afx_msg void	OnClose();
 	afx_msg HCURSOR	OnQueryDragIcon();
@@ -123,18 +143,20 @@ private:
 	void			StartRunning ();
 	void			StopRunning ();
 
+	void			RefreshOutputDeviceList(void);
 	void			RefreshDisplayModeMenu(void);
 	void			RefreshPixelFormatMenu(void);
 	void			RefreshAudioChannelMenu(void);
-	void			AddDevice(IDeckLink* deckLink);
-	void			RemoveDevice(IDeckLink* deckLink);
+	void			AddDevice(CComPtr<IDeckLink>& deckLink);
+	void			RemoveDevice(CComPtr<IDeckLink>& deckLink);
 
 
 public:
 	void			ScheduleNextFrame(bool prerolling);
-	void			WriteNextAudioSamples();
+	void			WriteNextAudioSamples(unsigned int samplesToWrite);
 	void			ScheduledPlaybackStopped();
-	void			HaltStreams();
+	void			HaltStreams(CComPtr<IDeckLinkProfile>& newProfile);
+	void			HandleDeviceError(OutputDeviceError error);
 
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnNewDeviceSelected();
@@ -145,10 +167,57 @@ public:
 	afx_msg LRESULT	OnProfileUpdate(WPARAM wParam, LPARAM lParam);
 
 private:
-	SignalGenerator3DVideoFrame* CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*, bool)> fillFrame);
+	CComPtr<SignalGenerator3DVideoFrame> CreateOutputFrame(FillFrameFunction fillFrame);
 };
 
+class Timecode
+{
+public:
+	Timecode(int f, int d)
+		: m_fps(f), m_framecount(0), m_dropframes(d), m_frames(0), m_seconds(0), m_minutes(0), m_hours(0)
+	{
+	}
+	void update()
+	{
+		unsigned long frameCountNormalized = m_framecount++;
 
-void	FillSine (void* audioBuffer, unsigned long samplesToWrite, unsigned long channels, unsigned long sampleDepth);
-void	FillColourBars (IDeckLinkVideoFrame* theFrame, bool reversed);
-void	FillBlack (IDeckLinkVideoFrame* theFrame, bool /* unused */);
+		if (m_dropframes)
+		{
+			int deciMins, deciMinsRemainder;
+
+			int framesIn10mins = (60 * 10 * m_fps) - (9 * m_dropframes);
+			deciMins = frameCountNormalized / framesIn10mins;
+			deciMinsRemainder = frameCountNormalized - (deciMins * framesIn10mins);
+
+			// Add drop frames for 9 minutes of every 10 minutes that have elapsed
+			// AND drop frames for every minute (over the first minute) in this 10-minute block.
+			frameCountNormalized += m_dropframes * 9 * deciMins;
+			if (deciMinsRemainder >= m_dropframes)
+				frameCountNormalized += m_dropframes * ((deciMinsRemainder - m_dropframes) / (framesIn10mins / 10));
+		}
+
+		m_frames = (int)(frameCountNormalized % m_fps);
+		frameCountNormalized /= m_fps;
+		m_seconds = (int)(frameCountNormalized % 60);
+		frameCountNormalized /= 60;
+		m_minutes = (int)(frameCountNormalized % 60);
+		frameCountNormalized /= 60;
+		m_hours = (int)frameCountNormalized;
+	}
+	int hours() const { return m_hours; }
+	int minutes() const { return m_minutes; }
+	int seconds() const { return m_seconds; }
+	int frames() const { return m_frames; }
+private:
+	int m_fps;
+	unsigned long m_framecount;
+	int m_dropframes;
+	int m_frames;
+	int m_seconds;
+	int m_minutes;
+	int m_hours;
+};
+
+void	FillSine (unsigned char* audioBuffer, unsigned long samplesToWrite, unsigned long channels, unsigned long sampleDepth);
+void	FillColourBars (CComPtr<IDeckLinkMutableVideoFrame>& theFrame, bool reversed);
+void	FillBlack (CComPtr<IDeckLinkMutableVideoFrame>& theFrame, bool /* unused */);

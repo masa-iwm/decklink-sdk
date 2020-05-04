@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2003
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AutomaticModeDetection", "Win\AutomaticModeDetection.vcxproj", "{C0CFBE4E-BD52-4BA7-9A11-99A99E23F023}"
 EndProject
@@ -16,6 +16,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SynchronizedPlayback", "Win\SynchronizedPlayback.vcxproj", "{5D6D698B-7313-485A-AB90-F68A7900FC31}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SynchronizedCapture", "Win\SynchronizedCapture.vcxproj", "{531644EF-1007-46F6-83A5-E291F371522A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VancCapture", "Win\VancCapture.vcxproj", "{2285C896-D7BD-44A7-8333-D8E53CCA8E63}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -81,8 +83,19 @@ Global
 		{531644EF-1007-46F6-83A5-E291F371522A}.Release|Win32.Build.0 = Release|Win32
 		{531644EF-1007-46F6-83A5-E291F371522A}.Release|x64.ActiveCfg = Release|x64
 		{531644EF-1007-46F6-83A5-E291F371522A}.Release|x64.Build.0 = Release|x64
+		{2285C896-D7BD-44A7-8333-D8E53CCA8E63}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2285C896-D7BD-44A7-8333-D8E53CCA8E63}.Debug|Win32.Build.0 = Debug|Win32
+		{2285C896-D7BD-44A7-8333-D8E53CCA8E63}.Debug|x64.ActiveCfg = Debug|x64
+		{2285C896-D7BD-44A7-8333-D8E53CCA8E63}.Debug|x64.Build.0 = Debug|x64
+		{2285C896-D7BD-44A7-8333-D8E53CCA8E63}.Release|Win32.ActiveCfg = Release|Win32
+		{2285C896-D7BD-44A7-8333-D8E53CCA8E63}.Release|Win32.Build.0 = Release|Win32
+		{2285C896-D7BD-44A7-8333-D8E53CCA8E63}.Release|x64.ActiveCfg = Release|x64
+		{2285C896-D7BD-44A7-8333-D8E53CCA8E63}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D7D452B7-020F-4F58-9C52-56F317D1164F}
 	EndGlobalSection
 EndGlobal

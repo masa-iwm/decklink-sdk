@@ -49,7 +49,7 @@ private:
 	bool								m_cancelCapture;
 	bool								m_prevInputFrameValid;
 
-	std::atomic<uint32_t>				m_refCount;
+	std::atomic<ULONG>				m_refCount;
 
 public:
 	DeckLinkInputDevice(IDeckLink* device);

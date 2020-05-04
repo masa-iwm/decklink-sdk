@@ -242,27 +242,36 @@ IDeckLinkDisplayMode* BMDConfig::GetSelectedDeckLinkDisplayMode(IDeckLink* deckL
 	IDeckLinkDisplayMode*			displayMode = NULL;
 	IDeckLinkInput*					deckLinkInput = NULL;
 	IDeckLinkDisplayModeIterator*	displayModeIterator = NULL;
-	int								i = m_displayModeIndex < 0 ? 0 : m_displayModeIndex; // Format detection still needs a valid mode to start with
 
 	result = deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&deckLinkInput);
 	if (result != S_OK)
 		goto bail;
 
-	result = deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
-	if (result != S_OK)
-		goto bail;
-
-	while ((result = displayModeIterator->Next(&displayMode)) == S_OK)
+	if (m_displayModeIndex < 0)
 	{
-		if (i == 0)
-			break;
-		--i;
-
-		displayMode->Release();
+		// For format detection mode, use 1080p30 as default mode to start with
+		result = deckLinkInput->GetDisplayMode(bmdModeHD1080p30, &displayMode);
+		if (result != S_OK)
+			goto bail;
 	}
+	else
+	{
+		int i = m_displayModeIndex;
 
-	if (result != S_OK)
-		goto bail;
+		result = deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
+		if (result != S_OK)
+			goto bail;
+
+		while ((result = displayModeIterator->Next(&displayMode)) == S_OK)
+		{
+			if (i == 0)
+				break;
+			--i;
+
+			displayMode->Release();
+			displayMode = NULL;
+		}
+	}
 
 bail:
 	if (displayModeIterator)

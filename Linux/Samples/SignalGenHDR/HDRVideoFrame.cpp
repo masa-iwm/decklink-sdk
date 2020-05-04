@@ -24,15 +24,11 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-// HDRVideoFrame.cpp
-//
+
 
 #include <cstring>
 #include "HDRVideoFrame.h"
 
-
-#define CompareREFIID(iid1, iid2)	(memcmp(&iid1, &iid2, sizeof(REFIID)) == 0)
 
 HDRVideoFrame::HDRVideoFrame(com_ptr<IDeckLinkMutableVideoFrame> frame, HDRMetadata& metadata)
 	: m_videoFrame(frame), m_metadata(metadata), m_refCount(1)
@@ -181,13 +177,20 @@ HRESULT HDRVideoFrame::GetFloat(BMDDeckLinkFrameMetadataID metadataID, double* v
 HRESULT HDRVideoFrame::GetFlag(BMDDeckLinkFrameMetadataID, bool* value)
 {
 	// Not expecting GetFlag
-	value = nullptr;
+	*value = false;
 	return E_INVALIDARG;
 }
 
 HRESULT HDRVideoFrame::GetString(BMDDeckLinkFrameMetadataID, const char** value)
 {
 	// Not expecting GetString
-	value = nullptr;
+	*value = nullptr;
 	return E_INVALIDARG;
 }
+
+HRESULT	HDRVideoFrame::GetBytes(BMDDeckLinkFrameMetadataID metadataID, void* buffer, uint32_t* bufferSize)
+{
+	*bufferSize = 0;
+	return E_INVALIDARG;
+}
+

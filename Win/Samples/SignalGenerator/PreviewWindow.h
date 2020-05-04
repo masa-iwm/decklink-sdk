@@ -26,33 +26,38 @@
 */
 
 #pragma once
+
+#include <atomic>
 #include "DeckLinkAPI_h.h"
 
 
 class PreviewWindow : public IDeckLinkScreenPreviewCallback
 {
-private:
-	ULONG								m_refCount;
-	IDeckLinkGLScreenPreviewHelper*		m_deckLinkScreenPreviewHelper;
-	CStatic*							m_previewBox;
-	CDC*								m_previewBoxDC;
-	HGLRC								m_openGLctx;
-
-	bool								initOpenGL();
-	~PreviewWindow();
-
 public:
 	PreviewWindow();
+	virtual ~PreviewWindow();
 
 	// Initialise members and OpenGL rendering context
-	bool								init(CStatic* previewBox);
+	bool						init(CStatic* previewBox);
 
 	// IUnknown
-	virtual HRESULT STDMETHODCALLTYPE	QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG	STDMETHODCALLTYPE	AddRef();
-	virtual ULONG	STDMETHODCALLTYPE	Release();
+	HRESULT STDMETHODCALLTYPE	QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG	STDMETHODCALLTYPE	AddRef() override;
+	ULONG	STDMETHODCALLTYPE	Release() override;
 
 	// IDeckLinkScreenPreviewCallback
-	virtual HRESULT STDMETHODCALLTYPE	DrawFrame(IDeckLinkVideoFrame* theFrame);
+	HRESULT STDMETHODCALLTYPE	DrawFrame(IDeckLinkVideoFrame* theFrame) override;
+
+private:
+	std::atomic<ULONG>						m_refCount;
+	CComPtr<IDeckLinkGLScreenPreviewHelper>	m_deckLinkScreenPreviewHelper;
+	CStatic*								m_previewBox;
+	CDC*									m_previewBoxDC;
+	HGLRC									m_openGLctx;
+
+	LONG									m_previewBoxWidth;
+	LONG									m_previewBoxHeight;
+
+	bool									initOpenGL();
 };
 

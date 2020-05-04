@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -25,13 +25,17 @@
 ** -LICENSE-END-
 */
 
-// CapturePreviewDlg.h : header file
-//
-
 #pragma once
 
+#include <map>
+#include <mutex>
 #include "resource.h"
 #include "DeckLinkAPI_h.h"
+
+#include "DeckLinkDeviceDiscovery.h"
+#include "DeckLinkDevice.h"
+#include "PreviewWindow.h"
+#include "ProfileCallback.h"
 
 // Custom messages
 #define WM_REFRESH_INPUT_STREAM_DATA_MESSAGE	(WM_APP + 1)
@@ -77,12 +81,6 @@ typedef struct {
 	CString colorspace;
 } MetadataStruct;
 
-// Forward declarations
-class DeckLinkDevice;
-class DeckLinkDeviceDiscovery;
-class PreviewWindow;
-class ProfileCallback;
-
 class CCapturePreviewDlg : public CDialog
 {
 public:
@@ -95,6 +93,7 @@ public:
 	afx_msg void			OnNewDeviceSelected();
 	afx_msg void			OnInputConnectionSelected();
 	afx_msg void			OnStartStopBnClicked();
+	afx_msg void			OnAutoDetectCBClicked();
 	afx_msg void			OnClose();
 
 	// Custom message handlers
@@ -107,20 +106,20 @@ public:
 
 	// DeckLinkDevice delegate methods
 	void					ShowErrorMessage(TCHAR* msg, TCHAR* title);
-	void					UpdateFrameData(AncillaryDataStruct& ancillaryData, MetadataStruct& metadata);
-
-	// ProfileCallback delegate methods
-	void					HaltStreams();
 
 protected:
 	// Internal helper methods
 	void					EnableInterface(bool enabled);
+	void					RefreshInputDeviceList();
 	void					RefreshInputConnectionList();
 	void					RefreshVideoModeList();
 	void					StartCapture();
 	void					StopCapture();
-	void					AddDevice(IDeckLink* deckLink);
-	void					RemoveDevice(IDeckLink* deckLink);
+	void					AddDevice(CComPtr<IDeckLink>& deckLink);
+	void					RemoveDevice(CComPtr<IDeckLink>& deckLink);
+	void					VideoFrameArrived(CComPtr<IDeckLinkVideoInputFrame>& videoFrame);
+	void					HaltStreams(CComPtr<IDeckLinkProfile>& newProfile);
+	void					HandleDeviceError(DeviceError error);
 
 	// UI elements
 	CComboBox				m_deviceListCombo;
@@ -160,16 +159,20 @@ protected:
 	CStatic					m_colorspace;
 
 	CStatic					m_previewBox;
-	PreviewWindow*			m_previewWindow;
+	CComPtr<PreviewWindow>	m_previewWindow;
+
+	CSize					m_minDialogSize;
 
 	//
-	AncillaryDataStruct			m_ancillaryData;
-	MetadataStruct			m_metadata;
-	CCriticalSection			m_critSec; // to synchronise access to the above structures
-	DeckLinkDevice*				m_selectedDevice;
-	BMDVideoConnection			m_selectedInputConnection;
-	DeckLinkDeviceDiscovery*	m_deckLinkDiscovery;
-	ProfileCallback*            m_profileCallback;
+	AncillaryDataStruct					m_ancillaryData;
+	MetadataStruct						m_metadata;
+	std::mutex							m_mutex; // to synchronise access to the above structures
+	CComPtr<DeckLinkDevice>				m_selectedDevice;
+	BMDVideoConnection					m_selectedInputConnection;
+	CComPtr<DeckLinkDeviceDiscovery>	m_deckLinkDiscovery;
+	CComPtr<ProfileCallback>			m_profileCallback;
+
+	std::map<IDeckLink*, CComPtr<DeckLinkDevice>>		m_inputDevices;
 
 	//
 	virtual void			DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
@@ -179,5 +182,6 @@ protected:
 	virtual BOOL			OnInitDialog();
 	afx_msg void			OnPaint();
 	afx_msg HCURSOR			OnQueryDragIcon();
+	afx_msg void			OnGetMinMaxInfo(MINMAXINFO* minMaxInfo);
 	DECLARE_MESSAGE_MAP()
 };

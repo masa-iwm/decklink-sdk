@@ -24,16 +24,13 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  DeckLinkDeviceDiscovery.cpp
-//  DeckLink Device Discovery Callback
-//
 
 #include <QCoreApplication>
 #include "DeckLinkDeviceDiscovery.h"
 
-DeckLinkDeviceDiscovery::DeckLinkDeviceDiscovery(SignalGenHDR* owner)
-	: m_uiDelegate(owner), m_deckLinkDiscovery(nullptr), m_refCount(1)
+DeckLinkDeviceDiscovery::DeckLinkDeviceDiscovery(QObject* owner) : 
+	m_owner(owner), 
+	m_refCount(1)
 {
 	m_deckLinkDiscovery = CreateDeckLinkDiscoveryInstance();
 }
@@ -69,14 +66,14 @@ HRESULT DeckLinkDeviceDiscovery::DeckLinkDeviceArrived(/* in */ IDeckLink* deckL
 {
 	deckLink->AddRef();
 	// Update UI (add new device to menu) from main thread
-	QCoreApplication::postEvent(m_uiDelegate, new DeckLinkDeviceDiscoveryEvent(kAddDeviceEvent, deckLink));
+	QCoreApplication::postEvent(m_owner, new DeckLinkDeviceDiscoveryEvent(kAddDeviceEvent, deckLink));
 	return S_OK;
 }
 
 HRESULT DeckLinkDeviceDiscovery::DeckLinkDeviceRemoved(/* in */ IDeckLink* deckLink)
 {
 	// Update UI (remove new device to menu) from main thread
-	QCoreApplication::postEvent(m_uiDelegate, new DeckLinkDeviceDiscoveryEvent(kRemoveDeviceEvent, deckLink));
+	QCoreApplication::postEvent(m_owner, new DeckLinkDeviceDiscoveryEvent(kRemoveDeviceEvent, deckLink));
 	deckLink->Release();
 	return S_OK;
 }

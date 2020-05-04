@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -26,87 +26,121 @@
 */
 
 #include "DeckLinkOpenGLWidget.h"
+#include <QOpenGLFunctions>
 
-DeckLinkOpenGLWidget::DeckLinkOpenGLWidget(QWidget* parent) 
-	: QOpenGLWidget(parent), m_refCount(1)
-{
-	m_deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
-}
+///
+/// DeckLinkOpenGLDelegate
+///
 
-DeckLinkOpenGLWidget::~DeckLinkOpenGLWidget()
+DeckLinkOpenGLDelegate::DeckLinkOpenGLDelegate() : 
+	m_refCount(1)
 {
-	if (m_deckLinkScreenPreviewHelper != nullptr)
-	{
-		m_deckLinkScreenPreviewHelper->Release();
-		m_deckLinkScreenPreviewHelper = nullptr;
-	}
 }
 
 /// IUnknown methods
 
-HRESULT DeckLinkOpenGLWidget::QueryInterface(REFIID, LPVOID *ppv)
+HRESULT DeckLinkOpenGLDelegate::QueryInterface(REFIID iid, LPVOID *ppv)
 {
-	*ppv = NULL;
-	return E_NOINTERFACE;
-}
+	CFUUIDBytes		iunknown;
+	HRESULT			result = S_OK;
 
-ULONG DeckLinkOpenGLWidget::AddRef ()
-{
-	return (ULONG) m_refCount.fetchAndAddAcquire(1);
-}
+	if (ppv == nullptr)
+		return E_INVALIDARG;
 
-ULONG DeckLinkOpenGLWidget::Release()
-{
-	ULONG newRefValue = (ULONG) m_refCount.fetchAndAddAcquire(-1);
-	if (newRefValue == 0)
+	// Obtain the IUnknown interface and compare it the provided REFIID
+	iunknown = CFUUIDGetUUIDBytes(IUnknownUUID);
+	if (memcmp(&iid, &iunknown, sizeof(REFIID)) == 0)
 	{
-		delete this;
-		return 0;
+		*ppv = this;
+		AddRef();
 	}
+	else if (memcmp(&iid, &IID_IDeckLinkScreenPreviewCallback, sizeof(REFIID)) == 0)
+	{
+		*ppv = static_cast<IDeckLinkScreenPreviewCallback*>(this);
+		AddRef();
+	}
+	else
+	{
+		*ppv = nullptr;
+		result = E_NOINTERFACE;
+	}
+
+	return result;
+}
+
+ULONG DeckLinkOpenGLDelegate::AddRef ()
+{
+	return ++m_refCount;
+}
+
+ULONG DeckLinkOpenGLDelegate::Release()
+{
+	ULONG newRefValue = --m_refCount;
+	if (newRefValue == 0)
+		delete this;
 
 	return newRefValue;
 }
 
 /// IDeckLinkScreenPreviewCallback methods
 
-HRESULT DeckLinkOpenGLWidget::DrawFrame(IDeckLinkVideoFrame* theFrame)
+HRESULT DeckLinkOpenGLDelegate::DrawFrame(IDeckLinkVideoFrame* frame)
 {
-	if (m_deckLinkScreenPreviewHelper != nullptr)
-	{
-		m_deckLinkScreenPreviewHelper->SetFrame(theFrame);
-		update();
-	}
+	emit frameArrived(com_ptr<IDeckLinkVideoFrame>(frame));
 	return S_OK;
+}
+
+///
+/// DeckLinkOpenGLWidget
+///
+
+DeckLinkOpenGLWidget::DeckLinkOpenGLWidget(QWidget* parent) : 
+	QOpenGLWidget(parent)
+{
+	m_deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
+	m_delegate = make_com_ptr<DeckLinkOpenGLDelegate>();
+
+	connect(m_delegate.get(), &DeckLinkOpenGLDelegate::frameArrived, this, &DeckLinkOpenGLWidget::setFrame, Qt::QueuedConnection);
+}
+
+void DeckLinkOpenGLWidget::clear()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	if (m_delegate)
+		m_delegate->DrawFrame(nullptr);
 }
 
 /// QOpenGLWidget methods
 
 void DeckLinkOpenGLWidget::initializeGL()
 {
-	if (m_deckLinkScreenPreviewHelper != nullptr)
+	if (m_deckLinkScreenPreviewHelper)
 	{
-		m_mutex.lock();
-			m_deckLinkScreenPreviewHelper->InitializeGL();
-		m_mutex.unlock();
+		std::lock_guard<std::mutex> lock(m_mutex);
+		m_deckLinkScreenPreviewHelper->InitializeGL();
 	}
 }
 
 void DeckLinkOpenGLWidget::paintGL()
 {
-	m_mutex.lock();
-		glLoadIdentity();
-
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		m_deckLinkScreenPreviewHelper->PaintGL();
-	m_mutex.unlock();
+	std::lock_guard<std::mutex> lock(m_mutex);
+	m_deckLinkScreenPreviewHelper->PaintGL();
 }
 
 void DeckLinkOpenGLWidget::resizeGL(int width, int height)
 {
-	m_mutex.lock();
-		glViewport(0, 0, width, height);
-	m_mutex.unlock();
+	std::lock_guard<std::mutex> lock(m_mutex);
+	QOpenGLFunctions* f = context()->functions();
+	f->glViewport(0, 0, width, height);
 }
 
+/// DeckLinkOpenGLWidget slots 
+
+void DeckLinkOpenGLWidget::setFrame(com_ptr<IDeckLinkVideoFrame> frame)
+{
+	if (m_deckLinkScreenPreviewHelper)
+	{
+		m_deckLinkScreenPreviewHelper->SetFrame(frame.get());
+		update();
+	}
+}

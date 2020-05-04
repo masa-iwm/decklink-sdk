@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -27,83 +27,82 @@
 
 #pragma once
 
+#include <atomic>
+#include <functional>
 #include <QString>
-#include "DeckLinkAPI.h"
-#include "CapturePreview.h"
-#include "AncillaryDataTable.h"
 
-// Forward declarations
-class CapturePreview;
+#include "DeckLinkAPI.h"
+#include "com_ptr.h"
+#include "CapturePreviewEvents.h"
+#include "AncillaryDataTable.h"
 
 class DeckLinkInputDevice : public IDeckLinkInputCallback
 {
-private:
-
-	CapturePreview*				m_uiDelegate;
-	QAtomicInt					m_refCount;
-	//
-	QString						m_deviceName;
-	IDeckLink*					m_deckLink;
-	IDeckLinkInput*				m_deckLinkInput;
-	IDeckLinkConfiguration*		m_deckLinkConfig;
-	IDeckLinkHDMIInputEDID*		m_deckLinkHDMIInputEDID;
-	IDeckLinkProfileManager*	m_deckLinkProfileManager;
-
-	bool						m_supportsFormatDetection;
-	bool						m_currentlyCapturing;
-	bool						m_applyDetectedInputMode;
-	int64_t						m_supportedInputConnections;
-	//
-	static void					GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format, QString* timecodeString, QString* userBitsString);
-	static void					GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct* metadata);
+	using DisplayModeQueryFunc = std::function<void(com_ptr<IDeckLinkDisplayMode>&)>;
 
 public:
-	DeckLinkInputDevice(CapturePreview* owner, IDeckLink* deckLink);
-	virtual ~DeckLinkInputDevice();
+	DeckLinkInputDevice(QObject* owner, com_ptr<IDeckLink>& deckLink);
+	virtual ~DeckLinkInputDevice() = default;
 
 	bool						Init();
-	const QString&				GetDeviceName(void) const { return m_deviceName; }
-	bool						IsCapturing(void) const { return m_currentlyCapturing; }
-	bool						SupportsFormatDetection() const { return m_supportsFormatDetection; }
-	BMDVideoConnection			GetVideoConnections() const { return (BMDVideoConnection) m_supportedInputConnections; }
 
-	bool						StartCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode);
-	void						StopCapture(void);
+	const QString&				getDeviceName() const { return m_deviceName; }
+	bool						isCapturing() const { return m_currentlyCapturing; }
+	bool						supportsFormatDetection() const { return m_supportsFormatDetection; }
+	BMDVideoConnection			getVideoConnections() const { return (BMDVideoConnection) m_supportedInputConnections; }
+	void						queryDisplayModes(DisplayModeQueryFunc func);
 
-	IDeckLink*					GetDeckLinkInstance() { return m_deckLink; }
-	IDeckLinkInput*				GetDeckLinkInput() { return m_deckLinkInput; }
-	IDeckLinkConfiguration*		GetDeckLinkConfiguration() { return m_deckLinkConfig; }
-	IDeckLinkProfileManager*	GetProfileManager() { return m_deckLinkProfileManager; }
+	bool						startCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode);
+	void						stopCapture(void);
+
+	com_ptr<IDeckLink>					getDeckLinkInstance() const { return m_deckLink; }
+	com_ptr<IDeckLinkInput>				getDeckLinkInput() const { return m_deckLinkInput; }
+	com_ptr<IDeckLinkConfiguration>		getDeckLinkConfiguration() const { return m_deckLinkConfig; }
+	com_ptr<IDeckLinkProfileManager>	getProfileManager() const { return m_deckLinkProfileManager; }
 
 	// IUnknown interface
-	virtual HRESULT		QueryInterface (REFIID iid, LPVOID *ppv);
-	virtual ULONG		AddRef ();
-	virtual ULONG		Release ();
+	HRESULT		QueryInterface (REFIID iid, LPVOID *ppv) override;
+	ULONG		AddRef(void) override;
+	ULONG		Release(void) override;
 
 	// IDeckLinkInputCallback interface
-	virtual HRESULT		VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags);
-	virtual HRESULT		VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioPacket);
+	HRESULT		VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags) override;
+	HRESULT		VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioPacket) override;
+
+private:
+	QObject*							m_owner;
+	std::atomic<ULONG>					m_refCount;
+	//
+	QString								m_deviceName;
+	com_ptr<IDeckLink>					m_deckLink;
+	com_ptr<IDeckLinkInput>				m_deckLinkInput;
+	com_ptr<IDeckLinkConfiguration>		m_deckLinkConfig;
+	com_ptr<IDeckLinkHDMIInputEDID>		m_deckLinkHDMIInputEDID;
+	com_ptr<IDeckLinkProfileManager>	m_deckLinkProfileManager;
+
+	bool								m_supportsFormatDetection;
+	bool								m_currentlyCapturing;
+	bool								m_applyDetectedInputMode;
+	int64_t								m_supportedInputConnections;
+	//
+	static void	GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format, QString* timecodeString, QString* userBitsString);
+	static void	GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct* metadata);
 };
 
 class DeckLinkInputFormatChangedEvent : public QEvent
 {
-private:
-	BMDDisplayMode m_displayMode;
-
 public:
 	DeckLinkInputFormatChangedEvent(BMDDisplayMode displayMode);
 	virtual ~DeckLinkInputFormatChangedEvent() {}
 
 	BMDDisplayMode DisplayMode() const { return m_displayMode; }
+
+private:
+	BMDDisplayMode m_displayMode;
 };
 
 class DeckLinkInputFrameArrivedEvent : public QEvent
 {
-private:
-	AncillaryDataStruct*	m_ancillaryData;
-	MetadataStruct*			m_metadata;
-	bool					m_signalValid;
-
 public:
 	DeckLinkInputFrameArrivedEvent(AncillaryDataStruct* ancillaryData, MetadataStruct* metadata, bool signalValid);
 	virtual ~DeckLinkInputFrameArrivedEvent() {}
@@ -111,5 +110,10 @@ public:
 	AncillaryDataStruct*	AncillaryData(void) const { return m_ancillaryData; }
 	MetadataStruct*			Metadata(void) const { return m_metadata; }
 	bool					SignalValid(void) const { return m_signalValid; }
+
+private:
+	AncillaryDataStruct*	m_ancillaryData;
+	MetadataStruct*			m_metadata;
+	bool					m_signalValid;
 };
 

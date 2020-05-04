@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -112,10 +112,10 @@ public:
 	void UpdateFrameData(AncillaryDataStruct* newAncData, MetadataStruct* newMetadata);
 
 	// QAbstractTableModel methods
-	virtual int			rowCount(const QModelIndex& parent = QModelIndex()) const override { return kAncillaryDataTypes.size() + kMetadataTypes.size(); }
-	virtual int			columnCount(const QModelIndex& parent = QModelIndex()) const  override{ return kAncillaryTableColumnCount; }
-	virtual QVariant	data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
-	virtual QVariant	headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+	int			rowCount(const QModelIndex& parent = QModelIndex()) const override { Q_UNUSED(parent); return kAncillaryDataTypes.size() + kMetadataTypes.size(); }
+	int			columnCount(const QModelIndex& parent = QModelIndex()) const override { Q_UNUSED(parent); return kAncillaryTableColumnCount; }
+	QVariant	data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+	QVariant	headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 private:
 	QMutex			m_updateMutex;

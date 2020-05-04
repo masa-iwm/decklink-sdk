@@ -4,9 +4,9 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+lessThan(QT_VERSION, 5.4):error("SignalGenHDR SDK sample requires at least Qt version 5.4")
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT       += core gui widgets
 
 TARGET = SignalGenHDR
 TEMPLATE = app

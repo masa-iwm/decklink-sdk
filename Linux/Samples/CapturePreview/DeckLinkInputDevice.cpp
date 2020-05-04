@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -28,48 +28,24 @@
 #include <QCoreApplication>
 #include <QMessageBox>
 #include <QTextStream>
+
+#include "com_ptr.h"
 #include "DeckLinkInputDevice.h"
 
-DeckLinkInputDevice::DeckLinkInputDevice(CapturePreview* owner, IDeckLink* device)
-	: m_uiDelegate(owner), m_refCount(1), m_deckLink(device), m_deckLinkInput(nullptr), 
-	m_deckLinkConfig(nullptr), m_deckLinkHDMIInputEDID(nullptr), m_deckLinkProfileManager(nullptr),
-	m_supportsFormatDetection(false), m_currentlyCapturing(false), m_applyDetectedInputMode(false),
+DeckLinkInputDevice::DeckLinkInputDevice(QObject* owner, com_ptr<IDeckLink>& device) : 
+	m_owner(owner),
+	m_refCount(1),
+	m_deckLink(device),
+	m_deckLinkInput(IID_IDeckLinkInput, device),
+	m_deckLinkConfig(IID_IDeckLinkConfiguration, device),
+	m_deckLinkHDMIInputEDID(IID_IDeckLinkHDMIInputEDID, device),
+	m_deckLinkProfileManager(IID_IDeckLinkProfileManager, device),  // Non-null when the device has > 1 profiles
+	m_supportsFormatDetection(false),
+	m_currentlyCapturing(false),
+	m_applyDetectedInputMode(false),
 	m_supportedInputConnections(0)
 {
 	m_deckLink->AddRef();
-}
-
-DeckLinkInputDevice::~DeckLinkInputDevice()
-{
-	if (m_deckLinkHDMIInputEDID != nullptr)
-	{
-		m_deckLinkHDMIInputEDID->Release();
-		m_deckLinkHDMIInputEDID = nullptr;
-	}
-
-	if (m_deckLinkProfileManager != nullptr)
-	{
-		m_deckLinkProfileManager->Release();
-		m_deckLinkProfileManager = nullptr;
-	}
-
-	if (m_deckLinkInput != nullptr)
-	{
-		m_deckLinkInput->Release();
-		m_deckLinkInput = nullptr;
-	}
-
-	if (m_deckLinkConfig != nullptr)
-	{
-		m_deckLinkConfig->Release();
-		m_deckLinkConfig = nullptr;
-	}
-
-	if (m_deckLink != nullptr)
-	{
-		m_deckLink->Release();
-		m_deckLink = nullptr;
-	}
 }
 
 HRESULT	DeckLinkInputDevice::QueryInterface(REFIID iid, LPVOID *ppv)
@@ -103,50 +79,39 @@ HRESULT	DeckLinkInputDevice::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG DeckLinkInputDevice::AddRef(void)
 {
-	return (ULONG) m_refCount.fetchAndAddAcquire(1);
+	return ++m_refCount;
 }
 
 ULONG DeckLinkInputDevice::Release(void)
 {
-	ULONG newRefValue = m_refCount.fetchAndAddAcquire(-1);
-	
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 
 	return newRefValue;
 }
 
 bool DeckLinkInputDevice::Init()
 {
-	HRESULT							result;
-	IDeckLinkProfileAttributes*		deckLinkAttributes	= nullptr;
-	const char*						deviceNameStr;
+	com_ptr<IDeckLinkProfileAttributes>		deckLinkAttributes(IID_IDeckLinkProfileAttributes, m_deckLink);
+	const char*								deviceNameStr;
 
-	// Get input interface
-	result = m_deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&m_deckLinkInput);
-	if (result != S_OK)
+	if (!m_deckLinkInput)
 	{
 		// This may occur if device does not have input interface, for instance DeckLink Mini Monitor.
 		return false;
 	}
 		
-	// Get configuration interface so we can change input connector
-	// We hold onto IDeckLinkConfiguration until destructor to retain input connector setting
-	result = m_deckLink->QueryInterface(IID_IDeckLinkConfiguration, (void**)&m_deckLinkConfig);
-	if (result != S_OK)
+	// The configuration interface is valid until destructor to retain input connector setting
+	if (!m_deckLinkConfig)
 	{
-		QMessageBox::critical(m_uiDelegate, "DeckLink Input initialization error", "Unable to query IDeckLinkConfiguration object interface");
+		QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "DeckLink Input initialization error", "Unable to query IDeckLinkConfiguration object interface");
 		return false;
 	}
 
-	// Get attributes interface
-	result = m_deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**) &deckLinkAttributes);
-	if (result != S_OK)
+	if (!deckLinkAttributes)
 	{
-		QMessageBox::critical(m_uiDelegate, "DeckLink Input initialization error", "Unable to query IDeckLinkProfileAttributes object interface");
+		QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "DeckLink Input initialization error", "Unable to query IDeckLinkProfileAttributes object interface");
 		return false;
 	}
 
@@ -158,10 +123,8 @@ bool DeckLinkInputDevice::Init()
 	if (deckLinkAttributes->GetInt(BMDDeckLinkVideoInputConnections, &m_supportedInputConnections) != S_OK)
 		m_supportedInputConnections = 0;
 		
-	deckLinkAttributes->Release();
-
 	// Enable all EDID functionality if possible
-	if (m_deckLink->QueryInterface(IID_IDeckLinkHDMIInputEDID, (void**)&m_deckLinkHDMIInputEDID) == S_OK && m_deckLinkHDMIInputEDID)
+	if (m_deckLinkHDMIInputEDID)
 	{
 		int64_t allKnownRanges = bmdDynamicRangeSDR | bmdDynamicRangeHDRStaticPQ | bmdDynamicRangeHDRStaticHLG;
 		m_deckLinkHDMIInputEDID->SetInt(bmdDeckLinkHDMIInputEDIDDynamicRange, allKnownRanges);
@@ -169,8 +132,7 @@ bool DeckLinkInputDevice::Init()
 	}
 
 	// Get device name
-	result = m_deckLink->GetDisplayName(&deviceNameStr); 
-	if (result == S_OK)
+	if (m_deckLink->GetDisplayName(&deviceNameStr) == S_OK)
 	{
 		m_deviceName = deviceNameStr;
 		free((void*)deviceNameStr);
@@ -180,17 +142,24 @@ bool DeckLinkInputDevice::Init()
 		m_deviceName = "DeckLink";
 	}
 
-	// Get the profile manager interface
-	// Will return S_OK when the device has > 1 profiles
-	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileManager, (void**) &m_deckLinkProfileManager) != S_OK)
-	{
-		m_deckLinkProfileManager = nullptr;
-	}
-
 	return true;
 }
 
-bool DeckLinkInputDevice::StartCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode)
+void DeckLinkInputDevice::queryDisplayModes(DisplayModeQueryFunc func)
+{
+	com_ptr<IDeckLinkDisplayModeIterator>	displayModeIterator;
+	com_ptr<IDeckLinkDisplayMode>			displayMode;
+
+	if (m_deckLinkInput->GetDisplayModeIterator(displayModeIterator.releaseAndGetAddressOf()) != S_OK)
+		return;
+
+	while (displayModeIterator->Next(displayMode.releaseAndGetAddressOf()) == S_OK)
+	{
+		func(displayMode);
+	}
+}
+
+bool DeckLinkInputDevice::startCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode)
 {
 	HRESULT				result;
 	BMDVideoInputFlags	videoInputFlags = bmdVideoInputFlagDefault;
@@ -211,7 +180,7 @@ bool DeckLinkInputDevice::StartCapture(BMDDisplayMode displayMode, IDeckLinkScre
 	result = m_deckLinkInput->EnableVideoInput(displayMode, bmdFormat8BitYUV, videoInputFlags);
 	if (result != S_OK)
 	{
-		QMessageBox::critical(m_uiDelegate, "Error starting the capture", "This application was unable to select the chosen video mode. Perhaps, the selected device is currently in-use.");
+		QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "Error starting the capture", "This application was unable to select the chosen video mode. Perhaps, the selected device is currently in-use.");
 		return false;
 	}
 
@@ -219,7 +188,7 @@ bool DeckLinkInputDevice::StartCapture(BMDDisplayMode displayMode, IDeckLinkScre
 	result = m_deckLinkInput->StartStreams();
 	if (result != S_OK)
 	{
-		QMessageBox::critical(m_uiDelegate, "Error starting the capture", "This application was unable to start the capture. Perhaps, the selected device is currently in-use.");
+		QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "Error starting the capture", "This application was unable to start the capture. Perhaps, the selected device is currently in-use.");
 		return false;
 	}
 
@@ -228,18 +197,18 @@ bool DeckLinkInputDevice::StartCapture(BMDDisplayMode displayMode, IDeckLinkScre
 	return true;
 }
 
-void DeckLinkInputDevice::StopCapture()
+void DeckLinkInputDevice::stopCapture()
 {
-	if (m_deckLinkInput != NULL)
+	if (m_deckLinkInput)
 	{
 		// Stop the capture
 		m_deckLinkInput->StopStreams();
 
 		//
-		m_deckLinkInput->SetScreenPreviewCallback(NULL);
+		m_deckLinkInput->SetScreenPreviewCallback(nullptr);
 
 		// Delete capture callback
-		m_deckLinkInput->SetCallback(NULL);
+		m_deckLinkInput->SetCallback(nullptr);
 	}
 
 	m_currentlyCapturing = false;
@@ -264,7 +233,7 @@ HRESULT DeckLinkInputDevice::VideoInputFormatChanged (BMDVideoInputFormatChanged
 	result = m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection);
 	if (result != S_OK)
 	{
-		QMessageBox::critical(m_uiDelegate, "Error restarting the capture", "This application was unable to set new display mode");
+		QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "Error restarting the capture", "This application was unable to set new display mode");
 		return result;
 	}
 
@@ -272,13 +241,13 @@ HRESULT DeckLinkInputDevice::VideoInputFormatChanged (BMDVideoInputFormatChanged
 	result = m_deckLinkInput->StartStreams();
 	if (result != S_OK)
 	{
-		QMessageBox::critical(m_uiDelegate, "Error restarting the capture", "This application was unable to restart capture");
+		QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "Error restarting the capture", "This application was unable to restart capture");
 		return result;
 	}
 
 	// Notify UI of new display mode
-	if ((m_uiDelegate != nullptr) && (notificationEvents & bmdVideoInputDisplayModeChanged))
-		QCoreApplication::postEvent(m_uiDelegate, new DeckLinkInputFormatChangedEvent(newMode->GetDisplayMode()));
+	if ((m_owner != nullptr) && (notificationEvents & bmdVideoInputDisplayModeChanged))
+		QCoreApplication::postEvent(m_owner, new DeckLinkInputFormatChangedEvent(newMode->GetDisplayMode()));
 	
 	return S_OK;
 }
@@ -289,7 +258,7 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived (IDeckLinkVideoInputFrame* v
 	AncillaryDataStruct*	ancillaryData;
 	MetadataStruct*			metadata;
 
-	if (videoFrame == NULL)
+	if (videoFrame == nullptr)
 		return S_OK;
 
 	validFrame = (videoFrame->GetFlags() & bmdFrameHasNoInputSource) == 0;
@@ -307,8 +276,8 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived (IDeckLinkVideoInputFrame* v
 	GetMetadataFromFrame(videoFrame, metadata);
 
 	// Update the UI with new Ancillary data
-	if (m_uiDelegate != nullptr)
-		QCoreApplication::postEvent(m_uiDelegate, new DeckLinkInputFrameArrivedEvent(ancillaryData, metadata, validFrame));
+	if (m_owner != nullptr)
+		QCoreApplication::postEvent(m_owner, new DeckLinkInputFrameArrivedEvent(ancillaryData, metadata, validFrame));
 	else
 	{
 		delete ancillaryData;
@@ -320,12 +289,12 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived (IDeckLinkVideoInputFrame* v
 
 void DeckLinkInputDevice::GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* videoFrame, BMDTimecodeFormat timecodeFormat, QString* timecodeString, QString* userBitsString)
 {
-	IDeckLinkTimecode*		timecode	= nullptr;
-	const char*				timecodeStr	= nullptr;
-	BMDTimecodeUserBits		userBits 	= 0;
+	com_ptr<IDeckLinkTimecode>		timecode;
+	const char*						timecodeStr;
+	BMDTimecodeUserBits				userBits	= 0;
 
-	if ((videoFrame != NULL) && (timecodeString != NULL) && (userBitsString != NULL)
-		&& (videoFrame->GetTimecode(timecodeFormat, &timecode) == S_OK))
+	if ((videoFrame != nullptr) && (timecodeString != nullptr) && (userBitsString != nullptr)
+		&& (videoFrame->GetTimecode(timecodeFormat, timecode.releaseAndGetAddressOf()) == S_OK))
 	{
 		if (timecode->GetString(&timecodeStr) == S_OK)
 		{
@@ -339,8 +308,6 @@ void DeckLinkInputDevice::GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* vi
 
 		timecode->GetTimecodeUserBits(&userBits);
 		*userBitsString = QString("0x%1").arg(userBits, 8, 16, QChar('0'));
-
-		timecode->Release();
 	}
 	else
 	{
@@ -351,6 +318,8 @@ void DeckLinkInputDevice::GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* vi
 
 void DeckLinkInputDevice::GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct* metadata)
 {
+	com_ptr<IDeckLinkVideoFrameMetadataExtensions> metadataExtensions(IID_IDeckLinkVideoFrameMetadataExtensions, com_ptr<IDeckLinkVideoInputFrame>(videoFrame));
+
 	metadata->electroOpticalTransferFunction = "";
 	metadata->displayPrimariesRedX = "";
 	metadata->displayPrimariesRedY = "";
@@ -366,8 +335,7 @@ void DeckLinkInputDevice::GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFr
 	metadata->maximumFrameAverageLightLevel = "";
 	metadata->colorspace = "";
 
-	IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
-	if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
+	if (metadataExtensions)
 	{
 		double doubleValue = 0.0;
 		int64_t intValue = 0;
@@ -451,8 +419,6 @@ void DeckLinkInputDevice::GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFr
 				break;
 			}
 		}
-
-		metadataExtensions->Release();
 	}
 }
 

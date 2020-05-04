@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2017 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,50 +24,75 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  DeckLinkOutputDevice.h
-//  DeckLink Output device callback
-//
 
 #pragma once
 
 #include <atlstr.h>
+#include <atomic>
+#include <functional>
 #include "DeckLinkAPI_h.h"
-#include "SignalGeneratorDlg.h"
+
+enum class OutputDeviceError
+{
+	NoError = 0,
+	GetBufferedAudioSampleCountFailed,
+	GetBufferedVideoFrameCountFailed,
+};
 
 class DeckLinkOutputDevice : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
 {
-private:
-	int32_t						m_refCount;
-	CSignalGeneratorDlg*		m_uiDelegate;
-	IDeckLinkOutput*			m_deckLinkOutput;
-	IDeckLinkConfiguration*		m_deckLinkConfiguration;
-	IDeckLink*					m_deckLink;
-	IDeckLinkProfileManager*	m_deckLinkProfileManager;
-	CString						m_deviceName;
+	using QueryDisplayModeFunc = std::function<void(CComPtr<IDeckLinkDisplayMode>&)>;
+	using ScheduledFrameCompletedCallback = std::function<void(void)>;
+	using ScheduledPlaybackStoppedCallback = std::function<void(void)>;
+	using RenderAudioSamplesCallback = std::function<void(unsigned int)>;
+	using OutputDeviceErrorOccuredFunc = std::function<void(OutputDeviceError)>;
 
 public:
-	DeckLinkOutputDevice(CSignalGeneratorDlg* owner, IDeckLink* deckLink);
-	virtual ~DeckLinkOutputDevice();
+	DeckLinkOutputDevice(CComPtr<IDeckLink>& deckLink);
+	virtual ~DeckLinkOutputDevice() = default;
 
-	bool				Init();
+	bool		init();
 
 	// IUnknown
-	virtual HRESULT		STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG		STDMETHODCALLTYPE AddRef();
-	virtual ULONG		STDMETHODCALLTYPE Release();
+	HRESULT		STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG		STDMETHODCALLTYPE AddRef() override;
+	ULONG		STDMETHODCALLTYPE Release() override;
 
 	// IDeckLinkVideoOutputCallback
-	virtual HRESULT		STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
-	virtual HRESULT		STDMETHODCALLTYPE ScheduledPlaybackHasStopped();
+	HRESULT		STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result) override;
+	HRESULT		STDMETHODCALLTYPE ScheduledPlaybackHasStopped() override;
 
 	// IDeckLinkAudioOutputCallback
-	virtual HRESULT		STDMETHODCALLTYPE RenderAudioSamples(BOOL preroll);
+	HRESULT		STDMETHODCALLTYPE RenderAudioSamples(BOOL preroll) override;
 
-	const CString&				GetDeviceName() const { return m_deviceName; }
-	IDeckLinkOutput*			GetDeviceOutput() const { return m_deckLinkOutput; }
-	IDeckLinkConfiguration*		GetDeviceConfiguration() const { return m_deckLinkConfiguration; }
-	IDeckLink*					GetDeckLinkInstance() const { return m_deckLink; }
-	IDeckLinkProfileManager*	GetDeviceProfileManager() const { return m_deckLinkProfileManager; }
+	const CString&						getDeviceName() const { return m_deviceName; }
+	CComPtr<IDeckLinkOutput>			getDeviceOutput() const { return m_deckLinkOutput; }
+	CComPtr<IDeckLinkConfiguration>		getDeviceConfiguration() const { return m_deckLinkConfiguration; }
+	CComPtr<IDeckLink>					getDeckLinkInstance() const { return m_deckLink; }
+
+	void								onScheduledFrameCompleted(const ScheduledFrameCompletedCallback& callback) { m_scheduledFrameCompletedCallback = callback; }
+	void								onScheduledPlaybackStopped(const ScheduledPlaybackStoppedCallback& callback) { m_scheduledPlaybackStoppedCallback = callback; }
+	void								onRenderAudioSamples(const RenderAudioSamplesCallback& callback) { m_renderAudioSamplesCallback = callback; }
+	void								queryDisplayModes(QueryDisplayModeFunc func);
+	void								setErrorListener(const OutputDeviceErrorOccuredFunc& func) { m_errorListener = func; }
+
+	void								setVideoPrerollSize(const unsigned int videoPrerollSize) { m_videoPrerollSize = videoPrerollSize; }
+	void								setAudioWaterLevel(const unsigned int audioWaterLevel) { m_audioWaterLevel = audioWaterLevel; }
+
+private:
+	CComPtr<IDeckLink>					m_deckLink;
+	CComQIPtr<IDeckLinkOutput>			m_deckLinkOutput;
+	CComQIPtr<IDeckLinkConfiguration>	m_deckLinkConfiguration;
+	CString								m_deviceName;
+
+	ScheduledFrameCompletedCallback		m_scheduledFrameCompletedCallback;
+	ScheduledPlaybackStoppedCallback	m_scheduledPlaybackStoppedCallback;
+	RenderAudioSamplesCallback			m_renderAudioSamplesCallback;
+	OutputDeviceErrorOccuredFunc		m_errorListener;
+
+	unsigned int						m_videoPrerollSize;
+	unsigned int						m_audioWaterLevel;
+
+	std::atomic<ULONG>					m_refCount;
 };
 

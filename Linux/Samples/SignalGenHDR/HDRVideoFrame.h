@@ -24,9 +24,6 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-// HDRVideoFrame.h - header file
-//
 
 #pragma once
 
@@ -84,6 +81,7 @@ public:
 	virtual HRESULT			GetFloat(BMDDeckLinkFrameMetadataID metadataID, double* value);
 	virtual HRESULT			GetFlag(BMDDeckLinkFrameMetadataID metadataID, bool* value);
 	virtual HRESULT			GetString(BMDDeckLinkFrameMetadataID metadataID, const char** value);
+	virtual HRESULT			GetBytes(BMDDeckLinkFrameMetadataID metadataID, void* buffer, uint32_t* bufferSize);
 
 	void UpdateHDRMetadata(const HDRMetadata& metadata) { m_metadata = metadata; }
 

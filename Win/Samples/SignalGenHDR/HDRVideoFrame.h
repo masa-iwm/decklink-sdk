@@ -84,6 +84,7 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE GetFloat(BMDDeckLinkFrameMetadataID metadataID, double *value);
 	virtual HRESULT STDMETHODCALLTYPE GetFlag(BMDDeckLinkFrameMetadataID metadataID, BOOL *value);
 	virtual HRESULT STDMETHODCALLTYPE GetString(BMDDeckLinkFrameMetadataID metadataID, BSTR *value);
+	virtual HRESULT	STDMETHODCALLTYPE GetBytes(BMDDeckLinkFrameMetadataID metadataID, void* buffer, uint32_t* bufferSize);
 
 	void UpdateHDRMetadata(const HDRMetadata& metadata) { m_metadata = metadata; }
 

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,10 +24,9 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-// SignalGeneratorDlg.cpp : implementation file
-//
 
 #include "stdafx.h"
+#include <array>
 #include <map>
 #include <utility>
 #include "SignalGenerator.h"
@@ -43,24 +42,22 @@
 #define new DEBUG_NEW
 #endif
 
-const unsigned long		kAudioWaterlevel = 48000;
-
 // SD 75% Colour Bars
-static DWORD gSD75pcColourBars[8] =
+static const std::array<DWORD, 8> gSD75pcColourBars =
 {
 	0xeb80eb80, 0xa28ea22c, 0x832c839c, 0x703a7048,
 	0x54c654b8, 0x41d44164, 0x237223d4, 0x10801080
 };
 
 // HD 75% Colour Bars
-static DWORD gHD75pcColourBars[8] =
+static const std::array<DWORD, 8> gHD75pcColourBars =
 {
 	0xeb80eb80, 0xa888a82c, 0x912c9193, 0x8534853f,
 	0x3fcc3fc1, 0x33d4336d, 0x1c781cd4, 0x10801080
 };
 
 // Supported number audio channels
-static const int gAudioChannels[] = { 2, 8, 16 };
+static const std::array<int, 5> gAudioChannels = { 2, 8, 16, 32, 64 };
 
 // Supported pixel formats map to string represenatation and boolean if RGB format
 static const std::map<BMDPixelFormat, std::pair<CString, BOOL>> kPixelFormats = {
@@ -69,6 +66,11 @@ static const std::map<BMDPixelFormat, std::pair<CString, BOOL>> kPixelFormats = 
 	std::make_pair(bmdFormat8BitARGB,	std::make_pair(_T("8-bit RGB"), TRUE)),
 	std::make_pair(bmdFormat10BitRGB,	std::make_pair(_T("10-bit RGB"), TRUE)),
 };
+
+// Constants for calculating audio tone
+static const double kReferenceSoundPressure = 20.0; // dB
+static const double kReferenceAudioToneLevel = -20.0; // dB
+static const int kReferenceAudioToneFreq = 1000; // Hz
 
 CSignalGeneratorDlg::CSignalGeneratorDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CSignalGeneratorDlg::IDD, pParent)
@@ -79,16 +81,11 @@ CSignalGeneratorDlg::CSignalGeneratorDlg(CWnd* pParent /*=NULL*/)
 	m_running = false;
 	m_scheduledPlaybackStopped = false;
 	
-	m_videoFrameBlack = NULL;
-	m_videoFrameBars = NULL;
-	m_audioBuffer = NULL;
-
-	m_selectedDevice = NULL;
-	m_selectedDisplayMode = NULL;
+	m_selectedDisplayMode = bmdModeUnknown;
 	m_selectedVideoOutputFlags = bmdVideoOutputFlagDefault;
-
-	InitializeConditionVariable(&m_stopPlaybackCondition);
-	InitializeCriticalSection(&m_stopPlaybackLock);
+	m_timeCodeFormat = bmdTimecodeRP188VITC1;
+	m_dropFrames = 0;
+	m_hfrtcSupported = FALSE;
 }
 
 void CSignalGeneratorDlg::DoDataExchange(CDataExchange* pDX)
@@ -107,6 +104,7 @@ void CSignalGeneratorDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CSignalGeneratorDlg, CDialog)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
+	ON_WM_GETMINMAXINFO()
 	ON_WM_QUERYDRAGICON()
 	//}}AFX_MSG_MAP
 	ON_BN_CLICKED(IDOK, &CSignalGeneratorDlg::OnBnClickedOk)
@@ -119,76 +117,94 @@ BEGIN_MESSAGE_MAP(CSignalGeneratorDlg, CDialog)
 END_MESSAGE_MAP()
 
 
+void CSignalGeneratorDlg::RefreshOutputDeviceList(void)
+{
+	int index;
+	BOOL hasActiveOutputDevices;
+
+	m_deviceListCombo.ResetContent();
+
+	for (auto& device : m_outputDevices)
+	{
+		CComQIPtr<IDeckLinkProfileAttributes> deckLinkAttributes(device.second->getDeckLinkInstance());
+
+		if (deckLinkAttributes)
+		{
+			LONGLONG intAttribute;
+			if ((deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &intAttribute) == S_OK) &&
+				(((BMDDuplexMode)intAttribute) != bmdDuplexInactive))
+			{
+				// Input device is active, add to combobox
+				index = m_deviceListCombo.AddString(device.second->getDeviceName());
+				m_deviceListCombo.SetItemDataPtr(index, (void*)device.first);
+
+				// Retain selected device even if combo box position has changed
+				if (device.second == m_selectedDevice)
+					m_deviceListCombo.SetCurSel(index);
+			}
+		}
+	}
+
+	hasActiveOutputDevices = m_deviceListCombo.GetCount() > 0;
+
+	// If there is at least 1 active device, enable start/stop button
+	m_startButton.EnableWindow(hasActiveOutputDevices);
+
+	if (hasActiveOutputDevices)
+	{
+		// If device has been removed or becomes inactive due to profile change, then select first device in combobox
+		index = m_deviceListCombo.GetCurSel();
+		if (index == CB_ERR)
+		{
+			m_deviceListCombo.SetCurSel(0);
+			OnNewDeviceSelected();
+		}
+	}
+	else
+		m_selectedDevice = nullptr;
+
+	// If a device is selected and not running then enable interface
+	EnableInterface(m_selectedDevice && !m_running);
+}
+
 void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 {
 	// Populate the display mode combo with a list of display modes supported by the installed DeckLink card
-	IDeckLinkDisplayModeIterator*	displayModeIterator;
-	IDeckLinkDisplayMode*			deckLinkDisplayMode;
-	IDeckLinkOutput*				deckLinkOutput;
-
-	for (int i = 1; i < m_videoFormatCombo.GetCount(); i++)
-	{
-		deckLinkDisplayMode = (IDeckLinkDisplayMode*)m_videoFormatCombo.GetItemDataPtr(i-1);
-		deckLinkDisplayMode->Release();
-	}
 	m_videoFormatCombo.ResetContent();
 
-	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
-
-	if (deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
-		return;
-	
-	while (displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
+	m_selectedDevice->queryDisplayModes([this](CComPtr<IDeckLinkDisplayMode>& displayMode)
 	{
-		BSTR					modeName;
-		int						newIndex;
-		HRESULT					hr;
-		BOOL					supported = FALSE;
-		BMDSupportedVideoModeFlags	flags = bmdSupportedVideoModeDualStream3D;
+		CComBSTR			modeName;
+		BMDDisplayMode		bmdDisplayMode = displayMode->GetDisplayMode();
+		int					newIndex;
+		BOOL				supported = FALSE;
 
-		// Check that display mode is supported with the active profile
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
-		if (hr != S_OK || !supported)
-		{
-			deckLinkDisplayMode->Release();
-			continue;
-		}
+		if (displayMode->GetName(&modeName) != S_OK)
+			return;
 
-		if (deckLinkDisplayMode->GetName(&modeName) != S_OK)
-		{
-			deckLinkDisplayMode->Release();
-			continue;
-		}
-		
 		CString modeNameCString(modeName);
 		newIndex = m_videoFormatCombo.AddString(modeNameCString);
-		m_videoFormatCombo.SetItemDataPtr(newIndex, deckLinkDisplayMode); 
-
-		if (m_videoFormatCombo.GetCount() == 1)
-		{
-			// We have added our first item, refresh pixel format menu
-			m_videoFormatCombo.SetCurSel(0);
-			OnNewVideoFormatSelected();
-		}
+		m_videoFormatCombo.SetItemData(newIndex, bmdDisplayMode);
 
 		// Check Dual Stream 3D support with any pixel format
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoOutputConversion, flags, NULL, &supported);
-		if (hr != S_OK || ! supported)
+		if (!m_selectedDevice->getDeviceOutput()->DoesSupportVideoMode(bmdVideoConnectionUnspecified, bmdDisplayMode, bmdFormatUnspecified,
+			bmdNoVideoOutputConversion, bmdSupportedVideoModeDualStream3D, NULL, &supported) != S_OK)
 		{
-			SysFreeString(modeName);
-			continue;
+			return;
 		}
+
+		if (!supported)
+			return;
 
 		CString modeName3DCString(modeName);
 		modeName3DCString += _T(" 3D");
 		newIndex = m_videoFormatCombo.AddString(modeName3DCString);
-		m_videoFormatCombo.SetItemDataPtr(newIndex, deckLinkDisplayMode);
-		deckLinkDisplayMode->AddRef();
+		m_videoFormatCombo.SetItemData(newIndex, bmdDisplayMode);
+	});
 
-		SysFreeString(modeName);
-	}
-
-	displayModeIterator->Release();
+	// Select first item and refresh pixel format menu
+	m_videoFormatCombo.SetCurSel(0);
+	OnNewVideoFormatSelected();
 
 	m_startButton.EnableWindow(m_videoFormatCombo.GetCount() > 0);
 }
@@ -197,11 +213,9 @@ void CSignalGeneratorDlg::RefreshDisplayModeMenu(void)
 void CSignalGeneratorDlg::RefreshPixelFormatMenu(void)
 {
 	// Populate the pixel format mode combo with a list of pixel formats supported by the installed DeckLink card
-	IDeckLinkOutput* deckLinkOutput;
+	CComPtr<IDeckLinkOutput> deckLinkOutput = m_selectedDevice->getDeviceOutput();
 
 	m_pixelFormatCombo.ResetContent();
-
-	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
 
 	for (auto& pixelFormat : kPixelFormats)
 	{
@@ -213,7 +227,7 @@ void CSignalGeneratorDlg::RefreshPixelFormatMenu(void)
 
 		std::tie(pixelFormatString, std::ignore) = pixelFormat.second;
 
-		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode->GetDisplayMode(), pixelFormat.first, bmdNoVideoOutputConversion, flags, NULL, &supported);
+		hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, m_selectedDisplayMode, pixelFormat.first, bmdNoVideoOutputConversion, flags, NULL, &supported);
 		if (hr != S_OK || ! supported)
 			continue;
 
@@ -227,24 +241,20 @@ void CSignalGeneratorDlg::RefreshPixelFormatMenu(void)
 
 void CSignalGeneratorDlg::RefreshAudioChannelMenu(void)
 {
-	IDeckLink*				deckLink;
-	IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
-	LONGLONG				maxAudioChannels;
+	CComQIPtr<IDeckLinkProfileAttributes>		deckLinkAttributes(m_selectedDevice->getDeckLinkInstance());
+	LONGLONG									maxAudioChannels;
 
-	deckLink = m_selectedDevice->GetDeckLinkInstance();
-
-	// Get DeckLink attributes to determine number of audio channels
-	if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
-		goto bail;
+	if (!deckLinkAttributes)
+		return;
 
 	// Get max number of audio channels supported by DeckLink device
 	if (deckLinkAttributes->GetInt(BMDDeckLinkMaximumAudioChannels, &maxAudioChannels) != S_OK)
-		goto bail;
+		return;
 
 	m_audioChannelCombo.ResetContent();
 
 	// Scan through Audio channel popup menu and disable invalid entries
-	for (int i = 0; i < sizeof(gAudioChannels) / sizeof(*gAudioChannels); i++)
+	for (unsigned i = 0; i < gAudioChannels.size(); i++)
 	{
 		if (maxAudioChannels < (LONGLONG)gAudioChannels[i])
 			break;
@@ -257,19 +267,18 @@ void CSignalGeneratorDlg::RefreshAudioChannelMenu(void)
 	}
 
 	m_audioChannelCombo.SetCurSel(m_audioChannelCombo.GetCount() - 1);
-
-bail:
-	if (deckLinkAttributes)
-		deckLinkAttributes->Release();
 }
 
 // CSignalGeneratorDlg message handlers
 
 BOOL CSignalGeneratorDlg::OnInitDialog()
 {
-	bool			success = false;
-	
 	CDialog::OnInitDialog();
+
+	// Set initial dialog size as minimum size
+	CRect rectWindow;
+	GetWindowRect(rectWindow);
+	m_minDialogSize = rectWindow.Size();
 	
 	// Set the icon for this dialog.  The framework does this automatically
 	//  when the application's main window is not a dialog
@@ -290,31 +299,53 @@ BOOL CSignalGeneratorDlg::OnInitDialog()
 
 	//
 	// Create and enable DeckLink device discovery callback interface object
-	m_deckLinkDiscovery = new DeckLinkDeviceDiscovery(this);
-	if (m_deckLinkDiscovery != NULL)
+	try
 	{
+		m_deckLinkDiscovery.Attach(new DeckLinkDeviceDiscovery());
+
 		if (!m_deckLinkDiscovery->enable())
-		{
-			MessageBox(_T("This application requires the DeckLink drivers installed.\nPlease install the Blackmagic DeckLink drivers to use the features of this application."), _T("Error"));
-			goto bail;
-		}
+			throw std::runtime_error("This application requires the DeckLink drivers installed.\nPlease install the Blackmagic DeckLink drivers to use the features of this application.");
+	}
+	catch (const std::exception& e)
+	{
+		CStringW errorString(e.what());
+		MessageBox(errorString, _T("Error"));
+		return FALSE;
 	}
 
+	m_deckLinkDiscovery->onDeviceArrival([this](CComPtr<IDeckLink> &dl) {
+		// Update UI (add new device to menu) from main thread
+		PostMessage(WM_ADD_DEVICE_MESSAGE, (WPARAM)dl.Detach(), 0);
+	});
+
+	m_deckLinkDiscovery->onDeviceRemoval([this](CComPtr<IDeckLink> &dl) {
+		// Update UI (remove device from menu) from main thread
+		PostMessage(WM_REMOVE_DEVICE_MESSAGE, (WPARAM)dl.Detach(), 0);
+		dl.Release();
+	});
+
 	// Create and initialize preview helper
-	m_previewWindow = new PreviewWindow();
+	m_previewWindow.Attach(new PreviewWindow());
 	if (m_previewWindow->init(&m_previewBox) == false)
 	{
 		MessageBox(_T("This application was unable to initialise the preview window"), _T("Error"));
+		return FALSE;
 	}
 
 	// Create profile callback interface object
-	m_profileCallback = new ProfileCallback(this);
-	if (m_profileCallback == NULL)
+	m_profileCallback.Attach(new ProfileCallback());
+	if (!m_profileCallback)
 	{
 		MessageBox(_T("This application was unable to create profile callback class"), _T("Error"));
+		return FALSE;
 	}
 
-bail:
+	m_profileCallback->onHaltStreams(std::bind(&CSignalGeneratorDlg::HaltStreams, this, std::placeholders::_1));
+	m_profileCallback->onProfileActivated([this](CComPtr<IDeckLinkProfile>& /* unused */) {
+		// Update UI with new profile
+		PostMessage(WM_UPDATE_PROFILE_MESSAGE, 0, 0);
+	});
+
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -339,28 +370,43 @@ void CSignalGeneratorDlg::OnBnClickedOk()
 
 void CSignalGeneratorDlg::OnNewDeviceSelected()
 {
-	int		selectedDeviceIndex;
-
-	selectedDeviceIndex = m_deviceListCombo.GetCurSel();
+	int selectedDeviceIndex = m_deviceListCombo.GetCurSel();
 	if (selectedDeviceIndex < 0)
 		return;
 
-	// Release profile callback from existing selected device
-	if (m_selectedDevice != NULL)
+	if (m_selectedDevice)
 	{
-		IDeckLinkProfileManager* profileManager = m_selectedDevice->GetDeviceProfileManager();
-		if (profileManager != NULL)
-			profileManager->SetCallback(NULL);
+		// Unsubscribe to output device callbacks
+		m_selectedDevice->onScheduledFrameCompleted(nullptr);
+		m_selectedDevice->onRenderAudioSamples(nullptr);
+		m_selectedDevice->onScheduledPlaybackStopped(nullptr);
+		m_selectedDevice->setErrorListener(nullptr);
+
+		m_selectedDevice.Release();
 	}
 	
-	m_selectedDevice = (DeckLinkOutputDevice*)m_deviceListCombo.GetItemDataPtr(selectedDeviceIndex);
+	// Find output device based on IDeckLink* object
+	auto iter = m_outputDevices.find((IDeckLink*)m_deviceListCombo.GetItemDataPtr(selectedDeviceIndex));
+	if (iter == m_outputDevices.end())
+		return;
+
+	m_selectedDevice = iter->second;
 
 	// Register profile callback with newly selected device's profile manager
-	if (m_selectedDevice != NULL)
+	if (m_selectedDevice)
 	{
-		IDeckLinkProfileManager* profileManager = m_selectedDevice->GetDeviceProfileManager();
-		if (profileManager != NULL)
-			profileManager->SetCallback(m_profileCallback);
+		// Check whether HFRTC is supported by the selected device
+		CComQIPtr<IDeckLinkProfileAttributes> deckLinkAttributes = m_selectedDevice->getDeckLinkInstance();
+		if (!deckLinkAttributes || (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHighFrameRateTimecode, &m_hfrtcSupported) != S_OK))
+		{
+			m_hfrtcSupported = FALSE;
+		}
+
+		// Subscribe to output device callbacks
+		m_selectedDevice->onScheduledFrameCompleted(std::bind(&CSignalGeneratorDlg::ScheduleNextFrame, this, false));
+		m_selectedDevice->onRenderAudioSamples(std::bind(&CSignalGeneratorDlg::WriteNextAudioSamples, this, std::placeholders::_1));
+		m_selectedDevice->onScheduledPlaybackStopped(std::bind(&CSignalGeneratorDlg::ScheduledPlaybackStopped, this));
+		m_selectedDevice->setErrorListener(std::bind(&CSignalGeneratorDlg::HandleDeviceError, this, std::placeholders::_1));
 	}
 
 	// Update the video mode popup menu
@@ -373,98 +419,87 @@ void CSignalGeneratorDlg::OnNewDeviceSelected()
 
 void CSignalGeneratorDlg::OnNewVideoFormatSelected()
 {
-	int			selectedVideoFormatIndex;
-	CString		videoFormatName;
+	int					selectedVideoFormatIndex;
+	CString				videoFormatName;
 
 	selectedVideoFormatIndex = m_videoFormatCombo.GetCurSel();
 	if (selectedVideoFormatIndex < 0)
 		return;
 
-	m_selectedDisplayMode = (IDeckLinkDisplayMode*)m_videoFormatCombo.GetItemDataPtr(selectedVideoFormatIndex);
-
+	m_selectedDisplayMode = (BMDDisplayMode)m_videoFormatCombo.GetItemData(selectedVideoFormatIndex);
+	
 	m_videoFormatCombo.GetLBText(selectedVideoFormatIndex, videoFormatName);
 	m_selectedVideoOutputFlags = (videoFormatName.Find(_T(" 3D"), 0) != -1) ? bmdVideoOutputDualStream3D : bmdVideoOutputFlagDefault;
+
+	if (m_selectedDisplayMode == bmdModeNTSC ||
+		m_selectedDisplayMode == bmdModeNTSC2398 ||
+		m_selectedDisplayMode == bmdModePAL)
+	{
+		m_timeCodeFormat = bmdTimecodeVITC;
+		m_selectedVideoOutputFlags = (BMDVideoOutputFlags)(m_selectedVideoOutputFlags | bmdVideoOutputVITC);
+	}
+	else
+	{
+		m_timeCodeFormat = bmdTimecodeRP188Any;
+		m_selectedVideoOutputFlags = (BMDVideoOutputFlags)(m_selectedVideoOutputFlags | bmdVideoOutputRP188);
+	}
 
 	RefreshPixelFormatMenu();
 }
 
-void CSignalGeneratorDlg::AddDevice(IDeckLink* deckLink)
+void CSignalGeneratorDlg::AddDevice(CComPtr<IDeckLink>& deckLink)
 {
-	int deviceIndex;
-	DeckLinkOutputDevice* newDevice = new DeckLinkOutputDevice(this, deckLink);
+	CComPtr<DeckLinkOutputDevice>	newDevice;
+
+	newDevice.Attach(new DeckLinkOutputDevice(deckLink));
 
 	// Initialise new DeckLinkDevice object
-	if (!newDevice->Init())
-	{
+	if (!newDevice->init())
 		// Device does not have IDeckLinkOutput interface, eg it is a DeckLink Mini Recorder
-		newDevice->Release();
-		return;
-	}
-
-	// Add this DeckLink device to the device list
-	deviceIndex = m_deviceListCombo.AddString(newDevice->GetDeviceName());
-	if (deviceIndex < 0)
 		return;
 
-	m_deviceListCombo.SetItemDataPtr(deviceIndex, newDevice);
+	// Register profile callback with newly added device's profile manager
+	CComQIPtr<IDeckLinkProfileManager> profileManager(newDevice->getDeckLinkInstance());
+	if (profileManager)
+		profileManager->SetCallback(m_profileCallback);
 
-	if (m_deviceListCombo.GetCount() == 1)
-	{
-		// We have added our first item, refresh and enable UI
-		m_deviceListCombo.SetCurSel(0);
-		OnNewDeviceSelected();
-	}
+	// Store output device to map to maintain reference
+	m_outputDevices[deckLink] = std::move(newDevice);
+	
+	RefreshOutputDeviceList();
 }
 
-void CSignalGeneratorDlg::RemoveDevice(IDeckLink* deckLink)
+void CSignalGeneratorDlg::RemoveDevice(CComPtr<IDeckLink>& deckLink)
 {
-	int deviceIndex = -1;
-	DeckLinkOutputDevice* deviceToRemove = NULL;
-
-	// Find the combo box entry to remove (there may be multiple entries with the same name, but each
-	// will have a different data pointer).
-	for (deviceIndex = 0; deviceIndex < m_deviceListCombo.GetCount(); ++deviceIndex)
+	// Remove output device from list 
+	auto iter = m_outputDevices.find(deckLink);
+	if (iter != m_outputDevices.end())
 	{
-		deviceToRemove = (DeckLinkOutputDevice*)m_deviceListCombo.GetItemDataPtr(deviceIndex);
-		if (deviceToRemove->GetDeckLinkInstance() == deckLink)
-			break;
+		CComPtr<DeckLinkOutputDevice> deviceToRemove = iter->second;
+
+		if ((deviceToRemove == m_selectedDevice) && m_running)
+			StopRunning();
+
+		// Release profile callback from device to remove
+		CComQIPtr<IDeckLinkProfileManager> profileManager(deviceToRemove->getDeckLinkInstance());
+		if (profileManager)
+			profileManager->SetCallback(nullptr);
+
+		// Release DeckLinkDevice instance
+		deviceToRemove.Release();
+
+		m_outputDevices.erase(iter);
+
+		// Update output device combo box
+		RefreshOutputDeviceList();
 	}
-
-	if (deviceToRemove == NULL)
-		return;
-
-	// Remove device from list
-	m_deviceListCombo.DeleteString(deviceIndex);
-
-	// If playback is ongoing, stop it
-	if ((m_selectedDevice == deviceToRemove) && m_running)
-		StopRunning();
-
-	// Check how many devices are left
-	if (m_deviceListCombo.GetCount() == 0)
-	{
-		// We have removed the last device, disable the interface.
-		m_startButton.EnableWindow(FALSE);
-		EnableInterface(FALSE);
-		m_selectedDevice = NULL;
-	}
-	else if (m_selectedDevice == deviceToRemove)
-	{
-		// The device that was removed was the one selected in the UI.
-		// Select the first available device in the list and reset the UI.
-		m_deviceListCombo.SetCurSel(0);
-		OnNewDeviceSelected();
-	}
-
-	// Release DeckLinkDevice instance
-	deviceToRemove->Release();
 }
 
-static int GetRowBytes(BMDPixelFormat pixelFormat, ULONG frameWidth)
+static int GetRowBytes(BMDPixelFormat pixelFormat, int frameWidth)
 {
 	int bytesPerRow;
 
-	// Refer to DeckLink SDK Manual - 2.7.4 Pixel Formats
+	// Refer to DeckLink SDK Manual - 3.4 Pixel Formats
 	switch (pixelFormat)
 	{
 	case bmdFormat8BitYUV:
@@ -489,33 +524,36 @@ static int GetRowBytes(BMDPixelFormat pixelFormat, ULONG frameWidth)
 	return bytesPerRow;
 }
 
-SignalGenerator3DVideoFrame* CSignalGeneratorDlg::CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*, bool)> fillFrame)
+CComPtr<SignalGenerator3DVideoFrame> CSignalGeneratorDlg::CreateOutputFrame(FillFrameFunction fillFrame)
 {
-	IDeckLinkOutput*                deckLinkOutput;
-	IDeckLinkMutableVideoFrame*		referenceFrameLeft	= NULL;
-	IDeckLinkMutableVideoFrame*		referenceFrameRight	= NULL;
-	IDeckLinkMutableVideoFrame*		scheduleFrameLeft	= NULL;
-	IDeckLinkMutableVideoFrame*		scheduleFrameRight	= NULL;
-	HRESULT							hr;
-	BMDPixelFormat					pixelFormat;
-	int								bytesPerRow;
-	int								referenceBytesPerRow;
-	IDeckLinkVideoConversion*		frameConverter		= NULL;
-	SignalGenerator3DVideoFrame*	ret					= NULL;
+	CComPtr<IDeckLinkOutput>				deckLinkOutput;
+	CComPtr<IDeckLinkMutableVideoFrame>		referenceFrameLeft;
+	CComPtr<IDeckLinkMutableVideoFrame>		referenceFrameRight;
+	CComPtr<IDeckLinkMutableVideoFrame>		scheduleFrameLeft;
+	CComPtr<IDeckLinkMutableVideoFrame>		scheduleFrameRight;
+	BMDPixelFormat							pixelFormat;
+	int										bytesPerRow;
+	int										referenceBytesPerRow;
+	CComPtr<IDeckLinkVideoConversion>		frameConverter;
+	CComPtr<SignalGenerator3DVideoFrame>	returnFrame;
 
 	pixelFormat = (BMDPixelFormat)m_pixelFormatCombo.GetItemData(m_pixelFormatCombo.GetCurSel());
 	bytesPerRow = GetRowBytes(pixelFormat, m_frameWidth);
 	referenceBytesPerRow = GetRowBytes(bmdFormat8BitYUV, m_frameWidth);
 
-	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
+	deckLinkOutput = m_selectedDevice->getDeviceOutput();
 
-	hr = CoCreateInstance(CLSID_CDeckLinkVideoConversion, NULL, CLSCTX_ALL, IID_IDeckLinkVideoConversion, (void**)&frameConverter);
-	if (hr != S_OK)
-		goto bail;
+	if (frameConverter.CoCreateInstance(CLSID_CDeckLinkVideoConversion, NULL, CLSCTX_ALL) != S_OK)
+	{
+		MessageBox(_T("Could create video conversion interface"), _T("Error"));
+		return nullptr;
+	}
 
-	hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrameLeft);
-	if (hr != S_OK)
-		goto bail;
+	if (deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrameLeft) != S_OK)
+	{
+		MessageBox(_T("Could create video output frame"), _T("Error"));
+		return nullptr;
+	}
 
 	fillFrame(referenceFrameLeft, false);
 
@@ -523,25 +561,30 @@ SignalGenerator3DVideoFrame* CSignalGeneratorDlg::CreateOutputFrame(std::functio
 	{
 		// Frame is already 8-bit YUV, no conversion required
 		scheduleFrameLeft = referenceFrameLeft;
-		scheduleFrameLeft->AddRef();
 	}
 	else
 	{
-		hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, bytesPerRow, pixelFormat, bmdFrameFlagDefault, &scheduleFrameLeft);
-		if (hr != S_OK)
-			goto bail;
+		if (deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, bytesPerRow, pixelFormat, bmdFrameFlagDefault, &scheduleFrameLeft) != S_OK)
+		{
+			MessageBox(_T("Could create video output frame"), _T("Error"));
+			return nullptr;
+		}
 
-		hr = frameConverter->ConvertFrame(referenceFrameLeft, scheduleFrameLeft);
-		if (hr != S_OK)
-			goto bail;
+		if (frameConverter->ConvertFrame(referenceFrameLeft, scheduleFrameLeft) != S_OK)
+		{
+			MessageBox(_T("Could convert video output frame"), _T("Error"));
+			return nullptr;
+		}
 	}
 
 	// If dual-stream 3D, generate right-eye frame
 	if (m_selectedVideoOutputFlags == bmdVideoOutputDualStream3D)
 	{
-		hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrameRight);
-		if (hr != S_OK)
-			goto bail;
+		if (deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrameRight) != S_OK)
+		{
+			MessageBox(_T("Could create video output frame"), _T("Error"));
+			return nullptr;
+		}
 
 		fillFrame(referenceFrameRight, true);
 
@@ -549,57 +592,33 @@ SignalGenerator3DVideoFrame* CSignalGeneratorDlg::CreateOutputFrame(std::functio
 		{
 			// Frame is already 8-bit YUV, no conversion required
 			scheduleFrameRight = referenceFrameRight;
-			scheduleFrameRight->AddRef();
 		}
 		else
 		{
-			hr = deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, bytesPerRow, pixelFormat, bmdFrameFlagDefault, &scheduleFrameRight);
-			if (hr != S_OK)
-				goto bail;
+			if (deckLinkOutput->CreateVideoFrame(m_frameWidth, m_frameHeight, bytesPerRow, pixelFormat, bmdFrameFlagDefault, &scheduleFrameRight) != S_OK)
+			{
+				MessageBox(_T("Could create video output frame"), _T("Error"));
+				return nullptr;
+			}
 
-			hr = frameConverter->ConvertFrame(referenceFrameRight, scheduleFrameRight);
-			if (hr != S_OK)
-				goto bail;
+			if (frameConverter->ConvertFrame(referenceFrameRight, scheduleFrameRight) != S_OK)
+			{
+				MessageBox(_T("Could convert video output frame"), _T("Error"));
+				return nullptr;
+			}
 		}
 	}
 
-	ret = new SignalGenerator3DVideoFrame(scheduleFrameLeft, scheduleFrameRight);
-
-bail:
-	if (referenceFrameLeft)
-	{
-		referenceFrameLeft->Release();
-		referenceFrameLeft = NULL;
-	}
-	if (referenceFrameRight)
-	{
-		referenceFrameRight->Release();
-		referenceFrameRight = NULL;
-	}
-	if (scheduleFrameLeft)
-	{
-		scheduleFrameLeft->Release();
-		scheduleFrameLeft = NULL;
-	}
-	if (scheduleFrameRight)
-	{
-		scheduleFrameRight->Release();
-		scheduleFrameRight = NULL;
-	}
-	if (frameConverter)
-	{
-		frameConverter->Release();
-		frameConverter = NULL;
-	}
-
-	return ret;
+	returnFrame.Attach(new SignalGenerator3DVideoFrame(scheduleFrameLeft, scheduleFrameRight));
+	return returnFrame;
 }
 
 void	CSignalGeneratorDlg::StartRunning ()
 {
-	IDeckLinkOutput*	deckLinkOutput;
-	BOOL				output444;
-	HRESULT				result;
+	CComPtr<IDeckLinkOutput>			deckLinkOutput = m_selectedDevice->getDeviceOutput();
+	CComPtr<IDeckLinkDisplayMode>		displayMode;
+	BOOL								output444;
+	HRESULT								result;
 
 	// Determine the audio and video properties for the output stream
 	m_outputSignal = (OutputSignal)m_outputSignalCombo.GetCurSel();
@@ -607,13 +626,29 @@ void	CSignalGeneratorDlg::StartRunning ()
 	m_audioSampleDepth = (BMDAudioSampleType)m_audioSampleDepthCombo.GetItemData(m_audioSampleDepthCombo.GetCurSel());
 	m_audioSampleRate = bmdAudioSampleRate48kHz;
 	//
-	// - Extract the IDeckLinkDisplayMode from the display mode popup menu (stashed in the item's tag)
-	m_frameWidth = m_selectedDisplayMode->GetWidth();
-	m_frameHeight = m_selectedDisplayMode->GetHeight();
-	m_selectedDisplayMode->GetFrameRate(&m_frameDuration, &m_frameTimescale);
+	// - Extract the IDeckLinkDisplayMode from the selected BMDDisplayMode
+	if (deckLinkOutput->GetDisplayMode(m_selectedDisplayMode, &displayMode) != S_OK)
+		goto bail;
+
+	m_frameWidth = (int)displayMode->GetWidth();
+	m_frameHeight = (int)displayMode->GetHeight();
+	m_fieldDominance = displayMode->GetFieldDominance();
+	displayMode->GetFrameRate(&m_frameDuration, &m_frameTimescale);
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	m_framesPerSecond = (unsigned long)((m_frameTimescale + (m_frameDuration-1))  /  m_frameDuration);
 	
+	// Set the video preroll size and audio waterlevel to 1/2 second
+	m_selectedDevice->setVideoPrerollSize(m_framesPerSecond / 2);
+	m_selectedDevice->setAudioWaterLevel(bmdAudioSampleRate48kHz / 2);
+
+	// m-rate frame rates with multiple 30-frame counting should implement Drop Frames compensation, refer to SMPTE 12-1
+	if (m_frameDuration == 1001 && m_frameTimescale % 30000 == 0)
+		m_dropFrames = (unsigned int)(2 * (m_frameTimescale / 30000));
+	else
+		m_dropFrames = 0;
+
+	m_timeCode = std::make_unique<Timecode>(m_framesPerSecond, m_dropFrames);
+
 	// Set the output to 444 if RGB mode is selected
 	try
 	{
@@ -624,14 +659,13 @@ void	CSignalGeneratorDlg::StartRunning ()
 		goto bail;
 	}
 
-	result = m_selectedDevice->GetDeviceConfiguration()->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
+	result = m_selectedDevice->getDeviceConfiguration()->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
 	// If a device without SDI output is used, then SetFlags will return E_NOTIMPL
 	if ((result != S_OK) && (result != E_NOTIMPL))
 		goto bail;
 
 	// Set the video output mode
-	deckLinkOutput = m_selectedDevice->GetDeviceOutput();
-	if (deckLinkOutput->EnableVideoOutput(m_selectedDisplayMode->GetDisplayMode(), m_selectedVideoOutputFlags) != S_OK)
+	if (deckLinkOutput->EnableVideoOutput(m_selectedDisplayMode, m_selectedVideoOutputFlags) != S_OK)
 		goto bail;
 
 	// Set the audio output mode
@@ -646,11 +680,15 @@ void	CSignalGeneratorDlg::StartRunning ()
 	// Generate one second of audio tone
 	m_audioSamplesPerFrame = (unsigned long)((m_audioSampleRate * m_frameDuration) / m_frameTimescale);
 	m_audioBufferSampleLength = (unsigned long)((m_framesPerSecond * m_audioSampleRate * m_frameDuration) / m_frameTimescale);
-	m_audioBuffer = HeapAlloc(GetProcessHeap(), 0, (m_audioBufferSampleLength * m_audioChannelCount * (m_audioSampleDepth / 8)));
-	if (m_audioBuffer == NULL)
-		goto bail;
-	FillSine(m_audioBuffer, m_audioBufferSampleLength, m_audioChannelCount, m_audioSampleDepth);
-	
+	m_audioBuffer.resize(m_audioBufferSampleLength * m_audioChannelCount * (m_audioSampleDepth / 8), 0x0);  // Zero buffer  (interpreted as audio silence)
+	m_audioBufferOffset = 0;
+	m_audioStreamTime = 0;
+
+	if (m_outputSignal == kOutputSignalPip)
+		FillSine(m_audioBuffer.data(), m_audioSamplesPerFrame, m_audioChannelCount, m_audioSampleDepth);
+	else
+		FillSine(m_audioBuffer.data() + (m_audioSamplesPerFrame * m_audioChannelCount * m_audioSampleDepth / 8), (m_audioBufferSampleLength - m_audioSamplesPerFrame), m_audioChannelCount, m_audioSampleDepth);
+
 	// Generate a frame of black
 	m_videoFrameBlack = CreateOutputFrame(FillBlack);
 	if (! m_videoFrameBlack)
@@ -661,19 +699,19 @@ void	CSignalGeneratorDlg::StartRunning ()
 	if (! m_videoFrameBars)
 		goto bail;
 
-	// Begin video preroll by scheduling a second of frames in hardware
+	// Begin video preroll by scheduling half a second of frames in hardware
 	m_totalFramesScheduled = 0;
-	for (unsigned i = 0; i < m_framesPerSecond; i++)
+	for (unsigned i = 0; i < m_framesPerSecond / 2; i++)
 		ScheduleNextFrame(true);
 	
 	// Begin audio preroll.  This will begin calling our audio callback, which will start the DeckLink output stream.
-	m_totalAudioSecondsScheduled = 0;
 	if (deckLinkOutput->BeginAudioPreroll() != S_OK)
 		goto bail;
 	
-	EnterCriticalSection(&m_stopPlaybackLock);
-	m_scheduledPlaybackStopped = false;
-	LeaveCriticalSection(&m_stopPlaybackLock);
+	{
+		std::lock_guard<std::mutex> lock(m_stopPlaybackMutex);
+		m_scheduledPlaybackStopped = false;
+	}
 
 	// Success; update the UI
 	m_running = true;
@@ -691,40 +729,26 @@ bail:
 
 void	CSignalGeneratorDlg::StopRunning ()
 {
-	IDeckLinkOutput* deckLinkOutput = m_selectedDevice->GetDeviceOutput();
+	CComPtr<IDeckLinkOutput> deckLinkOutput = m_selectedDevice->getDeviceOutput();
 
 	// Stop the audio and video output streams immediately
-	deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
+	deckLinkOutput->StopScheduledPlayback(0, nullptr, 0);
 
 	// Recommended to wait for IDeckLinkVideoOutputCallback::ScheduledPlaybackHasStopped callback before disabling output
-	EnterCriticalSection(&m_stopPlaybackLock);
-	while (!m_scheduledPlaybackStopped)
 	{
-		SleepConditionVariableCS(&m_stopPlaybackCondition, &m_stopPlaybackLock, INFINITE);
+		std::unique_lock<std::mutex> lock(m_stopPlaybackMutex);
+		m_stopPlaybackCondition.wait(lock, [&] { return m_scheduledPlaybackStopped; });
 	}
-	LeaveCriticalSection(&m_stopPlaybackLock);
 
 	// Dereference DeckLinkOutputDevice delegate from callbacks
-	deckLinkOutput->SetScheduledFrameCompletionCallback(NULL);
-	deckLinkOutput->SetAudioCallback(NULL);
-	deckLinkOutput->SetScreenPreviewCallback(NULL);
+	deckLinkOutput->SetScheduledFrameCompletionCallback(nullptr);
+	deckLinkOutput->SetAudioCallback(nullptr);
+	deckLinkOutput->SetScreenPreviewCallback(nullptr);
 
 	// Disable video and audio outputs
 	deckLinkOutput->DisableAudioOutput();
 	deckLinkOutput->DisableVideoOutput();
 
-	if (m_videoFrameBlack != NULL)
-		m_videoFrameBlack->Release();
-	m_videoFrameBlack = NULL;
-	
-	if (m_videoFrameBars != NULL)
-		m_videoFrameBars->Release();
-	m_videoFrameBars = NULL;
-	
-	if (m_audioBuffer != NULL)
-		HeapFree(GetProcessHeap(), 0, m_audioBuffer);
-	m_audioBuffer = NULL;
-	
 	// Success; update the UI
 	m_running = false;
 	m_startButton.SetWindowText(_T("Start"));
@@ -735,7 +759,10 @@ void	CSignalGeneratorDlg::StopRunning ()
 
 void	CSignalGeneratorDlg::ScheduleNextFrame (bool prerolling)
 {
-	IDeckLinkOutput* deckLinkOutput = m_selectedDevice->GetDeviceOutput();
+	CComPtr<IDeckLinkOutput>				deckLinkOutput = m_selectedDevice->getDeviceOutput();
+	CComPtr<SignalGenerator3DVideoFrame>	currentFrame;
+	bool									setVITC1Timecode = false;
+	bool									setVITC2Timecode = false;
 
 	if (prerolling == false)
 	{
@@ -749,14 +776,12 @@ void	CSignalGeneratorDlg::ScheduleNextFrame (bool prerolling)
 		if ((m_totalFramesScheduled % m_framesPerSecond) == 0)
 		{
 			// On each second, schedule a frame of bars
-			if (deckLinkOutput->ScheduleVideoFrame(m_videoFrameBars, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale) != S_OK)
-				return;
+			currentFrame = m_videoFrameBars;
 		}
 		else
 		{
 			// Schedue frames of black
-			if (deckLinkOutput->ScheduleVideoFrame(m_videoFrameBlack, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale) != S_OK)
-				return;
+			currentFrame = m_videoFrameBlack;
 		}
 	}
 	else
@@ -764,82 +789,193 @@ void	CSignalGeneratorDlg::ScheduleNextFrame (bool prerolling)
 		if ((m_totalFramesScheduled % m_framesPerSecond) == 0)
 		{
 			// On each second, schedule a frame of black
-			if (deckLinkOutput->ScheduleVideoFrame(m_videoFrameBlack, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale) != S_OK)
-				return;
+			currentFrame = m_videoFrameBlack;
 		}
 		else
 		{
 			// Schedue frames of color bars
-			if (deckLinkOutput->ScheduleVideoFrame(m_videoFrameBars, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale) != S_OK)
-				return;
+			currentFrame = m_videoFrameBars;
 		}
 	}
-	
-	m_totalFramesScheduled += 1;
-}
 
-void	CSignalGeneratorDlg::WriteNextAudioSamples ()
-{
-	IDeckLinkOutput* deckLinkOutput = m_selectedDevice->GetDeviceOutput();
-
-	// Write one second of audio to the DeckLink API.
-	
-	if (m_outputSignal == kOutputSignalPip)
+	if (m_timeCodeFormat == bmdTimecodeVITC)
 	{
-		// Schedule one-frame of audio tone
-		if (deckLinkOutput->ScheduleAudioSamples(m_audioBuffer, m_audioSamplesPerFrame, (m_totalAudioSecondsScheduled * m_audioBufferSampleLength), m_audioSampleRate, NULL) != S_OK)
-			return;
+		if (currentFrame->SetTimecodeFromComponents(bmdTimecodeVITC,
+			m_timeCode->hours(),
+			m_timeCode->minutes(),
+			m_timeCode->seconds(),
+			m_timeCode->frames(),
+			bmdTimecodeFlagDefault) != S_OK)
+		{
+			MessageBox(_T("Could not set VITC timecode on frame"), _T("Error"));
+			goto bail;
+		}
 	}
 	else
 	{
-		// Schedule one-second (minus one frame) of audio tone
-		if (deckLinkOutput->ScheduleAudioSamples(m_audioBuffer, (m_audioBufferSampleLength - m_audioSamplesPerFrame), (m_totalAudioSecondsScheduled * m_audioBufferSampleLength) + m_audioSamplesPerFrame, m_audioSampleRate, NULL) != S_OK)
-			return;
+		int frames = m_timeCode->frames();
+
+		if (m_hfrtcSupported)
+		{
+			if (currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188HighFrameRate,
+				m_timeCode->hours(),
+				m_timeCode->minutes(),
+				m_timeCode->seconds(),
+				frames,
+				bmdTimecodeFlagDefault) != S_OK)
+			{
+				MessageBox(_T("Could not set HFRTC timecode on frame"), _T("Error"));
+				goto bail;
+			}
+		}
+
+		if (m_fieldDominance != bmdProgressiveFrame)
+		{
+			// An interlaced or PsF frame has both VITC1 and VITC2 set with the same timecode value (SMPTE ST 12-2:2014 7.2)
+			setVITC1Timecode = true;
+			setVITC2Timecode = true;
+		}
+		else if (m_framesPerSecond <= 30)
+		{
+			// If this isn't a High-P mode, then just use VITC1 (SMPTE ST 12-2:2014 7.2)
+			setVITC1Timecode = true;
+		}
+		else if (m_framesPerSecond <= 60)
+		{
+			// If this is a High-P mode then use VITC1 on even frames and VITC2 on odd frames. This is done because the
+			// frames field of the RP188 VITC timecode cannot hold values greater than 30 (SMPTE ST 12-2:2014 7.2, 9.2)
+			if ((frames & 1) == 0)
+				setVITC1Timecode = true;
+			else
+				setVITC2Timecode = true;
+
+			frames >>= 1;
+		}
+
+		if (setVITC1Timecode)
+		{
+			if (currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188VITC1,
+				m_timeCode->hours(),
+				m_timeCode->minutes(),
+				m_timeCode->seconds(),
+				frames,
+				bmdTimecodeFlagDefault) != S_OK)
+			{
+				MessageBox(_T("Could not set VITC1 timecode on interlaced frame"), _T("Error"));
+				goto bail;
+			}
+		}
+
+		if (setVITC2Timecode)
+		{
+			// The VITC2 timecode also has the field mark flag set
+			if (currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188VITC2,
+				m_timeCode->hours(),
+				m_timeCode->minutes(),
+				m_timeCode->seconds(),
+				frames,
+				bmdTimecodeFieldMark) != S_OK)
+			{
+				MessageBox(_T("Could not set VITC1 timecode on interlaced frame"), _T("Error"));
+				goto bail;
+			}
+		}
 	}
-	
-	m_totalAudioSecondsScheduled += 1;
+
+	deckLinkOutput->ScheduleVideoFrame(currentFrame, (m_totalFramesScheduled * m_frameDuration), m_frameDuration, m_frameTimescale);
+
+bail:
+	m_timeCode->update();
+	m_totalFramesScheduled += 1;
+}
+
+void	CSignalGeneratorDlg::WriteNextAudioSamples(unsigned int samplesToWrite)
+{
+	CComPtr<IDeckLinkOutput>	deckLinkOutput = m_selectedDevice->getDeviceOutput();
+	unsigned int				samplesToEndOfBuffer;
+	unsigned int				samplesWritten;
+
+	samplesToEndOfBuffer = (m_audioBufferSampleLength - m_audioBufferOffset);
+	if (samplesToWrite > samplesToEndOfBuffer)
+		samplesToWrite = samplesToEndOfBuffer;
+
+	HRESULT hr = deckLinkOutput->ScheduleAudioSamples((void*)(m_audioBuffer.data() + m_audioBufferOffset * m_audioChannelCount * m_audioSampleDepth / 8), samplesToWrite, m_audioStreamTime, m_audioSampleRate, &samplesWritten);
+	if (hr == S_OK)
+	{
+		m_audioBufferOffset = ((m_audioBufferOffset + samplesWritten) % m_audioBufferSampleLength);
+		m_audioStreamTime += samplesWritten;
+	}
 }
 
 void	CSignalGeneratorDlg::ScheduledPlaybackStopped()
 {
 	// Notify waiting process that scheduled playback has stopped
-	EnterCriticalSection(&m_stopPlaybackLock);
+	std::lock_guard<std::mutex> guard(m_stopPlaybackMutex);
 	m_scheduledPlaybackStopped = true;
-	LeaveCriticalSection(&m_stopPlaybackLock);
-
-	WakeConditionVariable(&m_stopPlaybackCondition);
+	m_stopPlaybackCondition.notify_all();
 }
 
-void	CSignalGeneratorDlg::HaltStreams()
+void	CSignalGeneratorDlg::HaltStreams(CComPtr<IDeckLinkProfile>& newProfile)
 {
+	CComPtr<IDeckLink> deckLink;
+
 	// Profile is changing, stop playback if running
-	if (m_running)
+	if ((newProfile->GetDevice(&deckLink) == S_OK) &&
+		(m_selectedDevice->getDeckLinkInstance() == deckLink) &&
+		m_running)
+	{
 		StopRunning();
+	}
+}
+
+void CSignalGeneratorDlg::HandleDeviceError(OutputDeviceError error)
+{
+	switch (error)
+	{
+		case OutputDeviceError::GetBufferedAudioSampleCountFailed:
+			MessageBox(_T("Could not obtain the buffered audio sample count"), _T("Error"));
+			break;
+
+		case OutputDeviceError::GetBufferedVideoFrameCountFailed:
+			MessageBox(_T("Could not obtain the buffered video frame count"), _T("Error"));
+			break;
+	}
 }
 
 LRESULT CSignalGeneratorDlg::OnAddDevice(WPARAM wParam, LPARAM lParam)
 {
 	// A new device has been connected
-	AddDevice((IDeckLink*)wParam);
+	CComPtr<IDeckLink> deckLink;
+	deckLink.Attach((IDeckLink*)wParam);
+	AddDevice(deckLink);
 	return 0;
 }
 
 LRESULT	CSignalGeneratorDlg::OnRemoveDevice(WPARAM wParam, LPARAM lParam)
 {
 	// An existing device has been disconnected
-	RemoveDevice((IDeckLink*)wParam);
+	CComPtr<IDeckLink> deckLink;
+	deckLink.Attach((IDeckLink*)wParam);
+	RemoveDevice(deckLink);
 	return 0;
 }
 
 LRESULT	CSignalGeneratorDlg::OnProfileUpdate(WPARAM wParam, LPARAM lParam)
 {
-	// Update display mode menu with new profile
-	RefreshDisplayModeMenu();
-
-	// Update available audio channels with new profile
-	RefreshAudioChannelMenu();
-
+	// Check whether device is active/inactive and update output device combobox, 
+	// following the same steps as if the device was added/removed. 
+	RefreshOutputDeviceList();
 	return 0;
+}
+
+
+// Required to ensure minimum szie of dialog
+void CSignalGeneratorDlg::OnGetMinMaxInfo(MINMAXINFO* minMaxInfo)
+{
+	CDialog::OnGetMinMaxInfo(minMaxInfo);
+
+	minMaxInfo->ptMinTrackSize.x = std::max(minMaxInfo->ptMinTrackSize.x, m_minDialogSize.cx);
+	minMaxInfo->ptMinTrackSize.y = std::max(minMaxInfo->ptMinTrackSize.y, m_minDialogSize.cy);
 }
 
 // If you add a minimize button to your dialog, you will need the code below
@@ -876,50 +1012,28 @@ void CSignalGeneratorDlg::OnClose()
 	if (m_running)
 		StopRunning();
 
-	// Disable profile callback
-	if ((m_selectedDevice != NULL) && (m_selectedDevice->GetDeviceProfileManager() != NULL))
+	if (m_selectedDevice)
+		m_selectedDevice.Release();
+
+	// Release all output devices
+	for (auto& device : m_outputDevices)
 	{
-		m_selectedDevice->GetDeviceProfileManager()->SetCallback(NULL);
+		CComQIPtr<IDeckLinkProfileManager> profileManager(device.second->getDeckLinkInstance());
+		if (profileManager)
+			profileManager->SetCallback(nullptr);
+
+		device.second.Release();
 	}
+
+	// Release profile callback
+	m_profileCallback.Release();
+
+	// Release preview window
+	m_previewWindow.Release();
 
 	// Disable DeckLink device discovery
 	m_deckLinkDiscovery->disable();
-
-	// Release all DeckLinkOutputDevice instances
-	while (m_deviceListCombo.GetCount() > 0)
-	{
-		DeckLinkOutputDevice* device = (DeckLinkOutputDevice*)m_deviceListCombo.GetItemDataPtr(0);
-		device->Release();
-		m_deviceListCombo.DeleteString(0);
-	}
-
-	// Release all DisplayMode instances
-	while (m_videoFormatCombo.GetCount() > 0)
-	{
-		IDeckLinkDisplayMode* deckLinkDisplayMode = (IDeckLinkDisplayMode*)m_videoFormatCombo.GetItemDataPtr(0);
-		deckLinkDisplayMode->Release();
-		m_videoFormatCombo.DeleteString(0);
-	}
-
-	// Release Profile Callback
-	if (m_profileCallback != NULL)
-	{
-		m_profileCallback->Release();
-	}
-
-	// Release PreviewWindow instance
-	if (m_previewWindow != NULL)
-	{
-		m_previewWindow->Release();
-	}
-
-	// Release DeckLinkDeviceDiscovery instance
-	if (m_deckLinkDiscovery != NULL)
-	{
-		m_deckLinkDiscovery->Release();
-	}
-
-	DeleteCriticalSection(&m_stopPlaybackLock);
+	m_deckLinkDiscovery.Release();
 
 	CDialog::OnClose();
 }
@@ -936,60 +1050,54 @@ HCURSOR CSignalGeneratorDlg::OnQueryDragIcon()
 /*****************************************/
 
 
-void	FillSine (void* audioBuffer, unsigned long samplesToWrite, unsigned long channels, unsigned long sampleDepth)
+void	FillSine (unsigned char* audioBuffer, unsigned long samplesToWrite, unsigned long channels, unsigned long sampleDepth)
 {
-	if (sampleDepth == 16)
+	int audioMaxLevel = (1 << ((int)sampleDepth - 1)) - 1;
+	double toneMaxLevel = (double)audioMaxLevel * pow(10.0, kReferenceAudioToneLevel / kReferenceSoundPressure);
+
+	if (sampleDepth == bmdAudioSampleType16bitInteger)
 	{
-		INT16*		nextBuffer;
+		int16_t* nextBuffer;
 		
-		nextBuffer = (INT16*)audioBuffer;
+		nextBuffer = (int16_t*)audioBuffer;
 		for (unsigned i = 0; i < samplesToWrite; i++)
 		{
-			INT16		sample;
+			int16_t sample;
 			
-			sample = (INT16)(24576.0 * sin((i * 2.0 * M_PI) / 48.0));
+			sample = (int16_t)(toneMaxLevel * sin((i * 2.0 * M_PI * kReferenceAudioToneFreq) / (int)bmdAudioSampleRate48kHz));
 			for (unsigned ch = 0; ch < channels; ch++)
 				*(nextBuffer++) = sample;
 		}
 	}
-	else if (sampleDepth == 32)
+	else if (sampleDepth == bmdAudioSampleType32bitInteger)
 	{
-		INT32*		nextBuffer;
+		int32_t* nextBuffer;
 		
-		nextBuffer = (INT32*)audioBuffer;
+		nextBuffer = (int32_t*)audioBuffer;
 		for (unsigned i = 0; i < samplesToWrite; i++)
 		{
-			INT32		sample;
+			int32_t sample;
 			
-			sample = (INT32)(1610612736.0 * sin((i * 2.0 * M_PI) / 48.0));
+			sample = (int32_t)(toneMaxLevel * sin((i * 2.0 * M_PI * kReferenceAudioToneFreq) / (int)bmdAudioSampleRate48kHz));
 			for (unsigned ch = 0; ch < channels; ch++)
 				*(nextBuffer++) = sample;
 		}
 	}
 }
 
-void	FillColourBars (IDeckLinkVideoFrame* theFrame, bool reversed)
+void	FillColourBars (CComPtr<IDeckLinkMutableVideoFrame>& theFrame, bool reversed)
 {
 	DWORD*			nextWord;
 	unsigned long	width;
 	unsigned long	height;
-	DWORD*			bars;
 	unsigned long	colourBarCount;
 	
 	theFrame->GetBytes((void**)&nextWord);
 	width = theFrame->GetWidth();
 	height = theFrame->GetHeight();
 	
-	if (width > 720)
-	{
-		bars = gHD75pcColourBars;
-		colourBarCount = sizeof(gHD75pcColourBars) / sizeof(gHD75pcColourBars[0]);
-	}
-	else
-	{
-		bars = gSD75pcColourBars;
-		colourBarCount = sizeof(gSD75pcColourBars) / sizeof(gSD75pcColourBars[0]);
-	}
+	auto& bars = (width > 720) ? gHD75pcColourBars : gSD75pcColourBars;
+	colourBarCount = bars.size();
 
 	for (unsigned y = 0; y < height; y++)
 	{
@@ -1005,7 +1113,7 @@ void	FillColourBars (IDeckLinkVideoFrame* theFrame, bool reversed)
 	}
 }
 
-void	FillBlack (IDeckLinkVideoFrame* theFrame, bool /* unused */ )
+void	FillBlack (CComPtr<IDeckLinkMutableVideoFrame>& theFrame, bool /* unused */ )
 {
 	DWORD*			nextWord;
 	unsigned long	width;

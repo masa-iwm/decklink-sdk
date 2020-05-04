@@ -75,3 +75,6 @@ void        StringToStdString(STRINGOBJ bmdStr, std::string& stdStr);
 // atomic operators
 INT32_SIGNED AtomicIncrement(volatile INT32_SIGNED* value);
 INT32_SIGNED AtomicDecrement(volatile INT32_SIGNED* value);
+
+bool operator==(const REFIID& lhs, const REFIID& rhs);
+

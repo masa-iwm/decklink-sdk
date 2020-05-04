@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -25,10 +25,8 @@
 ** -LICENSE-END-
 */
 
-// CapturePreviewDlg.cpp : implementation file
-//
-
 #include "stdafx.h"
+#include <algorithm>
 #include <vector>
 #include "CapturePreview.h"
 #include "CapturePreviewDlg.h"
@@ -39,10 +37,7 @@
 #define new DEBUG_NEW
 #endif
 
-
-using namespace std;
-
-static const vector<pair<BMDVideoConnection, CString>> kInputConnections =
+static const std::vector<std::pair<BMDVideoConnection, CString>> kInputConnections =
 {
 	{ bmdVideoConnectionSDI,		_T("SDI") },
 	{ bmdVideoConnectionHDMI,		_T("HDMI") },
@@ -51,6 +46,9 @@ static const vector<pair<BMDVideoConnection, CString>> kInputConnections =
 	{ bmdVideoConnectionComposite,	_T("Composite") },
 	{ bmdVideoConnectionSVideo,		_T("S-Video") },
 };
+
+static void getAncillaryDataFromFrame(CComPtr<IDeckLinkVideoInputFrame>& videoFrame, BMDTimecodeFormat timecodeFormat, CString& timecodeString, CString& userBitsString);
+static void getMetadataFromFrame(CComPtr<IDeckLinkVideoInputFrame>& videoFrame, MetadataStruct& metadata);
 
 CCapturePreviewDlg::CCapturePreviewDlg(CWnd* pParent)
 : CDialog(CCapturePreviewDlg::IDD, pParent), m_deckLinkDiscovery(NULL),
@@ -104,12 +102,14 @@ void CCapturePreviewDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CCapturePreviewDlg, CDialog)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_WM_GETMINMAXINFO()
 	ON_WM_CLOSE()
 
 	// UI element messages
 	ON_BN_CLICKED(IDC_START_STOP_BUTTON, &CCapturePreviewDlg::OnStartStopBnClicked)
 	ON_CBN_SELCHANGE(IDC_INPUT_DEVICE_COMBO, &CCapturePreviewDlg::OnNewDeviceSelected)
 	ON_CBN_SELCHANGE(IDC_INPUT_CONNECTION_COMBO, &CCapturePreviewDlg::OnInputConnectionSelected)
+	ON_BN_CLICKED(IDC_AUTODETECT_FORMAT_CHECK, &CCapturePreviewDlg::OnAutoDetectCBClicked)
 
 	// Custom messages
 	ON_MESSAGE(WM_REFRESH_INPUT_STREAM_DATA_MESSAGE, &CCapturePreviewDlg::OnRefreshInputStreamData)
@@ -125,7 +125,7 @@ void CCapturePreviewDlg::OnStartStopBnClicked()
 	if (m_selectedDevice == NULL)
 		return;
 
-	if (m_selectedDevice->IsCapturing())
+	if (m_selectedDevice->isCapturing())
 		StopCapture();
 	else
 		StartCapture();
@@ -133,51 +133,42 @@ void CCapturePreviewDlg::OnStartStopBnClicked()
 
 void CCapturePreviewDlg::OnNewDeviceSelected()
 {
-	int		selectedDeviceIndex;
+	int			selectedDeviceIndex;
+
+	m_selectedDevice = nullptr;
 
 	selectedDeviceIndex = m_deviceListCombo.GetCurSel();
 	if (selectedDeviceIndex < 0)
 		return;
 
-	// Release profile callback from existing selected device
-	if (m_selectedDevice != NULL)
+	if (m_selectedDevice)
 	{
-		IDeckLinkProfileManager* profileManager = m_selectedDevice->GetDeviceProfileManager();
-		if (profileManager != NULL)
-			profileManager->SetCallback(NULL);
+		// Unsubscribe to input device callbacks
+		m_selectedDevice->setErrorListener(nullptr);
+		m_selectedDevice->onVideoFormatChange(nullptr);
+		m_selectedDevice->onVideoFrameArrival(nullptr);
+
+		m_selectedDevice.Release();
 	}
 
-	m_selectedDevice = (DeckLinkDevice*)m_deviceListCombo.GetItemDataPtr(selectedDeviceIndex);
+	// Find input device based on IDeckLink* object
+	auto iter = m_inputDevices.find((IDeckLink*)m_deviceListCombo.GetItemDataPtr(selectedDeviceIndex));
+	if (iter == m_inputDevices.end())
+		return;
 
-	if (m_selectedDevice != NULL)
+	m_selectedDevice = iter->second;
+
+	if (m_selectedDevice)
 	{
-		IDeckLinkProfileManager*	profileManager	= NULL;
-		LONGLONG					duplexMode		= bmdDuplexInactive;
+		// Subscribe to input device callbacks
+		m_selectedDevice->setErrorListener(std::bind(&CCapturePreviewDlg::HandleDeviceError, this, std::placeholders::_1));
+		m_selectedDevice->onVideoFormatChange([this](BMDDisplayMode displayMode) { PostMessage(WM_DETECT_VIDEO_MODE_MESSAGE, 0, (LPARAM)displayMode); });
+		m_selectedDevice->onVideoFrameArrival(std::bind(&CCapturePreviewDlg::VideoFrameArrived, this, std::placeholders::_1));
 
-		// Register profile callback with newly selected device's profile manager
-		profileManager = m_selectedDevice->GetDeviceProfileManager();
-		if (profileManager != NULL)
-			profileManager->SetCallback(m_profileCallback);
+		// Update the input video connections combo
+		RefreshInputConnectionList();
 
-		// Query duplex attribute to determine whether sub-device is active
-		if ((m_selectedDevice->GetDeckLinkAttributes()->GetInt(BMDDeckLinkDuplex, &duplexMode) == S_OK) && 
-			(duplexMode != bmdDuplexInactive))
-		{
-			// Sub-device is active - update the input video connections combo
-			RefreshInputConnectionList();
-
-			if (m_selectedDevice->SupportsFormatDetection())
-				m_applyDetectedInputModeCheckbox.SetCheck(BST_CHECKED);
-
-		}
-		else
-		{
-			// Sub-device inactive, reset interface and disable start button
-			m_inputConnectionCombo.ResetContent();
-			m_modeListCombo.ResetContent();
-			m_applyDetectedInputModeCheckbox.SetCheck(BST_UNCHECKED);
-			m_startStopButton.EnableWindow(FALSE);
-		}
+		EnableInterface(true);
 	}
 }
 
@@ -193,11 +184,16 @@ void CCapturePreviewDlg::OnInputConnectionSelected()
 	m_selectedInputConnection = (BMDVideoConnection)m_inputConnectionCombo.GetItemData(selectedConnectionIndex);
 
 	// Configure input connection for selected device
-	if (m_selectedDevice->GetDeckLinkConfiguration()->SetInt(bmdDeckLinkConfigVideoInputConnection, (int64_t)m_selectedInputConnection) != S_OK)
+	if (m_selectedDevice->getDeckLinkConfiguration()->SetInt(bmdDeckLinkConfigVideoInputConnection, (int64_t)m_selectedInputConnection) != S_OK)
 		return;
 
 	// Updated video mode combo for selected input connection
 	RefreshVideoModeList();
+}
+
+void CCapturePreviewDlg::OnAutoDetectCBClicked()
+{
+	m_modeListCombo.EnableWindow(m_selectedDevice && (m_applyDetectedInputModeCheckbox.GetCheck() == BST_UNCHECKED) ? TRUE : FALSE);
 }
 
 void CCapturePreviewDlg::OnClose()
@@ -206,38 +202,30 @@ void CCapturePreviewDlg::OnClose()
 	StopCapture();
 
 	// Disable profile callback
-	if ((m_selectedDevice != NULL) && (m_selectedDevice->GetDeviceProfileManager() != NULL))
+	if (m_selectedDevice) 
 	{
-		m_selectedDevice->GetDeviceProfileManager()->SetCallback(NULL);
+		m_selectedDevice.Release();
 	}
 
 	// Release all DeckLinkDevice instances
-	while(m_deviceListCombo.GetCount() > 0)
+	for (auto& device : m_inputDevices)
 	{
-		DeckLinkDevice* device = (DeckLinkDevice*)m_deviceListCombo.GetItemDataPtr(0);
-		device->Release();
-		m_deviceListCombo.DeleteString(0);
+		CComQIPtr<IDeckLinkProfileManager> profileManager(device.second->getDeckLinkInstance());
+		if (profileManager)
+			profileManager->SetCallback(nullptr);
+
+		device.second.Release();
 	}
 
-	if (m_profileCallback != NULL)
-	{
-		m_profileCallback->Release();
-		m_profileCallback = NULL;
-	}
+	// Release profile callback
+	m_profileCallback.Release();
 
-	if (m_previewWindow != NULL)
-	{
-		m_previewWindow->Release();
-		m_previewWindow = NULL;
-	}
+	// Release preview window
+	m_previewWindow.Release();
 
 	// Release DeckLink discovery instance
-	if (m_deckLinkDiscovery != NULL)
-	{
-		m_deckLinkDiscovery->Disable();
-		m_deckLinkDiscovery->Release();
-		m_deckLinkDiscovery = NULL;
-	}
+	m_deckLinkDiscovery->disable();
+	m_deckLinkDiscovery.Release();
 
 	CDialog::OnClose();
 }
@@ -248,28 +236,81 @@ void CCapturePreviewDlg::ShowErrorMessage(TCHAR* msg, TCHAR* title)
 	MessageBox(msg, title);
 }
 
+void CCapturePreviewDlg::RefreshInputDeviceList()
+{
+	int index;
+	BOOL hasActiveInputDevices;
+
+	m_deviceListCombo.ResetContent();
+
+	for (auto& device : m_inputDevices)
+	{
+		CComQIPtr<IDeckLinkProfileAttributes> deckLinkAttributes(device.second->getDeckLinkInstance());
+
+		if (deckLinkAttributes)
+		{
+			int64_t intAttribute;
+			if ((deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &intAttribute) == S_OK) &&
+				(((BMDDuplexMode)intAttribute) != bmdDuplexInactive))
+			{
+				// Input device is active, add to combobox
+				index = m_deviceListCombo.AddString(device.second->getDeviceName());
+				m_deviceListCombo.SetItemDataPtr(index, (void*)device.first);
+
+				// Retain selected device even if combo box position has changed
+				if (device.second == m_selectedDevice)
+					m_deviceListCombo.SetCurSel(index);
+			}
+		}
+	}
+
+	hasActiveInputDevices = m_deviceListCombo.GetCount() > 0;
+
+	// If there is at least 1 active device, enable start/stop button
+	m_startStopButton.EnableWindow(hasActiveInputDevices);
+
+	if (hasActiveInputDevices)
+	{
+		// If device has been removed or becomes inactive due to profile change, then select first device in combobox
+		index = m_deviceListCombo.GetCurSel();
+		if (index == CB_ERR)
+		{
+			m_deviceListCombo.SetCurSel(0);
+			OnNewDeviceSelected();
+		}
+	}
+	else
+		m_selectedDevice = nullptr;
+
+	// If a device is selected and not capturing then enable interface
+	EnableInterface(m_selectedDevice && !m_selectedDevice->isCapturing());
+}
+
 void CCapturePreviewDlg::RefreshInputConnectionList()
 {
-	IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
-	LONGLONG					availableInputConnections;
-	LONGLONG					currentInputConnection;
-	int							index;
+	CComQIPtr<IDeckLinkProfileAttributes>	deckLinkAttributes(m_selectedDevice->getDeckLinkInstance());
+	LONGLONG								availableInputConnections;
+	LONGLONG								currentInputConnection;
+	int										index;
 
 	m_inputConnectionCombo.ResetContent();
 
+	if (!deckLinkAttributes)
+		return;
+
 	// Get the available input video connections for the device
-	if (m_selectedDevice->GetDeckLinkAttributes()->GetInt(BMDDeckLinkVideoInputConnections, &availableInputConnections) != S_OK)
+	if (deckLinkAttributes->GetInt(BMDDeckLinkVideoInputConnections, &availableInputConnections) != S_OK)
 		availableInputConnections = bmdVideoConnectionUnspecified;
 
 	// Get the current selected input connection
-	if (m_selectedDevice->GetDeckLinkConfiguration()->GetInt(bmdDeckLinkConfigVideoInputConnection, &currentInputConnection) != S_OK)
+	if (m_selectedDevice->getDeckLinkConfiguration()->GetInt(bmdDeckLinkConfigVideoInputConnection, &currentInputConnection) != S_OK)
 	{
 		currentInputConnection = bmdVideoConnectionUnspecified;
 	}
 
 	for (auto connection : kInputConnections)
 	{
-		if ((connection.first & availableInputConnections) != 0)
+		if ((connection.first & (BMDVideoConnection)availableInputConnections) != 0)
 		{
 			// Input video connection is supported by device, add to combo
 			index = m_inputConnectionCombo.AddString(connection.second);
@@ -295,53 +336,37 @@ void CCapturePreviewDlg::RefreshInputConnectionList()
 
 void CCapturePreviewDlg::RefreshVideoModeList()
 {
-	// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
-	IDeckLinkDisplayModeIterator*		displayModeIterator;
-	IDeckLinkDisplayMode*				deckLinkDisplayMode;
-
-	// Clear the menu
 	m_modeListCombo.ResetContent();
 
-	if (m_selectedDevice->GetDeckLinkInput()->GetDisplayModeIterator(&displayModeIterator) != S_OK)
-		return;
-
-	while (displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
+	m_selectedDevice->queryDisplayModes([this](CComPtr<IDeckLinkDisplayMode>& deckLinkDisplayMode)
 	{
-		BSTR	modeName;
-		int		newIndex;
-		HRESULT hr			= E_FAIL;
-		BOOL	supported;
+		CComBSTR	modeName;
+		int			newIndex;
+		BOOL		supported;
 
 		// Check that display mode is supported with the active profile
-		hr = m_selectedDevice->GetDeckLinkInput()->DoesSupportVideoMode(m_selectedInputConnection, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified, bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
-		if (hr != S_OK || !supported)
-			continue;
+		if ((m_selectedDevice->getDeckLinkInput()->DoesSupportVideoMode(m_selectedInputConnection, deckLinkDisplayMode->GetDisplayMode(), bmdFormatUnspecified,
+			bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, nullptr, &supported) != S_OK) ||
+			!supported)
+		{
+			return;
+		}
 
 		if (deckLinkDisplayMode->GetName(&modeName) != S_OK)
-		{
-			deckLinkDisplayMode->Release();
-			deckLinkDisplayMode = NULL;
-			continue;
-		}
+			return;
 
 		// Add this item to the video format popup menu
 		newIndex = m_modeListCombo.AddString(modeName);
 
 		// Save the BMDDisplayMode in the menu item's tag
 		m_modeListCombo.SetItemData(newIndex, deckLinkDisplayMode->GetDisplayMode());
+	});
 
-		if (m_modeListCombo.GetCount() == 1)
-		{
-			// We have added our first item, refresh pixel format menu
-			m_modeListCombo.SetCurSel(0);
-		}
-
-		deckLinkDisplayMode->Release();
-		SysFreeString(modeName);
+	if (m_modeListCombo.GetCount() > 0)
+	{
+		// Select first item in list
+		m_modeListCombo.SetCurSel(0);
 	}
-
-	displayModeIterator->Release();
-	displayModeIterator = NULL;
 
 	m_startStopButton.EnableWindow(m_modeListCombo.GetCount() > 0);
 }
@@ -354,19 +379,25 @@ void CCapturePreviewDlg::StartCapture()
 	if (selectedVideoFormatIndex < 0)
 		return;
 
-	if (m_selectedDevice && 
-		m_selectedDevice->StartCapture((BMDDisplayMode)m_modeListCombo.GetItemData(selectedVideoFormatIndex), m_previewWindow, applyDetectedInputMode))
+	if (m_selectedDevice)
 	{
-		// Update UI
-		m_startStopButton.SetWindowText(_T("Stop capture"));
-		EnableInterface(false);
+		if (m_selectedDevice->startCapture((BMDDisplayMode)m_modeListCombo.GetItemData(selectedVideoFormatIndex), m_previewWindow, applyDetectedInputMode))
+		{
+			// Update UI
+			m_startStopButton.SetWindowText(_T("Stop capture"));
+			EnableInterface(false);
+		}
+		else
+		{
+			m_selectedDevice->stopCapture();
+		}
 	}
 }
 
 void CCapturePreviewDlg::StopCapture()
 {
 	if (m_selectedDevice)
-		m_selectedDevice->StopCapture();
+		m_selectedDevice->stopCapture();
 
 	// Update UI
 	m_startStopButton.SetWindowText(_T("Start capture"));
@@ -378,28 +409,76 @@ void CCapturePreviewDlg::EnableInterface(bool enabled)
 {
 	m_deviceListCombo.EnableWindow((enabled) ? TRUE : FALSE);
 	m_inputConnectionCombo.EnableWindow((enabled) ? TRUE : FALSE);
-	m_modeListCombo.EnableWindow((enabled) ? TRUE : FALSE);
 
 	if (enabled)
 	{
-		if (m_selectedDevice && m_selectedDevice->SupportsFormatDetection())
+		if (m_selectedDevice && m_selectedDevice->doesSupportFormatDetection())
 		{
 			m_applyDetectedInputModeCheckbox.EnableWindow(TRUE);
+			m_applyDetectedInputModeCheckbox.SetCheck(BST_CHECKED);
+			m_modeListCombo.EnableWindow(FALSE);
 		}
 		else
 		{
 			m_applyDetectedInputModeCheckbox.EnableWindow(FALSE);
 			m_applyDetectedInputModeCheckbox.SetCheck(BST_UNCHECKED);
+			m_modeListCombo.EnableWindow(TRUE);
 		}
 	}
 	else
+	{
 		m_applyDetectedInputModeCheckbox.EnableWindow(FALSE);
+		m_modeListCombo.EnableWindow(FALSE);
+	}
 }
+
+void CCapturePreviewDlg::VideoFrameArrived(CComPtr<IDeckLinkVideoInputFrame>& videoFrame)
+{
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		// Get the various timecodes and userbits attached to this frame
+		getAncillaryDataFromFrame(videoFrame, bmdTimecodeVITC, m_ancillaryData.vitcF1Timecode, m_ancillaryData.vitcF1UserBits);
+		getAncillaryDataFromFrame(videoFrame, bmdTimecodeVITCField2, m_ancillaryData.vitcF2Timecode, m_ancillaryData.vitcF2UserBits);
+		getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC1, m_ancillaryData.rp188vitc1Timecode, m_ancillaryData.rp188vitc1UserBits);
+		getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC, m_ancillaryData.rp188ltcTimecode, m_ancillaryData.rp188ltcUserBits);
+		getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2, m_ancillaryData.rp188vitc2Timecode, m_ancillaryData.rp188vitc2UserBits);
+		getAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188HighFrameRate, m_ancillaryData.rp188hfrtcTimecode, m_ancillaryData.rp188hfrtcUserBits);
+		getMetadataFromFrame(videoFrame, m_metadata);
+	}
+
+	// Update the UI
+	PostMessage(WM_REFRESH_INPUT_STREAM_DATA_MESSAGE, (videoFrame->GetFlags() & bmdFrameHasNoInputSource), 0);
+}
+
+void CCapturePreviewDlg::HandleDeviceError(DeviceError error)
+{
+	switch (error)
+	{
+		case DeviceError::EnableVideoInputFailed:
+			ShowErrorMessage(_T("This application was unable to select the chosen video mode. Perhaps, the selected device is currently in-use."), _T("Error starting the capture"));
+			break;
+
+		case DeviceError::StartStreamsFailed:
+			ShowErrorMessage(_T("This application was unable to start the capture. Perhaps, the selected device is currently in-use."), _T("Error starting the capture"));
+			break;
+
+		case DeviceError::ReenableVideoInputFailed:
+			PostMessage(WM_ERROR_RESTARTING_CAPTURE_MESSAGE, 0, 0);
+			break;
+	}
+}
+
 
 BOOL	CCapturePreviewDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 	SetIcon(m_hIcon, FALSE);
+
+	// Set initial dialog size as minimum size
+	CRect rectWindow;
+	GetWindowRect(rectWindow);
+	m_minDialogSize = rectWindow.Size();
 
 	// Empty popup menus
 	m_deviceListCombo.ResetContent();
@@ -410,153 +489,153 @@ BOOL	CCapturePreviewDlg::OnInitDialog()
 	EnableInterface(false);
 
 	// Create and initialise preview, profile callback and DeckLink device discovery objects 
-	m_previewWindow = new PreviewWindow();
+	m_previewWindow.Attach(new PreviewWindow());
 	if (m_previewWindow->init(&m_previewBox) == false)
 	{
 		ShowErrorMessage(_T("This application was unable to initialise the preview window"), _T("Error"));
 		goto bail;
 	}
 
-	m_profileCallback = new ProfileCallback(this);
+	m_profileCallback.Attach(new ProfileCallback());
 
-	m_deckLinkDiscovery = new DeckLinkDeviceDiscovery(this);
-	if (! m_deckLinkDiscovery->Enable())
-		ShowErrorMessage(_T("Please install the Blackmagic Desktop Video drivers to use the features of this application."), _T("This application requires the Desktop Video drivers installed."));
+	m_profileCallback->onHaltStreams(std::bind(&CCapturePreviewDlg::HaltStreams, this, std::placeholders::_1));
+	m_profileCallback->onProfileActivated([this](CComPtr<IDeckLinkProfile>& /* unused */) {
+		// Update UI with new profile
+		PostMessage(WM_UPDATE_PROFILE_MESSAGE, 0, 0);
+	});
+
+	try
+	{
+		m_deckLinkDiscovery.Attach(new DeckLinkDeviceDiscovery());
+
+		if (!m_deckLinkDiscovery->enable())
+			throw std::runtime_error("This application requires the DeckLink drivers installed.\nPlease install the Blackmagic DeckLink drivers to use the features of this application.");
+	}
+	catch (const std::exception& e)
+	{
+		CStringW errorString(e.what());
+		MessageBox(errorString, _T("Error"));
+		return FALSE;
+	}
+
+	m_deckLinkDiscovery->onDeviceArrival([this](CComPtr<IDeckLink> &dl) {
+		// Update UI (add new device to menu) from main thread
+		PostMessage(WM_ADD_DEVICE_MESSAGE, (WPARAM)dl.Detach(), 0);
+	});
+
+	m_deckLinkDiscovery->onDeviceRemoval([this](CComPtr<IDeckLink> &dl) {
+		// Update UI (remove device from menu) from main thread
+		PostMessage(WM_REMOVE_DEVICE_MESSAGE, (WPARAM)dl.Detach(), 0);
+		dl.Release();
+	});
+
 
 bail:
 	return TRUE;
 }
 
-void CCapturePreviewDlg::AddDevice(IDeckLink* deckLink)
+void CCapturePreviewDlg::AddDevice(CComPtr<IDeckLink>& deckLink)
 {	
-	int deviceIndex;
-	DeckLinkDevice* newDevice = new DeckLinkDevice(this, deckLink);
+	CComPtr<DeckLinkDevice>		newDevice;
+
+	try
+	{
+		newDevice.Attach(new DeckLinkDevice(deckLink));
+	}
+	catch (...)
+	{
+		// Device does not have IDeckLinkInput interface, eg it is a DeckLink Mini Monitor
+		return;
+	}
 
 	// Initialise new DeckLinkDevice object
-	if (!newDevice->Init())
-	{
-		newDevice->Release();
-		return;
-	}
-
-	// Add this DeckLink device to the device list
-	deviceIndex = m_deviceListCombo.AddString(newDevice->GetDeviceName());
-	if (deviceIndex < 0)
+	if (!newDevice->init())
 		return;
 
-	m_deviceListCombo.SetItemDataPtr(deviceIndex, newDevice);
+	// Register profile callback with newly added device's profile manager
+	CComQIPtr<IDeckLinkProfileManager> profileManager(newDevice->getDeckLinkInstance());
+	if (profileManager)
+		profileManager->SetCallback(m_profileCallback);
 
-	if (m_deviceListCombo.GetCount() == 1)
+	// Store input device to map to maintain reference
+	m_inputDevices[deckLink] = std::move(newDevice);
+	RefreshInputDeviceList();
+}
+
+void CCapturePreviewDlg::RemoveDevice(CComPtr<IDeckLink>& deckLink)
+{
+	// Remove input device from list 
+	auto iter = m_inputDevices.find(deckLink);
+	if (iter != m_inputDevices.end())
 	{
-		// We have added our first item, refresh and enable UI
-		m_deviceListCombo.SetCurSel(0);
-		OnNewDeviceSelected();
+		CComPtr<DeckLinkDevice> deviceToRemove = iter->second;
+		CComQIPtr<IDeckLinkProfileManager> profileManager(deviceToRemove->getDeckLinkInstance());
 
-		m_startStopButton.EnableWindow(TRUE);
-		EnableInterface(true);
+		if (deviceToRemove->isCapturing())
+			deviceToRemove->stopCapture();
+
+		// Release profile callback from device to remove
+		if (profileManager)
+			profileManager->SetCallback(nullptr);
+
+		// Release DeckLinkDevice instance
+		deviceToRemove.Release();
+
+		m_inputDevices.erase(iter);
+
+		// Update input device combo box
+		RefreshInputDeviceList();
 	}
 }
 
-void CCapturePreviewDlg::RemoveDevice(IDeckLink* deckLink)
+void    CCapturePreviewDlg::HaltStreams(CComPtr<IDeckLinkProfile>& newProfile)
 {
-	int deviceIndex = -1;
-	DeckLinkDevice* deviceToRemove  = NULL;
+	CComPtr<IDeckLink> deckLink;
 
-	// Find the combo box entry to remove (there may be multiple entries with the same name, but each
-	// will have a different data pointer).
-	for (deviceIndex = 0; deviceIndex < m_deviceListCombo.GetCount(); ++deviceIndex)
+	// Profile is changing, stop capture if running
+	if ((newProfile->GetDevice(&deckLink) == S_OK) &&
+		(m_selectedDevice->getDeckLinkInstance() == deckLink) &&
+		(m_selectedDevice->isCapturing()))
 	{
-		deviceToRemove = (DeckLinkDevice*)m_deviceListCombo.GetItemDataPtr(deviceIndex);
-		if (deviceToRemove->DeckLinkInstance() == deckLink)
-			break;
-	}
-
-	if (deviceToRemove == NULL)
-		return;
-
-	// Stop capturing before removal
-	if (deviceToRemove->IsCapturing())
-		deviceToRemove->StopCapture();
-
-	// Remove device from list
-	m_deviceListCombo.DeleteString(deviceIndex);
-
-	// Refresh UI
-	m_startStopButton.SetWindowText(_T("Start capture"));
-
-	// Check how many devices are left
-	if (m_deviceListCombo.GetCount() == 0)
-	{
-		// We have removed the last device, disable the interface.
-		m_startStopButton.EnableWindow(FALSE);
-		EnableInterface(false);
-		m_selectedDevice = NULL;
-	}
-	else if (m_selectedDevice == deviceToRemove)
-	{
-		// The device that was removed was the one selected in the UI.
-		// Select the first available device in the list and reset the UI.
-		m_deviceListCombo.SetCurSel(0);
-		OnNewDeviceSelected();
-
-		m_invalidInputLabel.ShowWindow(SW_HIDE);
-	}
-
-	// Release DeckLinkDevice instance
-	deviceToRemove->Release();
-}
-
-void	CCapturePreviewDlg::UpdateFrameData(AncillaryDataStruct& ancillaryData, MetadataStruct& metadata)
-{
-	// Copy ancillary data under protection of critsec object
-	m_critSec.Lock();
-		m_ancillaryData = ancillaryData;
-		m_metadata = metadata;
-	m_critSec.Unlock();
-}
-
-void    CCapturePreviewDlg::HaltStreams()
-{
-	// Profile is changing, stop playback if running
-	if (m_selectedDevice->IsCapturing())
 		StopCapture();
+	}
 }
 
 LRESULT  CCapturePreviewDlg::OnRefreshInputStreamData(WPARAM wParam, LPARAM lParam)
 {
-	// Update the UI under protection of critsec object
-	m_critSec.Lock();
+	{
+		// Update the UI under protection of mutex lock
+		std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_vitcTcF1.SetWindowText(m_ancillaryData.vitcF1Timecode);
-	m_vitcUbF1.SetWindowText(m_ancillaryData.vitcF1UserBits);
-	m_vitcTcF2.SetWindowText(m_ancillaryData.vitcF2Timecode);
-	m_vitcUbF2.SetWindowText(m_ancillaryData.vitcF2UserBits);
+		m_vitcTcF1.SetWindowText(m_ancillaryData.vitcF1Timecode);
+		m_vitcUbF1.SetWindowText(m_ancillaryData.vitcF1UserBits);
+		m_vitcTcF2.SetWindowText(m_ancillaryData.vitcF2Timecode);
+		m_vitcUbF2.SetWindowText(m_ancillaryData.vitcF2UserBits);
 
-	m_rp188Vitc1Tc.SetWindowText(m_ancillaryData.rp188vitc1Timecode);
-	m_rp188Vitc1Ub.SetWindowText(m_ancillaryData.rp188vitc1UserBits);
-	m_rp188Vitc2Tc.SetWindowText(m_ancillaryData.rp188vitc2Timecode);
-	m_rp188Vitc2Ub.SetWindowText(m_ancillaryData.rp188vitc2UserBits);
-	m_rp188LtcTc.SetWindowText(m_ancillaryData.rp188ltcTimecode);
-	m_rp188LtcUb.SetWindowText(m_ancillaryData.rp188ltcUserBits);
-	m_rp188HfrtcTc.SetWindowText(m_ancillaryData.rp188hfrtcTimecode);
-	m_rp188HfrtcUb.SetWindowText(m_ancillaryData.rp188hfrtcUserBits);
+		m_rp188Vitc1Tc.SetWindowText(m_ancillaryData.rp188vitc1Timecode);
+		m_rp188Vitc1Ub.SetWindowText(m_ancillaryData.rp188vitc1UserBits);
+		m_rp188Vitc2Tc.SetWindowText(m_ancillaryData.rp188vitc2Timecode);
+		m_rp188Vitc2Ub.SetWindowText(m_ancillaryData.rp188vitc2UserBits);
+		m_rp188LtcTc.SetWindowText(m_ancillaryData.rp188ltcTimecode);
+		m_rp188LtcUb.SetWindowText(m_ancillaryData.rp188ltcUserBits);
+		m_rp188HfrtcTc.SetWindowText(m_ancillaryData.rp188hfrtcTimecode);
+		m_rp188HfrtcUb.SetWindowText(m_ancillaryData.rp188hfrtcUserBits);
 
-	m_hdrEotf.SetWindowText(m_metadata.electroOpticalTransferFunction);
-	m_hdrDpRedX.SetWindowText(m_metadata.displayPrimariesRedX);
-	m_hdrDpRedY.SetWindowText(m_metadata.displayPrimariesRedY);
-	m_hdrDpGreenX.SetWindowText(m_metadata.displayPrimariesGreenX);
-	m_hdrDpGreenY.SetWindowText(m_metadata.displayPrimariesGreenY);
-	m_hdrDpBlueX.SetWindowText(m_metadata.displayPrimariesBlueX);
-	m_hdrDpBlueY.SetWindowText(m_metadata.displayPrimariesBlueY);
-	m_hdrWhitePointX.SetWindowText(m_metadata.whitePointX);
-	m_hdrWhitePointY.SetWindowText(m_metadata.whitePointY);
-	m_hdrMaxDml.SetWindowText(m_metadata.maxDisplayMasteringLuminance);
-	m_hdrMinDml.SetWindowText(m_metadata.minDisplayMasteringLuminance);
-	m_hdrMaxCll.SetWindowText(m_metadata.maximumContentLightLevel);
-	m_hdrMaxFall.SetWindowText(m_metadata.maximumFrameAverageLightLevel);  
-	m_colorspace.SetWindowText(m_metadata.colorspace);
-	
-	m_critSec.Unlock();
+		m_hdrEotf.SetWindowText(m_metadata.electroOpticalTransferFunction);
+		m_hdrDpRedX.SetWindowText(m_metadata.displayPrimariesRedX);
+		m_hdrDpRedY.SetWindowText(m_metadata.displayPrimariesRedY);
+		m_hdrDpGreenX.SetWindowText(m_metadata.displayPrimariesGreenX);
+		m_hdrDpGreenY.SetWindowText(m_metadata.displayPrimariesGreenY);
+		m_hdrDpBlueX.SetWindowText(m_metadata.displayPrimariesBlueX);
+		m_hdrDpBlueY.SetWindowText(m_metadata.displayPrimariesBlueY);
+		m_hdrWhitePointX.SetWindowText(m_metadata.whitePointX);
+		m_hdrWhitePointY.SetWindowText(m_metadata.whitePointY);
+		m_hdrMaxDml.SetWindowText(m_metadata.maxDisplayMasteringLuminance);
+		m_hdrMinDml.SetWindowText(m_metadata.minDisplayMasteringLuminance);
+		m_hdrMaxCll.SetWindowText(m_metadata.maximumContentLightLevel);
+		m_hdrMaxFall.SetWindowText(m_metadata.maximumFrameAverageLightLevel);
+		m_colorspace.SetWindowText(m_metadata.colorspace);
+	}
 
 	m_invalidInputLabel.ShowWindow((wParam) ? SW_SHOW : SW_HIDE);
 
@@ -587,14 +666,18 @@ LRESULT CCapturePreviewDlg::OnDetectVideoMode(WPARAM wParam, LPARAM lParam)
 LRESULT CCapturePreviewDlg::OnAddDevice(WPARAM wParam, LPARAM lParam)
 {
 	// A new device has been connected
-	AddDevice((IDeckLink*)wParam);
+	CComPtr<IDeckLink> deckLink;
+	deckLink.Attach((IDeckLink*)wParam);
+	AddDevice(deckLink);
 	return 0;
 }
 
 LRESULT	CCapturePreviewDlg::OnRemoveDevice(WPARAM wParam, LPARAM lParam)
 {
 	// An existing device has been disconnected
-	RemoveDevice((IDeckLink*)wParam);
+	CComPtr<IDeckLink> deckLink;
+	deckLink.Attach((IDeckLink*)wParam);
+	RemoveDevice(deckLink);
 	return 0;
 }
 
@@ -608,10 +691,9 @@ LRESULT	CCapturePreviewDlg::OnErrorRestartingCapture(WPARAM wParam, LPARAM lPara
 
 LRESULT CCapturePreviewDlg::OnProfileUpdate(WPARAM wParam, LPARAM lParam)
 {
-	// Action as if new device selected to check whether device is active/inactive
-	// This will subsequently update input connections and video modes combo boxes
-	OnNewDeviceSelected();
-
+	// Check whether device is active/inactive and update input device combobox, 
+	// following the same steps as if the device was added/removed. 
+	RefreshInputDeviceList();
 	return 0;
 }
 
@@ -645,5 +727,136 @@ void CCapturePreviewDlg::OnPaint()
 HCURSOR CCapturePreviewDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
+}
+
+// Required to ensure minimum size of dialog
+void CCapturePreviewDlg::OnGetMinMaxInfo(MINMAXINFO* minMaxInfo)
+{
+	CDialog::OnGetMinMaxInfo(minMaxInfo);
+
+	minMaxInfo->ptMinTrackSize.x = std::max(minMaxInfo->ptMinTrackSize.x, m_minDialogSize.cx);
+	minMaxInfo->ptMinTrackSize.y = std::max(minMaxInfo->ptMinTrackSize.y, m_minDialogSize.cy);
+}
+
+void getAncillaryDataFromFrame(CComPtr<IDeckLinkVideoInputFrame>& videoFrame, BMDTimecodeFormat timecodeFormat, CString& timecodeString, CString& userBitsString)
+{
+	CComPtr<IDeckLinkTimecode>		timecode;
+	CComBSTR						timecodeBstr;
+	BMDTimecodeUserBits				userBits;
+
+	timecodeString = _T("");
+	userBitsString = _T("");
+
+	if (videoFrame && (videoFrame->GetTimecode(timecodeFormat, &timecode) == S_OK))
+	{
+		if (timecode->GetString(&timecodeBstr) == S_OK)
+			timecodeString = timecodeBstr;
+
+		if (timecode->GetTimecodeUserBits(&userBits) == S_OK)
+			userBitsString.Format(_T("0x%08X"), userBits);
+	}
+}
+
+void getMetadataFromFrame(CComPtr<IDeckLinkVideoInputFrame>& videoFrame, MetadataStruct& metadata)
+{
+	metadata.electroOpticalTransferFunction = _T("");
+	metadata.displayPrimariesRedX = _T("");
+	metadata.displayPrimariesRedY = _T("");
+	metadata.displayPrimariesGreenX = _T("");
+	metadata.displayPrimariesGreenY = _T("");
+	metadata.displayPrimariesBlueX = _T("");
+	metadata.displayPrimariesBlueY = _T("");
+	metadata.whitePointX = _T("");
+	metadata.whitePointY = _T("");
+	metadata.maxDisplayMasteringLuminance = _T("");
+	metadata.minDisplayMasteringLuminance = _T("");
+	metadata.maximumContentLightLevel = _T("");
+	metadata.maximumFrameAverageLightLevel = _T("");
+	metadata.colorspace = _T("");
+
+	CComQIPtr<IDeckLinkVideoFrameMetadataExtensions> metadataExtensions(videoFrame);
+
+	if (metadataExtensions)
+	{
+		double doubleValue = 0.0;
+		int64_t intValue = 0;
+
+		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
+		{
+			switch (intValue)
+			{
+			case 0:
+				metadata.electroOpticalTransferFunction = _T("SDR");
+				break;
+			case 1:
+				metadata.electroOpticalTransferFunction = _T("HDR");
+				break;
+			case 2:
+				metadata.electroOpticalTransferFunction = _T("PQ (ST2084)");
+				break;
+			case 3:
+				metadata.electroOpticalTransferFunction = _T("HLG");
+				break;
+			default:
+				metadata.electroOpticalTransferFunction.Format(_T("Unknown EOTF: %d"), (int32_t)intValue);
+				break;
+			}
+		}
+
+		if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
+		{
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
+				metadata.displayPrimariesRedX.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY, &doubleValue) == S_OK)
+				metadata.displayPrimariesRedY.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX, &doubleValue) == S_OK)
+				metadata.displayPrimariesGreenX.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY, &doubleValue) == S_OK)
+				metadata.displayPrimariesGreenY.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX, &doubleValue) == S_OK)
+				metadata.displayPrimariesBlueX.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY, &doubleValue) == S_OK)
+				metadata.displayPrimariesBlueY.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointX, &doubleValue) == S_OK)
+				metadata.whitePointX.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointY, &doubleValue) == S_OK)
+				metadata.whitePointY.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance, &doubleValue) == S_OK)
+				metadata.maxDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance, &doubleValue) == S_OK)
+				metadata.minDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel, &doubleValue) == S_OK)
+				metadata.maximumContentLightLevel.Format(_T("%.04f"), doubleValue);
+
+			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
+				metadata.maximumFrameAverageLightLevel.Format(_T("%.04f"), doubleValue);
+		}
+
+		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataColorspace, &intValue) == S_OK)
+		{
+			switch (intValue)
+			{
+			case bmdColorspaceRec601:
+				metadata.colorspace = _T("Rec.601");
+				break;
+			case bmdColorspaceRec709:
+				metadata.colorspace = _T("Rec.709");
+				break;
+			case bmdColorspaceRec2020:
+				metadata.colorspace = _T("Rec.2020");
+				break;
+			}
+		}
+	}
 }
 

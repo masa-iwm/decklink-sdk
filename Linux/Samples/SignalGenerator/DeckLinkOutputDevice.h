@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,50 +24,65 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  DeckLinkOutputDevice.h
-//  DeckLink Output device callback
-//
 
 #pragma once
 
+#include <atomic>
+#include <functional>
+
+#include <QObject>
 #include <QString>
+
+#include "com_ptr.h"
 #include "DeckLinkAPI.h"
-#include "SignalGenerator.h"
 
 class DeckLinkOutputDevice : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback
 {
-private:
-	QAtomicInt					m_refCount;
-	SignalGenerator*			m_uiDelegate;
-	IDeckLink*					m_deckLink;
-	IDeckLinkOutput*			m_deckLinkOutput;
-	IDeckLinkConfiguration*		m_deckLinkConfiguration;
-	IDeckLinkProfileManager*	m_deckLinkProfileManager;
-	QString						m_deviceName;
+	using ScheduledFrameCompletedFunc	= std::function<void(void)>;
+	using RenderAudioSamplesFunc		= std::function<void(void)>;
+	using ScheduledPlaybackStoppedFunc	= std::function<void(void)>; 
+	using DisplayModeQueryFunc			= std::function<void(com_ptr<IDeckLinkDisplayMode>&)>;
 
 public:
-	DeckLinkOutputDevice(SignalGenerator* owner, IDeckLink* deckLink);
-	virtual ~DeckLinkOutputDevice();
-
-	bool				Init();
+	DeckLinkOutputDevice(QObject* owner, com_ptr<IDeckLink>& deckLink);
+	virtual ~DeckLinkOutputDevice() = default;
 
 	// IUnknown
-	virtual HRESULT		QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG		AddRef();
-	virtual ULONG		Release();
+	HRESULT		QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG		AddRef() override;
+	ULONG		Release() override;
 
 	// IDeckLinkVideoOutputCallback
-	virtual HRESULT		ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
-	virtual HRESULT		ScheduledPlaybackHasStopped();
+	HRESULT		ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result) override;
+	HRESULT		ScheduledPlaybackHasStopped() override;
 
 	// IDeckLinkAudioOutputCallback
-	virtual HRESULT		RenderAudioSamples(bool preroll);
+	HRESULT		RenderAudioSamples(bool preroll) override;
 
-	const QString				GetDeviceName() const { return m_deviceName; };
-	IDeckLinkOutput*			GetDeviceOutput() const { return m_deckLinkOutput; }
-	IDeckLinkConfiguration*		GetDeviceConfiguration() const { return m_deckLinkConfiguration; }
-	IDeckLink*					GetDeckLinkInstance() const { return m_deckLink; }
-	IDeckLinkProfileManager*	GetProfileManager() const { return m_deckLinkProfileManager; }
+	// Other methods
+	const QString						getDeviceName() const { return m_deviceName; }
+	com_ptr<IDeckLinkOutput>			getDeviceOutput() const { return m_deckLinkOutput; }
+	com_ptr<IDeckLink>					getDeckLinkInstance() const { return m_deckLink; }
+	com_ptr<IDeckLinkConfiguration>		getDeviceConfiguration() const { return m_deckLinkConfiguration; }
+	com_ptr<IDeckLinkProfileManager>	getProfileManager() const { return m_deckLinkProfileManager; }
+
+	void	queryDisplayModes(DisplayModeQueryFunc func);
+	void	onScheduledFrameCompleted(const ScheduledFrameCompletedFunc& callback) { m_scheduledFrameCompletedCallback = callback; }
+	void	onRenderAudioSamples(const RenderAudioSamplesFunc& callback) { m_renderAudioSamplesCallback = callback; }
+	void	onScheduledPlaybackStopped(const ScheduledPlaybackStoppedFunc& callback) { m_scheduledPlaybackStoppedCallback = callback; }
+
+private:
+	std::atomic<ULONG>					m_refCount;
+	QObject*							m_owner;
+
+	com_ptr<IDeckLink>					m_deckLink;
+	com_ptr<IDeckLinkOutput>			m_deckLinkOutput;
+	com_ptr<IDeckLinkConfiguration>		m_deckLinkConfiguration;
+	com_ptr<IDeckLinkProfileManager>	m_deckLinkProfileManager;
+	QString								m_deviceName;
+
+	ScheduledFrameCompletedFunc			m_scheduledFrameCompletedCallback;
+	ScheduledPlaybackStoppedFunc		m_scheduledPlaybackStoppedCallback;
+	RenderAudioSamplesFunc				m_renderAudioSamplesCallback;
 };
 

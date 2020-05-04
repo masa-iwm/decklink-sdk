@@ -30,6 +30,7 @@
 //
 
 #include <atomic>
+#include <memory>
 #include <vector>
 #include <Cocoa/Cocoa.h>
 #include "DeckLinkAPI.h"
@@ -46,6 +47,7 @@ enum OutputSignal
 class DeckLinkDeviceDiscovery;
 class PlaybackDelegate;
 class ProfileCallback;
+class Timecode;
 
 @interface SyncController : NSObject {
 	NSWindow*					window;
@@ -89,6 +91,11 @@ class ProfileCallback;
 	BMDAudioSampleRate			audioSampleRate;
 	uint32_t					audioSampleDepth;
 	uint32_t					totalAudioSecondsScheduled;
+	//
+	std::unique_ptr<Timecode>	timeCode;
+	BMDTimecodeFormat			timeCodeFormat;
+	uint32_t					dropFrames;
+	bool						hfrtcSupported;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification;
@@ -97,7 +104,7 @@ class ProfileCallback;
 - (void)addDevice:(IDeckLink*)deckLink;
 - (void)removeDevice:(IDeckLink*)deckLink;
 
-- (void)haltStreams;
+- (void)haltStreams:(IDeckLinkProfile*)newProfile;
 - (void)updateProfile:(IDeckLinkProfile*)newProfile;
 
 - (void)refreshDisplayModeMenu;
@@ -203,8 +210,57 @@ public:
 	virtual ULONG		Release ();
 };
 
+class Timecode
+{
+public:
+	Timecode(int f, int d)
+	: m_fps(f), m_framecount(0), m_dropframes(d), m_frames(0),m_seconds(0),m_minutes(0),m_hours(0)
+	{
+	}
+	void update()
+	{
+		unsigned long frameCountNormalized = m_framecount++;
+		
+		if (m_dropframes)
+		{
+			int deciMins, deciMinsRemainder;
+			
+			int framesIn10mins = (60 * 10 * m_fps) - (9 * m_dropframes);
+			deciMins = frameCountNormalized / framesIn10mins;
+			deciMinsRemainder = frameCountNormalized - (deciMins * framesIn10mins);
+			
+			// Add drop frames for 9 minutes of every 10 minutes that have elapsed
+			// AND drop frames for every minute (over the first minute) in this 10-minute block.
+			frameCountNormalized += m_dropframes * 9 * deciMins;
+			if (deciMinsRemainder >= m_dropframes)
+				frameCountNormalized += m_dropframes * ((deciMinsRemainder - m_dropframes) / (framesIn10mins / 10));
+		}
+		
+		m_frames = (int)(frameCountNormalized % m_fps);
+		frameCountNormalized /= m_fps;
+		m_seconds = (int)(frameCountNormalized % 60);
+		frameCountNormalized /= 60;
+		m_minutes = (int)(frameCountNormalized % 60);
+		frameCountNormalized /= 60;
+		m_hours = (int)frameCountNormalized;
+	}
+	int hours() const { return m_hours; }
+	int minutes() const { return m_minutes; }
+	int seconds() const { return m_seconds; }
+	int frames() const { return m_frames; }
+private:
+	int m_fps;
+	unsigned long m_framecount;
+	int m_dropframes;
+	int m_frames;
+	int m_seconds;
+	int m_minutes;
+	int m_hours;
+};
+
 void	FillSine (void* audioBuffer, uint32_t samplesToWrite, uint32_t channels, uint32_t sampleDepth);
 void	FillColourBars (IDeckLinkVideoFrame* theFrame, bool reversed);
 void	FillBlack (IDeckLinkVideoFrame* theFrame);
 void	ScheduleNextVideoFrame (void);
 int		GetRowBytes(BMDPixelFormat pixelFormat, int frameWidth);
+bool	IsDeviceActive(IDeckLink* deckLink);

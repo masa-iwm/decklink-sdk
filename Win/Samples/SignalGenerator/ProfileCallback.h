@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,31 +24,36 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-// ProfileCallback.h : header file
-// DeckLink Device Profile Callback
-//
 
 #pragma once
 
+#include <atomic>
+#include <functional>
 #include "DeckLinkAPI_h.h"
-#include "SignalGeneratorDlg.h"
 
 class ProfileCallback : public IDeckLinkProfileCallback
 {
-private:
-	CSignalGeneratorDlg*    m_uiDelegate;
-	int32_t                 m_refCount;
+	using Callback = std::function<void(CComPtr<IDeckLinkProfile>&)>;
 
 public:
-	ProfileCallback(CSignalGeneratorDlg* uiDelegate);
-	virtual ~ProfileCallback() {}
+	ProfileCallback();
+	virtual ~ProfileCallback() = default;
+
+	void		onHaltStreams(const Callback& callback) { m_haltStreamsCallback = callback; }
+	void		onProfileActivated(const Callback& callback) { m_profileActivatedCallback = callback; }
 
 	// IDeckLinkProfileCallback interface
-	virtual HRESULT		STDMETHODCALLTYPE ProfileChanging(IDeckLinkProfile *profileToBeActivated, BOOL streamsWillBeForcedToStop);
-	virtual HRESULT		STDMETHODCALLTYPE ProfileActivated(IDeckLinkProfile *activatedProfile);
+	HRESULT		STDMETHODCALLTYPE ProfileChanging(IDeckLinkProfile* profileToBeActivated, BOOL streamsWillBeForcedToStop) override;
+	HRESULT		STDMETHODCALLTYPE ProfileActivated(IDeckLinkProfile* activatedProfile) override;
 
 	// IUnknown needs only a dummy implementation
-	virtual HRESULT		STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG		STDMETHODCALLTYPE AddRef();
-	virtual ULONG		STDMETHODCALLTYPE Release();
+	HRESULT		STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG		STDMETHODCALLTYPE AddRef() override;
+	ULONG		STDMETHODCALLTYPE Release() override;
+
+private:
+	std::atomic<ULONG>		m_refCount;
+
+	Callback				m_haltStreamsCallback;
+	Callback				m_profileActivatedCallback;
 };

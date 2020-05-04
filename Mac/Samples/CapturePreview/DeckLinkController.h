@@ -25,6 +25,7 @@
  ** -LICENSE-END-
  */
 
+#include <atomic>
 #include <vector>
 #include "DeckLinkAPI.h"
 #include "CapturePreview.h"
@@ -72,14 +73,14 @@ private:
     CapturePreviewAppDelegate*              uiDelegate;
     CFStringRef                             deviceName;
 	int64_t									supportedInputConnections;
-    int32_t                                 refCount;
+	std::atomic<ULONG>						refCount;
 };
 
 class ProfileCallback : public IDeckLinkProfileCallback
 {
 private:
 	CapturePreviewAppDelegate*		uiDelegate;
-	int32_t							refCount;
+	std::atomic<ULONG>				refCount;
 	
 public:
 	ProfileCallback(CapturePreviewAppDelegate* uiDelegate);
@@ -100,7 +101,7 @@ class DeckLinkDeviceDiscovery :  public IDeckLinkDeviceNotificationCallback
 private:
     IDeckLinkDiscovery*             deckLinkDiscovery;
     CapturePreviewAppDelegate*      uiDelegate;
-    int32_t                         refCount;
+    std::atomic<ULONG>              refCount;
 public:
 	DeckLinkDeviceDiscovery(CapturePreviewAppDelegate* uiDelegate);
 	virtual ~DeckLinkDeviceDiscovery();

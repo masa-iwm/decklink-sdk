@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,82 +24,40 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  DeckLinkOutputDevice.cpp
-//  Decklink output device callback
-//
 
 #include "stdafx.h"
 #include "DeckLinkOutputDevice.h"
 
-DeckLinkOutputDevice::DeckLinkOutputDevice(CSignalGeneratorDlg* owner, IDeckLink* deckLink) : 
-	m_uiDelegate(owner), 
-	m_deckLink(deckLink), 
-	m_deckLinkOutput(NULL), 
-	m_deckLinkConfiguration(NULL),
-	m_deckLinkProfileManager(NULL), 
+DeckLinkOutputDevice::DeckLinkOutputDevice(CComPtr<IDeckLink>& deckLink) : 
+	m_deckLink(deckLink),
+	m_deckLinkOutput(deckLink),
+	m_deckLinkConfiguration(deckLink),
+	m_videoPrerollSize(30),
+	m_audioWaterLevel(48000),
 	m_refCount(1)
 {
-	m_deckLink->AddRef();
 }
 
-DeckLinkOutputDevice::~DeckLinkOutputDevice()
+bool DeckLinkOutputDevice::init()
 {
-	if (m_deckLinkProfileManager)
-	{
-		m_deckLinkProfileManager->Release();
-		m_deckLinkProfileManager = NULL;
-	}
+	CComBSTR deviceNameBSTR;
 
-	if (m_deckLinkConfiguration)
-	{
-		m_deckLinkConfiguration->Release();
-		m_deckLinkConfiguration = NULL;
-	}
-
-	if (m_deckLinkOutput)
-	{
-		m_deckLinkOutput->Release();
-		m_deckLinkOutput = NULL;
-	}
-
-	if (m_deckLink)
-	{
-		m_deckLink->Release();
-		m_deckLink = NULL;
-	}
-}
-
-bool DeckLinkOutputDevice::Init()
-{
-	IDeckLinkDisplayModeIterator*   displayModeIterator = NULL;
-	IDeckLinkDisplayMode*           displayMode = NULL;
-	BSTR							deviceNameBSTR = NULL;
-
-	// Get output interface
-	if (m_deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deckLinkOutput) != S_OK)
+	// Check output interface exists
+	if (!m_deckLinkOutput)
 		return false;
 
 	// Get configuration interface
-	if (m_deckLink->QueryInterface(IID_IDeckLinkConfiguration, (void**)&m_deckLinkConfiguration) != S_OK)
+	if (!m_deckLinkConfiguration)
 		return false;
 
 	// Get device name
 	if (m_deckLink->GetDisplayName(&deviceNameBSTR) == S_OK)
 	{
 		m_deviceName = CString(deviceNameBSTR);
-		::SysFreeString(deviceNameBSTR);
 	}
 	else
 	{
 		m_deviceName = _T("DeckLink");
-	}
-
-	// Get the profile manager interface
-	// Will return S_OK when the device has > 1 profiles
-	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileManager, (void**)&m_deckLinkProfileManager) != S_OK)
-	{
-		m_deckLinkProfileManager = NULL;
 	}
 
 	return true;
@@ -107,13 +65,13 @@ bool DeckLinkOutputDevice::Init()
 
 HRESULT	DeckLinkOutputDevice::QueryInterface(REFIID iid, LPVOID *ppv)
 {
-	HRESULT			result = E_NOINTERFACE;
+	HRESULT result = E_NOINTERFACE;
 
-	if (ppv == NULL)
+	if (!ppv)
 		return E_INVALIDARG;
 
 	// Initialise the return result
-	*ppv = NULL;
+	*ppv = nullptr;
 
 	// Obtain the IUnknown interface and compare it the provided REFIID
 	if (iid == IID_IUnknown)
@@ -122,9 +80,15 @@ HRESULT	DeckLinkOutputDevice::QueryInterface(REFIID iid, LPVOID *ppv)
 		AddRef();
 		result = S_OK;
 	}
-	else if (iid == IID_IDeckLinkDeviceNotificationCallback)
+	else if (iid == IID_IDeckLinkVideoOutputCallback)
 	{
-		*ppv = (IDeckLinkDeviceNotificationCallback*)this;
+		*ppv = static_cast<IDeckLinkVideoOutputCallback*>(this);
+		AddRef();
+		result = S_OK;
+	}
+	else if (iid == IID_IDeckLinkAudioOutputCallback)
+	{
+		*ppv = static_cast<IDeckLinkAudioOutputCallback*>(this);
 		AddRef();
 		result = S_OK;
 	}
@@ -134,42 +98,88 @@ HRESULT	DeckLinkOutputDevice::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG DeckLinkOutputDevice::AddRef(void)
 {
-	return InterlockedIncrement((volatile long *)&m_refCount);
+	return ++m_refCount;
 }
 
 ULONG DeckLinkOutputDevice::Release(void)
 {
-	ULONG newRefValue = InterlockedDecrement((volatile long*)&m_refCount);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
 		delete this;
+
 	return newRefValue;
 }
 
 HRESULT	DeckLinkOutputDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {
-	// When a scheduled video frame is complete, schedule next frame  
-	m_uiDelegate->ScheduleNextFrame(false);
+	// Notify subscriber that scheduled frame is completed, so it can schedule more frames
+	if (m_scheduledFrameCompletedCallback)
+		m_scheduledFrameCompletedCallback();
+
 	return S_OK;
 }
 
 HRESULT	DeckLinkOutputDevice::ScheduledPlaybackHasStopped()
 {
-	// Notify delegate that playback has stopped, so it can disable output
-	m_uiDelegate->ScheduledPlaybackStopped();
+	// Notify subscriber that playback has stopped, so it can disable output
+	if (m_scheduledPlaybackStoppedCallback)
+		m_scheduledPlaybackStoppedCallback();
+
 	return S_OK;
 }
 
 HRESULT	DeckLinkOutputDevice::RenderAudioSamples(BOOL preroll)
 {
-	// Provide further audio samples to the DeckLink API until our preferred buffer waterlevel is reached
-	m_uiDelegate->WriteNextAudioSamples();
+	unsigned int bufferedAudioSampleCount;
+
+	// Check audio water level and request further samples if required
+	if (m_deckLinkOutput->GetBufferedAudioSampleFrameCount(&bufferedAudioSampleCount) != S_OK)
+	{
+		if (m_errorListener)
+			m_errorListener(OutputDeviceError::GetBufferedAudioSampleCountFailed);
+		return E_FAIL;
+	}
+
+	if (m_renderAudioSamplesCallback && (bufferedAudioSampleCount < m_audioWaterLevel))
+		// Notify subscriber to provide more audio samples to reach water level
+		m_renderAudioSamplesCallback(m_audioWaterLevel - bufferedAudioSampleCount);
 
 	if (preroll)
 	{
-		// Start audio and video output
-		m_deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
+		// Ensure that both audio and video preroll have sufficient samples, then commence scheduled playback
+		unsigned int bufferedVideoFrameCount;
+
+		if (m_deckLinkOutput->GetBufferedVideoFrameCount(&bufferedVideoFrameCount) != S_OK)
+		{
+			if (m_errorListener)
+				m_errorListener(OutputDeviceError::GetBufferedVideoFrameCountFailed);
+			return E_FAIL;
+		}
+
+		if ((bufferedAudioSampleCount >= m_audioWaterLevel) && (bufferedVideoFrameCount >= m_videoPrerollSize))
+		{
+			// Start audio and video output
+			m_deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
+		}
 	}
 
 	return S_OK;
 }
 
+void DeckLinkOutputDevice::queryDisplayModes(QueryDisplayModeFunc func)
+{
+	CComPtr<IDeckLinkDisplayModeIterator>	displayModeIterator;
+	CComPtr<IDeckLinkDisplayMode>			displayMode;
+
+	if (!func)
+		return;
+
+	if (m_deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
+		return;
+
+	while (displayModeIterator->Next(&displayMode) == S_OK)
+	{
+		func(displayMode);
+		displayMode.Release();
+	}
+}

@@ -103,19 +103,14 @@ HRESULT         DeckLinkDevice::QueryInterface (REFIID iid, LPVOID *ppv)
 
 ULONG       DeckLinkDevice::AddRef (void)
 {
-	return OSAtomicIncrement32(&refCount);
+	return ++refCount;
 }
 
 ULONG       DeckLinkDevice::Release (void)
 {
-	int32_t		newRefValue;
-	
-	newRefValue = OSAtomicDecrement32(&refCount);
+	ULONG newRefValue = --refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 	
 	return newRefValue;
 }
@@ -442,7 +437,7 @@ HRESULT		ProfileCallback::ProfileChanging (IDeckLinkProfile *profileToBeActivate
 	// profile and capture will be stopped by the DeckLink driver. It is better to notify the
 	// controller to gracefully stop capture, so that the UI is set to a known state.
 	if (streamsWillBeForcedToStop)
-		[uiDelegate haltStreams];
+		[uiDelegate haltStreams:profileToBeActivated];
 	return S_OK;
 }
 
@@ -480,19 +475,14 @@ HRESULT		ProfileCallback::QueryInterface (REFIID iid, LPVOID *ppv)
 
 ULONG		ProfileCallback::AddRef (void)
 {
-	return OSAtomicIncrement32(&refCount);
+	return ++refCount;
 }
 
 ULONG		ProfileCallback::Release (void)
 {
-	int32_t		newRefValue;
-	
-	newRefValue = OSAtomicDecrement32(&refCount);
+	ULONG newRefValue = --refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 	
 	return newRefValue;
 }
@@ -580,19 +570,14 @@ HRESULT         DeckLinkDeviceDiscovery::QueryInterface (REFIID iid, LPVOID *ppv
 
 ULONG           DeckLinkDeviceDiscovery::AddRef (void)
 {
-	return OSAtomicIncrement32(&refCount);
+	return ++refCount;
 }
 
 ULONG           DeckLinkDeviceDiscovery::Release (void)
 {
-	int32_t		newRefValue;
-	
-	newRefValue = OSAtomicDecrement32(&refCount);
+	ULONG newRefValue = --refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 	
 	return newRefValue;
 }

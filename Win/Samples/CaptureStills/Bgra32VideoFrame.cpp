@@ -1,4 +1,4 @@
-﻿/* -LICENSE-START-
+/* -LICENSE-START-
 ** Copyright (c) 2018 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
@@ -74,19 +74,15 @@ HRESULT	STDMETHODCALLTYPE Bgra32VideoFrame::QueryInterface(REFIID iid, LPVOID *p
 
 ULONG STDMETHODCALLTYPE Bgra32VideoFrame::AddRef(void)
 {
-	return m_refCount.fetch_add(1);
+	return ++m_refCount;
 }
 
 ULONG STDMETHODCALLTYPE Bgra32VideoFrame::Release(void)
 {
-	ULONG		newRefValue;
 
-	newRefValue = m_refCount.fetch_sub(1);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 
 	return newRefValue;
 }

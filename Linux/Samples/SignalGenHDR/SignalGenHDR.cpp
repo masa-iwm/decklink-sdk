@@ -24,8 +24,7 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-// SignalGenHDR.cpp : implementation file
-//
+
 
 #include <QMessageBox>
 #include <cmath>
@@ -94,11 +93,11 @@ SignalGenHDR::SignalGenHDR(QWidget *parent) :
 	layout = new QGridLayout(ui->previewWidget);
 	layout->setMargin(0);
 
-	m_previewView = new DeckLinkOpenGLWidget(this);
+	m_previewView = new DeckLinkOpenGLWidget(dynamic_cast<QWidget*>(this));
 	m_previewView->resize(ui->previewWidget->size());
 	m_previewView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-	layout->addWidget(m_previewView.get(), 0, 0, 0, 0);
-	m_previewView->DrawFrame(nullptr);
+	layout->addWidget(m_previewView, 0, 0, 0, 0);
+	m_previewView->clear();
 
 	connect(ui->startButton, SIGNAL(clicked()), this, SLOT(ToggleStart()));
 
@@ -156,7 +155,7 @@ SignalGenHDR::~SignalGenHDR()
 void SignalGenHDR::setup()
 {
 	// Create and initialise DeckLink device discovery
-	m_deckLinkDiscovery = new DeckLinkDeviceDiscovery(this);
+	m_deckLinkDiscovery = make_com_ptr<DeckLinkDeviceDiscovery>(this);
 	if (m_deckLinkDiscovery)
 	{
 		if (!m_deckLinkDiscovery->enable())
@@ -470,7 +469,7 @@ void SignalGenHDR::OutputDeviceChanged(int selectedDeviceIndex)
 	RefreshDisplayModeMenu();
 
 	// Set Screen Preview callback for selected device
-	m_selectedDeckLinkOutput->SetScreenPreviewCallback(m_previewView.get());
+	m_selectedDeckLinkOutput->SetScreenPreviewCallback(m_previewView->delegate());
 
 	// Enable the interface
 	EnableInterface(true);
@@ -608,17 +607,17 @@ void SignalGenHDR::UpdateOutputFrame()
 
 com_ptr<HDRVideoFrame> SignalGenHDR::CreateColorbarsFrame()
 {
-	com_ptr<IDeckLinkMutableVideoFrame>	referenceFrame = nullptr;
-	com_ptr<IDeckLinkMutableVideoFrame>	displayFrame = nullptr;
+	com_ptr<IDeckLinkMutableVideoFrame>	referenceFrame;
+	com_ptr<IDeckLinkMutableVideoFrame>	displayFrame;
 	HRESULT								hr;
 	BMDPixelFormat						referencePixelFormat;
 	int									referenceFrameBytesPerRow;
 	int									displayFrameBytesPerRow;
-	com_ptr<IDeckLinkVideoConversion>	frameConverter = nullptr;
+	com_ptr<IDeckLinkVideoConversion>	frameConverter;
 	unsigned long						frameWidth;
 	unsigned long						frameHeight;
 	EOTFColorRange						colorRange;
-	com_ptr<HDRVideoFrame>				ret = nullptr;
+	com_ptr<HDRVideoFrame>				ret;
 
 	frameWidth = m_selectedDisplayMode->GetWidth();
 	frameHeight = m_selectedDisplayMode->GetHeight();

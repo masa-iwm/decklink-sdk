@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,56 +24,27 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  SignalGenerator.h
-//  Signal Generator
-//
 
-#ifndef __SignalGenerator_H__
-#define __SignalGenerator_H__
+#pragma once 
 
 #include "DeckLinkAPI.h"
 
 #include <QMessageBox>
 #include <QWidget>
-#include <QGLWidget>
-#include <QMutex>
-#include <QEvent>
-#include <QWaitCondition>
+
+#include <condition_variable>
 #include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+
+#include "com_ptr.h"
+#include "DeckLinkOpenGLWidget.h"
+#include "DeckLinkOutputDevice.h"
+#include "DeckLinkDeviceDiscovery.h"
+#include "ProfileCallback.h"
 
 #include "ui_SignalGenerator.h"
-
-// Define custom event type 
-const QEvent::Type ADD_DEVICE_EVENT			= static_cast<QEvent::Type>(QEvent::User + 1);
-const QEvent::Type REMOVE_DEVICE_EVENT		= static_cast<QEvent::Type>(QEvent::User + 2);
-const QEvent::Type PROFILE_ACTIVATED_EVENT	= static_cast<QEvent::Type>(QEvent::User + 3);
-
-class SignalGeneratorEvent : public QEvent
-{
-private:
-	IDeckLink* 		m_deckLink;
-	
-public:
-	SignalGeneratorEvent( QEvent::Type type, IDeckLink* deckLinkDevice ) 
-		: QEvent( type ), m_deckLink( deckLinkDevice ) { m_deckLink->AddRef(); };
-	~SignalGeneratorEvent() { m_deckLink->Release(); };
-
-	IDeckLink* deckLink() const { return m_deckLink; };
-};
-
-class ProfileCallbackEvent : public QEvent
-{
-private:
-	IDeckLinkProfile*		m_profile;
-
-public:
-	ProfileCallbackEvent(QEvent::Type type, IDeckLinkProfile* profile)
-		: QEvent(type), m_profile(profile) { m_profile->AddRef(); }
-	virtual ~ProfileCallbackEvent() { m_profile->Release(); }
-
-	IDeckLinkProfile* Profile() const { return m_profile; }
-};
 
 class Timecode
 {
@@ -129,52 +100,49 @@ enum OutputSignal
 	kOutputSignalDrop		= 1
 };
 
-// Forward declarations
-class CDeckLinkGLWidget;
-class DeckLinkOutputDevice;
-class DeckLinkDeviceDiscovery;
-class ProfileCallback;
-
 class SignalGenerator : public QDialog
 {
 	Q_OBJECT
+
+	using FillFrameFunction = std::function<void(com_ptr<IDeckLinkMutableVideoFrame>&)>;
+
 public:
 	SignalGenerator();
-	~SignalGenerator();
+	~SignalGenerator() = default;
 	Ui::SignalGeneratorDialog *ui;
-	CDeckLinkGLWidget *previewView;
 	
-	bool						running;
-	DeckLinkOutputDevice* 		selectedDevice;
-	DeckLinkDeviceDiscovery*	deckLinkDiscovery;
-	BMDDisplayMode				selectedDisplayMode;
-	BMDPixelFormat				selectedPixelFormat;
-	ProfileCallback*			profileCallback;
+	bool									running;
+	com_ptr<DeckLinkOutputDevice> 			selectedDevice;
+	com_ptr<DeckLinkDeviceDiscovery>		deckLinkDiscovery;
+	BMDDisplayMode							selectedDisplayMode;
+	BMDPixelFormat							selectedPixelFormat;
+	DeckLinkOpenGLWidget*					previewView;
+	com_ptr<ProfileCallback>				profileCallback;
 	
-	uint32_t					frameWidth;
-	uint32_t					frameHeight;
-	BMDTimeValue				frameDuration;
-	BMDTimeScale				frameTimescale;
-	uint32_t					framesPerSecond;
-	uint32_t					dropFrames;
-	IDeckLinkMutableVideoFrame*	videoFrameBlack;
-	IDeckLinkMutableVideoFrame*	videoFrameBars;
-	uint32_t					totalFramesScheduled;
+	uint32_t								frameWidth;
+	uint32_t								frameHeight;
+	BMDTimeValue							frameDuration;
+	BMDTimeScale							frameTimescale;
+	uint32_t								framesPerSecond;
+	uint32_t								dropFrames;
+	com_ptr<IDeckLinkMutableVideoFrame>		videoFrameBlack;
+	com_ptr<IDeckLinkMutableVideoFrame>		videoFrameBars;
+	uint32_t								totalFramesScheduled;
 	//
-	OutputSignal				outputSignal;
-	void*						audioBuffer;
-	uint32_t					audioBufferSampleLength;
-	uint32_t					audioSamplesPerFrame;
-	uint32_t					audioChannelCount;
-	BMDAudioSampleRate			audioSampleRate;
-	uint32_t					audioSampleDepth;
-	uint32_t					totalAudioSecondsScheduled;
+	OutputSignal							outputSignal;
+	void*									audioBuffer;
+	uint32_t								audioBufferSampleLength;
+	uint32_t								audioSamplesPerFrame;
+	uint32_t								audioChannelCount;
+	BMDAudioSampleRate						audioSampleRate;
+	uint32_t								audioSampleDepth;
+	uint32_t								totalAudioSecondsScheduled;
 	//
-	QMutex						mutex;
-	QWaitCondition				stopPlaybackCondition;
+	std::mutex								mutex;
+	std::condition_variable					stopPlaybackCondition;
 	
-	BMDTimecodeFormat			timeCodeFormat;
-	bool						hfrtcSupported;
+	BMDTimecodeFormat						timeCodeFormat;
+	bool									hfrtcSupported;
 
 	void customEvent(QEvent* event);
 	void closeEvent(QCloseEvent *event);
@@ -191,11 +159,11 @@ public:
 	void refreshDisplayModeMenu(void);
 	void refreshPixelFormatMenu(void);
 	void refreshAudioChannelMenu(void);
-	void addDevice(IDeckLink* deckLink);
-	void removeDevice(IDeckLink* deckLink);
+	void addDevice(com_ptr<IDeckLink>& deckLink);
+	void removeDevice(com_ptr<IDeckLink>& deckLink);
 	void playbackStopped(void);
 	void haltStreams(void);
-	void updateProfile(IDeckLinkProfile* newProfile);
+	void updateProfile(com_ptr<IDeckLinkProfile>& newProfile);
 	
 public slots:
 	void outputDeviceChanged(int selectedDeviceIndex);
@@ -204,17 +172,16 @@ public slots:
 	
 private:
 	QGridLayout *layout;
-	Timecode *timeCode;
+	std::unique_ptr<Timecode> timeCode;
 
 	bool scheduledPlaybackStopped;
+	std::map<intptr_t, com_ptr<DeckLinkOutputDevice>>		outputDevices;
 
-	IDeckLinkMutableVideoFrame* CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*)> fillFrame);
+	com_ptr<IDeckLinkMutableVideoFrame> CreateOutputFrame(FillFrameFunction fillFrame);
 };
 
 int		GetRowBytes(BMDPixelFormat pixelFormat, uint32_t frameWidth);
 void	FillSine (void* audioBuffer, uint32_t samplesToWrite, uint32_t channels, uint32_t sampleDepth);
-void	FillColourBars (IDeckLinkVideoFrame* theFrame);
-void	FillBlack (IDeckLinkVideoFrame* theFrame);
+void	FillColorBars (com_ptr<IDeckLinkMutableVideoFrame>& theFrame);
+void	FillBlack (com_ptr<IDeckLinkMutableVideoFrame>& theFrame);
 void	ScheduleNextVideoFrame (void);
-
-#endif

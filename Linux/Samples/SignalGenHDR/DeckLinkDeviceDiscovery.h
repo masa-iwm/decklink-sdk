@@ -24,10 +24,6 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  DeckLinkDeviceDiscovery.h
-//  DeckLink Device Discovery Callback
-//
 
 #pragma once
 
@@ -36,13 +32,10 @@
 #include "DeckLinkAPI.h"
 #include "SignalGenHDR.h"
 
-// Forward class declarations
-class SignalGenHDR;
-
 class DeckLinkDeviceDiscovery : public IDeckLinkDeviceNotificationCallback
 {
 public:
-	DeckLinkDeviceDiscovery(SignalGenHDR* owner);
+	DeckLinkDeviceDiscovery(QObject* owner);
 	virtual ~DeckLinkDeviceDiscovery();
 
 	bool				enable();
@@ -58,7 +51,7 @@ public:
 	virtual ULONG		Release();
 
 private:
-	SignalGenHDR*				m_uiDelegate;
+	QObject*					m_owner;
 	com_ptr<IDeckLinkDiscovery>	m_deckLinkDiscovery;
 	std::atomic<ULONG>			m_refCount;
 };

@@ -159,10 +159,16 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChan
 	// when enabling video input
 	HRESULT	result;
 	char*	displayModeName = NULL;
-	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
-
-	if (formatFlags & bmdDetectedVideoInputRGB444)
-		pixelFormat = bmdFormat10BitRGB;
+	BMDPixelFormat	pixelFormat = g_config.m_pixelFormat;
+	
+	if (events & bmdVideoInputColorspaceChanged)
+	{
+		// Detected a change in colorspace, change pixel format to match detected format
+		if (formatFlags & bmdDetectedVideoInputRGB444)
+			pixelFormat = bmdFormat10BitRGB;
+		else
+			pixelFormat = bmdFormat10BitYUV;
+	}
 
 	mode->GetName((const char**)&displayModeName);
 	printf("Video format changed to %s %s\n", displayModeName, formatFlags & bmdDetectedVideoInputRGB444 ? "RGB" : "YUV");

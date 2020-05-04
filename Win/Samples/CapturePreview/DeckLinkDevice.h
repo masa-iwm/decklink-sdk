@@ -25,80 +25,70 @@
 ** -LICENSE-END-
 */
 
+#include <atomic>
+#include <functional>
 #include <vector>
 #include "DeckLinkAPI_h.h"
-#include "CapturePreview.h"
-#include "CapturePreviewDlg.h"
-#include "PreviewWindow.h"
 
+#pragma once
+
+enum class DeviceError
+{
+	NoError = 0,
+	EnableVideoInputFailed,
+	StartStreamsFailed,
+	ReenableVideoInputFailed,
+};
 
 class DeckLinkDevice : public IDeckLinkInputCallback
 {
-private:
+	using QueryDisplayModeFunc = std::function<void(CComPtr<IDeckLinkDisplayMode>&)>;
+	using DeviceErrorOccuredFunc = std::function<void(DeviceError)>;
+	using VideoFormatChangedCallback = std::function<void(BMDDisplayMode)>;
+	using VideoFrameArrivedCallback = std::function<void(CComPtr<IDeckLinkVideoInputFrame>&)>;
 
-	CCapturePreviewDlg*					m_uiDelegate;
-	ULONG								m_refCount;
+public:
+	DeckLinkDevice(CComPtr<IDeckLink>& device);
+	virtual ~DeckLinkDevice() = default;
+
+	bool								init();
+	const CString&						getDeviceName() { return m_deviceName; };
+	bool								isCapturing() { return m_currentlyCapturing; };
+	bool								doesSupportFormatDetection() { return (m_supportsFormatDetection == TRUE); };
+	bool								startCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode);
+	void								stopCapture();
+	CComPtr<IDeckLink>					getDeckLinkInstance() { return m_deckLink; }
+	CComPtr<IDeckLinkInput>				getDeckLinkInput() { return m_deckLinkInput; };
+	CComPtr<IDeckLinkConfiguration>		getDeckLinkConfiguration() { return m_deckLinkConfig; };
+
+	void								queryDisplayModes(QueryDisplayModeFunc func);
+	void								setErrorListener(const DeviceErrorOccuredFunc& func) { m_errorListener = func; }
+	void								onVideoFormatChange(const VideoFormatChangedCallback& callback) { m_videoFormatChangedCallback = callback; }
+	void								onVideoFrameArrival(const VideoFrameArrivedCallback& callback) { m_videoFrameArrivedCallback = callback; }
+
+	// IUnknown interface
+	HRESULT	STDMETHODCALLTYPE	QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG	STDMETHODCALLTYPE	AddRef() override;
+	ULONG	STDMETHODCALLTYPE	Release() override;
+
+	// IDeckLinkInputCallback interface
+	HRESULT STDMETHODCALLTYPE	VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode* newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags) override;
+	HRESULT STDMETHODCALLTYPE	VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioPacket) override;
+
+private:
+	std::atomic<ULONG>					m_refCount;
 	//
 	CString								m_deviceName;
-	IDeckLink*							m_deckLink;
-	IDeckLinkInput*						m_deckLinkInput;
-	IDeckLinkConfiguration*				m_deckLinkConfig;
-	IDeckLinkHDMIInputEDID*				m_deckLinkHDMIInputEDID;
-	IDeckLinkProfileManager*			m_deckLinkProfileManager;
-	IDeckLinkProfileAttributes*			m_deckLinkAttributes;
+	CComPtr<IDeckLink>					m_deckLink;
+	CComQIPtr<IDeckLinkInput>			m_deckLinkInput;
+	CComQIPtr<IDeckLinkConfiguration>	m_deckLinkConfig;
+	CComQIPtr<IDeckLinkHDMIInputEDID>	m_deckLinkHDMIInputEDID;
 
 	BOOL								m_supportsFormatDetection;
 	bool								m_currentlyCapturing;
 	bool								m_applyDetectedInputMode;
-	//
-	static void							GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* frame, BMDTimecodeFormat format, CString* timecodeString, CString* userBitsString);
-	static void							GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct& metadata);
 
-public:
-	DeckLinkDevice(CCapturePreviewDlg* uiDelegate, IDeckLink* device);
-	virtual ~DeckLinkDevice();
-
-	bool								Init();
-	const CString&						GetDeviceName() { return m_deviceName; };
-	bool								IsCapturing() { return m_currentlyCapturing; };
-	bool								SupportsFormatDetection() { return (m_supportsFormatDetection == TRUE); };
-	bool								StartCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode);
-	void								StopCapture();
-	IDeckLink*							DeckLinkInstance() { return m_deckLink; }
-	IDeckLinkProfileManager*			GetDeviceProfileManager() { return m_deckLinkProfileManager; };
-	IDeckLinkInput*						GetDeckLinkInput() { return m_deckLinkInput; };
-	IDeckLinkConfiguration*				GetDeckLinkConfiguration() { return m_deckLinkConfig; };
-	IDeckLinkProfileAttributes*			GetDeckLinkAttributes() { return m_deckLinkAttributes; };
-
-	// IUnknown interface
-	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ();
-	virtual ULONG	STDMETHODCALLTYPE	Release ();
-
-	// IDeckLinkInputCallback interface
-	virtual HRESULT STDMETHODCALLTYPE	VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newDisplayMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags);
-	virtual HRESULT STDMETHODCALLTYPE	VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFrame* videoFrame, /* in */ IDeckLinkAudioInputPacket* audioPacket);
-};
-
-class DeckLinkDeviceDiscovery :  public IDeckLinkDeviceNotificationCallback
-{
-private:
-	IDeckLinkDiscovery*					m_deckLinkDiscovery;
-	CCapturePreviewDlg*					m_uiDelegate;
-	ULONG								m_refCount;
-public:
-	DeckLinkDeviceDiscovery(CCapturePreviewDlg* uiDelegate);
-	virtual ~DeckLinkDeviceDiscovery();
-
-	bool						        Enable();
-	void						        Disable();
-
-	// IDeckLinkDeviceNotificationCallback interface
-	virtual HRESULT	STDMETHODCALLTYPE	DeckLinkDeviceArrived (/* in */ IDeckLink* deckLink);
-	virtual HRESULT	STDMETHODCALLTYPE	DeckLinkDeviceRemoved (/* in */ IDeckLink* deckLink);
-
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT	STDMETHODCALLTYPE	QueryInterface (REFIID iid, LPVOID *ppv);
-	virtual ULONG	STDMETHODCALLTYPE	AddRef ();
-	virtual ULONG	STDMETHODCALLTYPE	Release ();
+	DeviceErrorOccuredFunc				m_errorListener;
+	VideoFormatChangedCallback			m_videoFormatChangedCallback;
+	VideoFrameArrivedCallback			m_videoFrameArrivedCallback;
 };

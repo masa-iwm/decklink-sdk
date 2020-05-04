@@ -31,7 +31,6 @@
 
 #include "SignalGenerator3DVideoFrame.h"
 
-#include <libkern/OSAtomic.h>
 #include <stdexcept>
 
 #define CompareREFIID(iid1, iid2)	(memcmp(&iid1, &iid2, sizeof(REFIID)) == 0)
@@ -127,6 +126,31 @@ HRESULT SignalGenerator3DVideoFrame::GetTimecode(/* in */ BMDTimecodeFormat form
 HRESULT SignalGenerator3DVideoFrame::GetAncillaryData(/* out */ IDeckLinkVideoFrameAncillary **ancillary)
 {
 	return m_frameLeft->GetAncillaryData(ancillary);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetFlags(BMDFrameFlags newFlags)
+{
+	return m_frameLeft->SetFlags(newFlags);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode* timecode)
+{
+	return m_frameLeft->SetTimecode(format, timecode);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetTimecodeFromComponents(BMDTimecodeFormat format, uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t frames, BMDTimecodeFlags flags)
+{
+	return m_frameLeft->SetTimecodeFromComponents(format, hours, minutes, seconds, frames, flags);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetAncillaryData(IDeckLinkVideoFrameAncillary* ancillary)
+{
+	return m_frameLeft->SetAncillaryData(ancillary);
+}
+
+HRESULT SignalGenerator3DVideoFrame::SetTimecodeUserBits(BMDTimecodeFormat format, BMDTimecodeUserBits userBits)
+{
+	return m_frameLeft->SetTimecodeUserBits(format, userBits);
 }
 
 BMDVideo3DPackingFormat SignalGenerator3DVideoFrame::Get3DPackingFormat(void)

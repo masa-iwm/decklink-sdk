@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2017 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,36 +24,41 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  DeckLinkDeviceDiscovery.h
-//  DeckLink Device Discovery Callback
-//
 
 #pragma once
 
+#include <atomic>
+#include <functional>
 #include "DeckLinkAPI_h.h"
-#include "SignalGeneratorDlg.h"
 
 class DeckLinkDeviceDiscovery : public IDeckLinkDeviceNotificationCallback
 {
-private:
-	IDeckLinkDiscovery*     m_deckLinkDiscovery;
-	CSignalGeneratorDlg*    m_uiDelegate;
-	int32_t                 m_refCount;
+	using Callback = std::function<void(CComPtr<IDeckLink>&)>;
 
 public:
-	DeckLinkDeviceDiscovery(CSignalGeneratorDlg* uiDelegate);
+	DeckLinkDeviceDiscovery();
 	virtual ~DeckLinkDeviceDiscovery();
 
-	bool                enable();
-	void                disable();
+	void		onDeviceArrival(const Callback& callback) { m_deckLinkArrivedCallback = callback; }
+	void		onDeviceRemoval(const Callback& callback) { m_deckLinkRemovedCallback = callback; }
+
+	bool		enable();
+	void		disable();
 
 	// IDeckLinkDeviceArrivalNotificationCallback interface
-	virtual HRESULT     STDMETHODCALLTYPE DeckLinkDeviceArrived(/* in */ IDeckLink* deckLinkDevice);
-	virtual HRESULT     STDMETHODCALLTYPE DeckLinkDeviceRemoved(/* in */ IDeckLink* deckLinkDevice);
+	HRESULT		STDMETHODCALLTYPE DeckLinkDeviceArrived(IDeckLink* deckLinkDevice) override;
+	HRESULT		STDMETHODCALLTYPE DeckLinkDeviceRemoved(IDeckLink* deckLinkDevice) override;
 
 	// IUnknown needs only a dummy implementation
-	virtual HRESULT		STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG		STDMETHODCALLTYPE AddRef();
-	virtual ULONG		STDMETHODCALLTYPE Release();
+	HRESULT		STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG		STDMETHODCALLTYPE AddRef() override;
+	ULONG		STDMETHODCALLTYPE Release() override;
+
+private:
+	CComPtr<IDeckLinkDiscovery>		m_deckLinkDiscovery;
+
+	Callback						m_deckLinkArrivedCallback;
+	Callback						m_deckLinkRemovedCallback;
+
+	std::atomic<ULONG>				m_refCount;
 };

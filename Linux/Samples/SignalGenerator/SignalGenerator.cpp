@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,14 +24,12 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  SignalGenerator.cpp
-//  Signal Generator
-//
 
 #include "SignalGenerator.h"
+#include "SignalGeneratorEvents.h"
 #include "DeckLinkOutputDevice.h"
 #include "DeckLinkDeviceDiscovery.h"
+#include "DeckLinkOpenGLWidget.h"
 #include "ProfileCallback.h"
 
 #include <map>
@@ -66,131 +64,24 @@ static const std::map<BMDPixelFormat, std::pair<QString, bool>> kPixelFormats =
 	std::make_pair(bmdFormat10BitRGB,	std::make_pair(QString("10-bit RGB"), true)),
 };
 
-class CDeckLinkGLWidget : public QGLWidget, public IDeckLinkScreenPreviewCallback
+SignalGenerator::SignalGenerator() : QDialog(),
+	running(false),
+	selectedDisplayMode(bmdModeUnknown),
+	selectedPixelFormat(bmdFormatUnspecified),
+	audioBuffer(nullptr),
+	scheduledPlaybackStopped(false)
 {
-private:
-	QAtomicInt refCount;
-	QMutex mutex;
-	IDeckLinkOutput* deckLinkOutput;
-	IDeckLinkGLScreenPreviewHelper* deckLinkScreenPreviewHelper;
-	
-public:
-	CDeckLinkGLWidget(QWidget* parent);
-	
-	// IUnknown
-	virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG AddRef();
-	virtual ULONG Release();
-
-	// IDeckLinkScreenPreviewCallback
-	virtual HRESULT DrawFrame(IDeckLinkVideoFrame* theFrame);
-	
-protected:
-	void initializeGL();
-	void paintGL();
-	void resizeGL(int width, int height);
-};
-
-CDeckLinkGLWidget::CDeckLinkGLWidget(QWidget* parent) : QGLWidget(parent)
-{
-	refCount = 1;
-	
-	deckLinkOutput = deckLinkOutput;
-	deckLinkScreenPreviewHelper = CreateOpenGLScreenPreviewHelper();
-}
-
-void	CDeckLinkGLWidget::initializeGL ()
-{
-	if (deckLinkScreenPreviewHelper != NULL)
-	{
-		mutex.lock();
-			deckLinkScreenPreviewHelper->InitializeGL();
-		mutex.unlock();
-	}
-}
-
-void	CDeckLinkGLWidget::paintGL ()
-{
-	mutex.lock();
-		glLoadIdentity();
-
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		deckLinkScreenPreviewHelper->PaintGL();
-	mutex.unlock();
-}
-
-void	CDeckLinkGLWidget::resizeGL (int width, int height)
-{
-	mutex.lock();
-		glViewport(0, 0, width, height);
-	mutex.unlock();
-}
-
-HRESULT		CDeckLinkGLWidget::QueryInterface (REFIID, LPVOID *ppv)
-{
-	*ppv = NULL;
-	return E_NOINTERFACE;
-}
-
-ULONG		CDeckLinkGLWidget::AddRef ()
-{
-	int		oldValue;
-	
-	oldValue = refCount.fetchAndAddAcquire(1);
-	return (ULONG)(oldValue + 1);
-}
-
-ULONG		CDeckLinkGLWidget::Release ()
-{
-	int		oldValue;
-	
-	oldValue = refCount.fetchAndAddAcquire(-1);
-	if (oldValue == 1)
-	{
-		delete this;
-	}
-	
-	return (ULONG)(oldValue - 1);
-}
-
-HRESULT		CDeckLinkGLWidget::DrawFrame (IDeckLinkVideoFrame* theFrame)
-{
-	if (deckLinkScreenPreviewHelper != NULL)
-	{
-		deckLinkScreenPreviewHelper->SetFrame(theFrame);
-		update();
-	}
-	return S_OK;
-}
-
-SignalGenerator::SignalGenerator()
-	: QDialog()
-{
-	running = false;
-	selectedDevice = NULL;
-	deckLinkDiscovery = NULL;
-	profileCallback = NULL;
-	selectedDisplayMode = bmdModeUnknown;
-	selectedPixelFormat = bmdFormatUnspecified;
-	videoFrameBlack = NULL;
-	videoFrameBars = NULL;
-	audioBuffer = NULL;
-	timeCode = NULL;
-	scheduledPlaybackStopped = false;
-
 	ui = new Ui::SignalGeneratorDialog();
 	ui->setupUi(this);
 
 	layout = new QGridLayout(ui->previewContainer);
 	layout->setMargin(0);
 
-	previewView = new CDeckLinkGLWidget(this);
+	previewView = new DeckLinkOpenGLWidget(this);
 	previewView->resize(ui->previewContainer->size());
 	previewView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	layout->addWidget(previewView, 0, 0, 0, 0);
-	previewView->DrawFrame(NULL);
+	previewView->clear();
 
 	ui->outputSignalPopup->addItem("Pip", QVariant::fromValue((int)kOutputSignalPip));
 	ui->outputSignalPopup->addItem("Dropout", QVariant::fromValue((int)kOutputSignalDrop));
@@ -198,84 +89,52 @@ SignalGenerator::SignalGenerator()
 	ui->audioSampleDepthPopup->addItem("16", QVariant::fromValue(16));
 	ui->audioSampleDepthPopup->addItem("32", QVariant::fromValue(32));
 
-	connect(ui->startButton, SIGNAL(clicked()), this, SLOT(toggleStart()));
-	connect(ui->videoFormatPopup, SIGNAL(currentIndexChanged(int)), this, SLOT(videoFormatChanged(int)));
-	connect(ui->outputDevicePopup, SIGNAL(currentIndexChanged(int)), this, SLOT(outputDeviceChanged(int)));
+	connect(ui->startButton, &QPushButton::clicked, this, &SignalGenerator::toggleStart);
+	connect(ui->videoFormatPopup, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SignalGenerator::videoFormatChanged);
+	connect(ui->outputDevicePopup, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SignalGenerator::outputDeviceChanged);
 	enableInterface(false);
 	show();
-}
-
-SignalGenerator::~SignalGenerator()
-{
-	if (selectedDevice != NULL)
-	{
-		if (selectedDevice->GetProfileManager() != NULL)
-			selectedDevice->GetProfileManager()->SetCallback(NULL);
-
-		selectedDevice->GetDeviceOutput()->SetScreenPreviewCallback(NULL);
-	}
-
-	if (previewView != NULL)
-	{
-		previewView->Release();
-		previewView = NULL;
-	}
-
-	if (profileCallback != NULL)
-	{
-		profileCallback->Release();
-		profileCallback = NULL;
-	}
-
-	for (int i = 0; i < ui->outputDevicePopup->count(); i++)
-	{
-		DeckLinkOutputDevice* deckLinkOutputDevice = (DeckLinkOutputDevice*)(((QVariant)ui->outputDevicePopup->itemData(i)).value<void*>());
-		deckLinkOutputDevice->Release();
-		deckLinkOutputDevice = NULL;
-	}
-
-	if (deckLinkDiscovery != NULL)
-	{
-		deckLinkDiscovery->Release();
-		deckLinkDiscovery = NULL;
-	}
-
-	delete timeCode;
 }
 
 void SignalGenerator::setup()
 {
 	//
-	// Create and initialise DeckLink device discovery and profile objects
-	deckLinkDiscovery = new DeckLinkDeviceDiscovery(this);
-	profileCallback = new ProfileCallback(this);
-	if ((deckLinkDiscovery != NULL) && (profileCallback != NULL))
+	// Create and initialise DeckLink device discovery object
+	deckLinkDiscovery = make_com_ptr<DeckLinkDeviceDiscovery>(this);
+	if (deckLinkDiscovery)
 	{
 		if (!deckLinkDiscovery->enable())
 		{
 			QMessageBox::critical(this, "This application requires the DeckLink drivers installed.", "Please install the Blackmagic DeckLink drivers to use the features of this application.");
 		}
 	}
+
+	profileCallback = make_com_ptr<ProfileCallback>(this);
+	if (profileCallback)
+		profileCallback->onProfileChanging(std::bind(&SignalGenerator::haltStreams, this));
 }
 
 void SignalGenerator::customEvent(QEvent *event)
 {
-	if (event->type() == ADD_DEVICE_EVENT)
+	if (event->type() == kAddDeviceEvent)
 	{
-		SignalGeneratorEvent* sge = dynamic_cast<SignalGeneratorEvent*>(event);
-		addDevice(sge->deckLink());
+		DeckLinkDeviceDiscoveryEvent* discoveryEvent = dynamic_cast<DeckLinkDeviceDiscoveryEvent*>(event);
+		com_ptr<IDeckLink> deckLink(discoveryEvent->deckLink());
+		addDevice(deckLink);
 	}
 
-	else if (event->type() == REMOVE_DEVICE_EVENT)
+	else if (event->type() == kRemoveDeviceEvent)
 	{
-		SignalGeneratorEvent* sge = dynamic_cast<SignalGeneratorEvent*>(event);
-		removeDevice(sge->deckLink());
+		DeckLinkDeviceDiscoveryEvent* discoveryEvent = dynamic_cast<DeckLinkDeviceDiscoveryEvent*>(event);
+		com_ptr<IDeckLink> deckLink(discoveryEvent->deckLink());
+		removeDevice(deckLink);
 	}
 
-	else if (event->type() == PROFILE_ACTIVATED_EVENT)
+	else if (event->type() == kProfileActivatedEvent)
 	{
-		ProfileCallbackEvent* pce = dynamic_cast<ProfileCallbackEvent*>(event);
-		updateProfile(pce->Profile());
+		ProfileActivatedEvent* profileEvent = dynamic_cast<ProfileActivatedEvent*>(event);
+		com_ptr<IDeckLinkProfile> deckLinkProfile(profileEvent->deckLinkProfile());
+		updateProfile(deckLinkProfile);
 	}
 }
 
@@ -284,7 +143,16 @@ void SignalGenerator::closeEvent(QCloseEvent *)
 	if (running)
 		stopRunning();
 
-	deckLinkDiscovery->disable();
+	if (selectedDevice)
+	{
+		if (selectedDevice->getProfileManager())
+			selectedDevice->getProfileManager()->SetCallback(nullptr);
+
+		selectedDevice->getDeviceOutput()->SetScreenPreviewCallback(nullptr);
+	}
+
+	if (deckLinkDiscovery)
+		deckLinkDiscovery->disable();
 }
 
 void SignalGenerator::enableInterface(bool enable)
@@ -306,38 +174,19 @@ void SignalGenerator::toggleStart()
 
 void SignalGenerator::refreshDisplayModeMenu(void)
 {
-	// Populate the display mode combo with a list of display modes supported by the installed DeckLink card
-	IDeckLinkDisplayModeIterator*	displayModeIterator;
-	IDeckLinkDisplayMode*			deckLinkDisplayMode;
-	IDeckLinkOutput*                deckLinkOutput;
-
 	// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
 	ui->videoFormatPopup->clear();
 
-	deckLinkOutput = selectedDevice->GetDeviceOutput();
-	
-	if (deckLinkOutput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
-		return;
-
-	while (displayModeIterator->Next(&deckLinkDisplayMode) == S_OK)
+	selectedDevice->queryDisplayModes([this](com_ptr<IDeckLinkDisplayMode>& displayMode)
 	{
-		char*					modeName;
-		bool					supported = false;
-		BMDDisplayMode			mode = deckLinkDisplayMode->GetDisplayMode();
+		const char*		modeName;
 
-		if (deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, mode, bmdFormatUnspecified, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &supported) == S_OK && supported)
+		if (displayMode->GetName(&modeName) == S_OK)
 		{
-			if (deckLinkDisplayMode->GetName(const_cast<const char**>(&modeName)) == S_OK)
-			{
-				ui->videoFormatPopup->addItem(QString(modeName), QVariant::fromValue((uint64_t)mode));
-				free(modeName);
-			}
+			ui->videoFormatPopup->addItem(QString(modeName), QVariant::fromValue((uint64_t)displayMode->GetDisplayMode()));
+			free((void*)modeName);
 		}
-
-		deckLinkDisplayMode->Release();
-		deckLinkDisplayMode = nullptr;
-	}
-	displayModeIterator->Release();
+	});
 
 	ui->videoFormatPopup->setCurrentIndex(0);
 	ui->startButton->setEnabled(ui->videoFormatPopup->count() != 0);
@@ -346,8 +195,6 @@ void SignalGenerator::refreshDisplayModeMenu(void)
 void SignalGenerator::refreshPixelFormatMenu(void)
 {
 	// Populate the pixel format mode combo with a list of pixel formats supported by the installed DeckLink card
-	IDeckLinkOutput* deckLinkOutput = selectedDevice->GetDeviceOutput();
-
 	ui->pixelFormatPopup->clear();
 
 	for (auto& pixelFormat : kPixelFormats)
@@ -357,7 +204,8 @@ void SignalGenerator::refreshPixelFormatMenu(void)
 
 		std::tie(pixelFormatString, std::ignore) = pixelFormat.second;
 
-		HRESULT hr = deckLinkOutput->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, pixelFormat.first, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, NULL, &supported);
+		HRESULT hr = selectedDevice->getDeviceOutput()->DoesSupportVideoMode(bmdVideoConnectionUnspecified, selectedDisplayMode, 
+								pixelFormat.first, bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault, nullptr, &supported);
 		if (hr != S_OK || ! supported)
 			continue;
 
@@ -369,19 +217,15 @@ void SignalGenerator::refreshPixelFormatMenu(void)
 
 void SignalGenerator::refreshAudioChannelMenu(void)
 {
-	IDeckLink*					deckLink;
-	IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
-	int64_t						maxAudioChannels;
+	com_ptr<IDeckLinkProfileAttributes>	deckLinkAttributes(IID_IDeckLinkProfileAttributes, selectedDevice->getDeckLinkInstance());
+	int64_t								maxAudioChannels;
 
-	deckLink = selectedDevice->GetDeckLinkInstance();
-
-	// Get DeckLink attributes to determine number of audio channels
-	if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
-		goto bail;
+	if (!deckLinkAttributes)
+		return;
 
 	// Get max number of audio channels supported by DeckLink device
 	if (deckLinkAttributes->GetInt(BMDDeckLinkMaximumAudioChannels, &maxAudioChannels) != S_OK)
-		goto bail;
+		return;
 
 	ui->audioChannelPopup->clear();
 
@@ -397,26 +241,23 @@ void SignalGenerator::refreshAudioChannelMenu(void)
 	}
 	
 	ui->audioChannelPopup->setCurrentIndex(ui->audioChannelPopup->count() - 1);
-
-bail:
-	if (deckLinkAttributes)
-		deckLinkAttributes->Release();
 }
 
-void SignalGenerator::addDevice(IDeckLink* deckLink)
+void SignalGenerator::addDevice(com_ptr<IDeckLink>& deckLink)
 {
-	DeckLinkOutputDevice* newDevice = new DeckLinkOutputDevice(this, deckLink);
+	com_ptr<DeckLinkOutputDevice> outputDevice = make_com_ptr<DeckLinkOutputDevice>(this, deckLink);
 
-	// Initialise new DeckLinkDevice object
-	if (!newDevice->Init())
+	if (!outputDevice->getDeviceOutput())
 	{
 		// Device does not have IDeckLinkOutput interface, eg it is a DeckLink Mini Recorder
-		newDevice->Release();
 		return;
 	}
 
+	// Store output device to map to maintain reference
+	outputDevices[(intptr_t)deckLink.get()] = outputDevice;
+
 	// Add this DeckLink device to the device list
-	ui->outputDevicePopup->addItem(newDevice->GetDeviceName(), QVariant::fromValue((void*)newDevice));
+	ui->outputDevicePopup->addItem(outputDevice->getDeviceName(), QVariant::fromValue<intptr_t>((intptr_t)deckLink.get()));
 
 	if (ui->outputDevicePopup->count() == 1)
 	{
@@ -429,56 +270,57 @@ void SignalGenerator::addDevice(IDeckLink* deckLink)
 	}
 }
 
-void SignalGenerator::removeDevice(IDeckLink* deckLink)
+void SignalGenerator::removeDevice(com_ptr<IDeckLink>& deckLink)
 {
-	int deviceIndex = -1; 
-	DeckLinkOutputDevice* deviceToRemove = NULL;
+	// If device to remove is selected device, stop playback if active
+	if (selectedDevice->getDeckLinkInstance().get() == deckLink.get())
+	{
+		if (running)
+			stopRunning();
+		selectedDevice = nullptr;
+	}
 
 	// Find the combo box entry to remove (there may be multiple entries with the same name, but each
 	// will have a different data pointer).
-	for (deviceIndex = 0; deviceIndex < ui->outputDevicePopup->count(); ++deviceIndex)
+	for (int i = 0; i < ui->outputDevicePopup->count(); ++i)
 	{
-		deviceToRemove = (DeckLinkOutputDevice*)(((QVariant)ui->outputDevicePopup->itemData(deviceIndex)).value<void*>());
-		if (deviceToRemove->GetDeckLinkInstance() == deckLink)
+		if (deckLink.get() == (IDeckLink*)((ui->outputDevicePopup->itemData(i)).value<void*>()))
+		{
+			ui->outputDevicePopup->removeItem(i);
 			break;
+		}
 	}
 
-	if (deviceToRemove == NULL)
-		return;
-
-	// Remove device from list
-	ui->outputDevicePopup->removeItem(deviceIndex);
-
-	// If playback is ongoing, stop it
-	if ( (selectedDevice == deviceToRemove) && running )
-		stopRunning();
+	// Dereference output device by removing from list 
+	auto iter = outputDevices.find((intptr_t)deckLink.get());
+	if (iter != outputDevices.end())
+	{
+		outputDevices.erase(iter);
+	}
 
 	// Check how many devices are left
 	if (ui->outputDevicePopup->count() == 0)
 	{
 		// We have removed the last device, disable the interface.
 		enableInterface(false);
-		selectedDevice = NULL;
 	}
-	else if (selectedDevice == deviceToRemove)
+	else if (!selectedDevice)
 	{
 		// The device that was removed was the one selected in the UI.
 		// Select the first available device in the list and reset the UI.
 		ui->outputDevicePopup->setCurrentIndex(0);
 		outputDeviceChanged(0);
 	}
-
-	// Release DeckLinkDevice instance
-	deviceToRemove->Release();
 }
 
 void SignalGenerator::playbackStopped()
 {
 	// Notify waiting process that scheduled playback has stopped
-	mutex.lock();
+	{
+		std::lock_guard<std::mutex> lock(mutex);
 		scheduledPlaybackStopped = true;
-	mutex.unlock();
-	stopPlaybackCondition.wakeOne();
+	}
+	stopPlaybackCondition.notify_one();
 }
 
 void SignalGenerator::haltStreams(void)
@@ -488,7 +330,7 @@ void SignalGenerator::haltStreams(void)
 		stopRunning();
 }
 
-void SignalGenerator::updateProfile(IDeckLinkProfile* /* newProfile */)
+void SignalGenerator::updateProfile(com_ptr<IDeckLinkProfile>& /* newProfile */)
 {
 	// Update the video mode popup menu based on new profile
 	refreshDisplayModeMenu();
@@ -497,26 +339,26 @@ void SignalGenerator::updateProfile(IDeckLinkProfile* /* newProfile */)
 	refreshAudioChannelMenu();
 }
 
-IDeckLinkMutableVideoFrame *SignalGenerator::CreateOutputFrame(std::function<void(IDeckLinkVideoFrame*)> fillFrame)
+com_ptr<IDeckLinkMutableVideoFrame> SignalGenerator::CreateOutputFrame(FillFrameFunction fillFrame)
 {
-	IDeckLinkOutput*                deckLinkOutput;
-	IDeckLinkMutableVideoFrame*		referenceFrame	= NULL;
-	IDeckLinkMutableVideoFrame*		scheduleFrame	= NULL;
-	HRESULT							hr;
-	int								bytesPerRow;
-	int								referenceBytesPerRow;
-	IDeckLinkVideoConversion*		frameConverter	= NULL;
+	com_ptr<IDeckLinkOutput>				deckLinkOutput;
+	com_ptr<IDeckLinkMutableVideoFrame>		referenceFrame;
+	com_ptr<IDeckLinkMutableVideoFrame>		scheduleFrame;
+	HRESULT									hr;
+	int										bytesPerRow;
+	int										referenceBytesPerRow;
+	com_ptr<IDeckLinkVideoConversion>		frameConverter;
 
 	bytesPerRow = GetRowBytes(selectedPixelFormat, frameWidth);
 	referenceBytesPerRow = GetRowBytes(bmdFormat8BitYUV, frameWidth);
 
-	deckLinkOutput = selectedDevice->GetDeviceOutput();
+	deckLinkOutput = selectedDevice->getDeviceOutput();
 
 	frameConverter = CreateVideoConversionInstance();
-	if (frameConverter == NULL)
+	if (!frameConverter)
 		goto bail;
 
-	hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, &referenceFrame);
+	hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, referenceBytesPerRow, bmdFormat8BitYUV, bmdFrameFlagDefault, referenceFrame.releaseAndGetAddressOf());
 	if (hr != S_OK)
 		goto bail;
 
@@ -526,46 +368,54 @@ IDeckLinkMutableVideoFrame *SignalGenerator::CreateOutputFrame(std::function<voi
 	{
 		// Frame is already 8-bit YUV, no conversion required
 		scheduleFrame = referenceFrame;
-		scheduleFrame->AddRef();
 	}
 	else
 	{
-		hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, bytesPerRow, selectedPixelFormat, bmdFrameFlagDefault, &scheduleFrame);
+		hr = deckLinkOutput->CreateVideoFrame(frameWidth, frameHeight, bytesPerRow, selectedPixelFormat, bmdFrameFlagDefault, scheduleFrame.releaseAndGetAddressOf());
 		if (hr != S_OK)
 			goto bail;
 
-		hr = frameConverter->ConvertFrame(referenceFrame, scheduleFrame);
+		hr = frameConverter->ConvertFrame(referenceFrame.get(), scheduleFrame.get());
 		if (hr != S_OK)
 			goto bail;
 	}
 
 bail:
-	if (referenceFrame != NULL)
-	{
-		referenceFrame->Release();
-		referenceFrame = NULL;
-	}
-	if (frameConverter != NULL)
-	{
-		frameConverter->Release();
-		frameConverter = NULL;
-	}
-
 	return scheduleFrame;
 }
 
 void SignalGenerator::startRunning()
 {
-	IDeckLinkOutput*			deckLinkOutput		= selectedDevice->GetDeviceOutput();
-	IDeckLinkDisplayMode*		displayMode			= nullptr;
-	IDeckLinkProfileAttributes*	deckLinkAttributes	= nullptr;
-	bool						success				= false;
-	BMDVideoOutputFlags			videoOutputFlags	= 0;
-	bool						output444;
-	HRESULT						result;
-	QVariant v;
+	com_ptr<IDeckLinkOutput>			deckLinkOutput		= selectedDevice->getDeviceOutput();
+	com_ptr<IDeckLinkDisplayMode>		displayMode			= nullptr;
+	com_ptr<IDeckLinkProfileAttributes>	deckLinkAttributes(IID_IDeckLinkProfileAttributes, selectedDevice->getDeckLinkInstance());
+	bool								success				= false;
+	BMDVideoOutputFlags					videoOutputFlags	= 0;
+	bool								output444;
+	HRESULT								result;
+	QVariant 							v;
 	
-	deckLinkOutput->SetScreenPreviewCallback(previewView);
+	if (!deckLinkAttributes)
+		goto bail;
+
+	// When a scheduled video frame is complete, schedule next frame
+	selectedDevice->onScheduledFrameCompleted(std::bind(&SignalGenerator::scheduleNextFrame, this, false));
+
+	// Provide further audio samples to the DeckLink API until our preferred buffer waterlevel is reached
+	selectedDevice->onRenderAudioSamples(std::bind(&SignalGenerator::writeNextAudioSamples, this));
+
+	// Register when scheduled playback stopped callback, to know when to disable video output
+	selectedDevice->onScheduledPlaybackStopped(std::bind(&SignalGenerator::playbackStopped, this));
+
+	// Provide the delegate to the audio and video output interfaces
+	if (deckLinkOutput->SetScheduledFrameCompletionCallback(selectedDevice.get()) != S_OK)
+		goto bail;
+
+	if (deckLinkOutput->SetAudioCallback(selectedDevice.get()) != S_OK)
+		goto bail;
+
+	if (deckLinkOutput->SetScreenPreviewCallback(previewView->delegate()) != S_OK)
+		goto bail;
 
 	// Determine the audio and video properties for the output stream
 	v = ui->outputSignalPopup->itemData(ui->outputSignalPopup->currentIndex());
@@ -579,7 +429,7 @@ void SignalGenerator::startRunning()
 	audioSampleRate = bmdAudioSampleRate48kHz;
 	
 	// Get the IDeckLinkDisplayMode object associated with the selected display mode
-	if (deckLinkOutput->GetDisplayMode(selectedDisplayMode, &displayMode) != S_OK)
+	if (deckLinkOutput->GetDisplayMode(selectedDisplayMode, displayMode.releaseAndGetAddressOf()) != S_OK)
 		goto bail;
 
 	frameWidth = displayMode->GetWidth();
@@ -595,12 +445,7 @@ void SignalGenerator::startRunning()
 	else
 		dropFrames = 0;
 
-	displayMode->Release();
-
 	// Check whether HFRTC is supported by the selected device
-	if (selectedDevice->GetDeckLinkInstance()->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK)
-		goto bail;
-
 	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHighFrameRateTimecode, &hfrtcSupported) != S_OK)
 	{
 		hfrtcSupported = false;
@@ -619,9 +464,7 @@ void SignalGenerator::startRunning()
 		videoOutputFlags |= bmdVideoOutputRP188;
 	}
 
-	if (timeCode)
-		delete timeCode;
-	timeCode = new Timecode(framesPerSecond, dropFrames);
+	timeCode = std::unique_ptr<Timecode>(new Timecode(framesPerSecond, dropFrames));
 
 	selectedPixelFormat = (BMDPixelFormat)ui->pixelFormatPopup->itemData(ui->pixelFormatPopup->currentIndex()).value<int>();
 	
@@ -635,7 +478,7 @@ void SignalGenerator::startRunning()
 		goto bail;
 	}
 
-	result = selectedDevice->GetDeviceConfiguration()->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
+	result = selectedDevice->getDeviceConfiguration()->SetFlag(bmdDeckLinkConfig444SDIVideoOutput, output444);
 	// If a device without SDI output is used (eg Intensity Pro 4K), then SetFlags will return E_NOTIMPL
 	if ((result != S_OK) && (result != E_NOTIMPL))
 		goto bail;
@@ -648,12 +491,11 @@ void SignalGenerator::startRunning()
 	if (deckLinkOutput->EnableAudioOutput(bmdAudioSampleRate48kHz, audioSampleDepth, audioChannelCount, bmdAudioOutputStreamTimestamped) != S_OK)
 		goto bail;
 	
-	
 	// Generate one second of audio tone
 	audioSamplesPerFrame = ((audioSampleRate * frameDuration) / frameTimescale);
 	audioBufferSampleLength = (framesPerSecond * audioSampleRate * frameDuration) / frameTimescale;
 	audioBuffer = malloc(audioBufferSampleLength * audioChannelCount * (audioSampleDepth / 8));
-	if (audioBuffer == NULL)
+	if (audioBuffer == nullptr)
 		goto bail;
 	FillSine(audioBuffer, audioBufferSampleLength, audioChannelCount, audioSampleDepth);
 	
@@ -661,7 +503,7 @@ void SignalGenerator::startRunning()
 	videoFrameBlack = CreateOutputFrame(FillBlack);
 	
 	// Generate a frame of colour bars
-	videoFrameBars = CreateOutputFrame(FillColourBars);
+	videoFrameBars = CreateOutputFrame(FillColorBars);
 	
 	// Begin video preroll by scheduling a second of frames in hardware
 	totalFramesScheduled = 0;
@@ -683,11 +525,6 @@ void SignalGenerator::startRunning()
 	success = true;
 	
 bail:
-	if (deckLinkAttributes != NULL)
-	{
-		deckLinkAttributes->Release();
-	}
-
 	if(!success)
 	{
 		QMessageBox::critical(this, "Failed to start output", "Failed to start output");
@@ -698,37 +535,34 @@ bail:
 
 void SignalGenerator::stopRunning()
 {
-	IDeckLinkOutput* deckLinkOutput = selectedDevice->GetDeviceOutput();
+	com_ptr<IDeckLinkOutput> deckLinkOutput = selectedDevice->getDeviceOutput();
 
 	if (running)
 	{
 		// Stop the audio and video output streams immediately
-		deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
+		deckLinkOutput->StopScheduledPlayback(0, nullptr, 0);
 
 		// Wait until IDeckLinkVideoOutputCallback::ScheduledPlaybackHasStopped callback
-		mutex.lock();
-			while (!scheduledPlaybackStopped)
-				stopPlaybackCondition.wait(&mutex);
-		mutex.unlock();
+		std::unique_lock<std::mutex> lock(mutex);
+		stopPlaybackCondition.wait(lock, [this] { return scheduledPlaybackStopped; } );
 	}
 
+	// Deregister output callbacks
+	deckLinkOutput->SetScheduledFrameCompletionCallback(nullptr);
+	deckLinkOutput->SetAudioCallback(nullptr);
 	deckLinkOutput->SetScreenPreviewCallback(nullptr);
 
 	deckLinkOutput->DisableAudioOutput();
 	deckLinkOutput->DisableVideoOutput();
 	
-	if (videoFrameBlack != NULL)
-		videoFrameBlack->Release();
-	videoFrameBlack = NULL;
-	
-	if (videoFrameBars != NULL)
-		videoFrameBars->Release();
-	videoFrameBars = NULL;
-	
-	if (audioBuffer != NULL)
+	if (audioBuffer != nullptr)
 		free(audioBuffer);
-	audioBuffer = NULL;
+	audioBuffer = nullptr;
 	
+	selectedDevice->onScheduledFrameCompleted(nullptr);
+	selectedDevice->onRenderAudioSamples(nullptr);
+	selectedDevice->onScheduledPlaybackStopped(nullptr);
+
 	// Success; update the UI
 	running = false;
 	ui->startButton->setText("Start");
@@ -738,14 +572,14 @@ void SignalGenerator::stopRunning()
 
 void SignalGenerator::scheduleNextFrame(bool prerolling)
 {
-	HRESULT							result = S_OK;
-	IDeckLinkMutableVideoFrame*		currentFrame;
-	IDeckLinkOutput*				deckLinkOutput = nullptr;
-	IDeckLinkDisplayMode*			outputDisplayMode = nullptr;
-	bool							setVITC1Timecode = false;
-	bool							setVITC2Timecode = false;
+	HRESULT									result = S_OK;
+	com_ptr<IDeckLinkMutableVideoFrame>		currentFrame;
+	com_ptr<IDeckLinkOutput>				deckLinkOutput = nullptr;
+	com_ptr<IDeckLinkDisplayMode>			outputDisplayMode = nullptr;
+	bool									setVITC1Timecode = false;
+	bool									setVITC2Timecode = false;
 
-	deckLinkOutput = selectedDevice->GetDeviceOutput();
+	deckLinkOutput = selectedDevice->getDeviceOutput();
 
 	if (prerolling == false)
 	{
@@ -780,7 +614,7 @@ void SignalGenerator::scheduleNextFrame(bool prerolling)
 		if (result != S_OK)
 		{
 			fprintf(stderr, "Could not set VITC timecode on frame - result = %08x\n", result);
-			goto bail;
+			return;
 		}
 	}
 	else
@@ -798,15 +632,15 @@ void SignalGenerator::scheduleNextFrame(bool prerolling)
 			if (result != S_OK)
 			{
 				fprintf(stderr, "Could not set HFRTC timecode on frame - result = %08x\n", result);
-				goto bail;
+				return;
 			}
 		}
 
-		result = deckLinkOutput->GetDisplayMode(selectedDisplayMode, &outputDisplayMode);
+		result = deckLinkOutput->GetDisplayMode(selectedDisplayMode, outputDisplayMode.releaseAndGetAddressOf());
 		if (result != S_OK)
 		{
 			fprintf(stderr, "Could not get output display mode - result = %08x\n", result);
-			goto bail;			
+			return;			
 		}
 
 		if (outputDisplayMode->GetFieldDominance() != bmdProgressiveFrame)
@@ -843,7 +677,7 @@ void SignalGenerator::scheduleNextFrame(bool prerolling)
 			if (result != S_OK)
 			{
 				fprintf(stderr, "Could not set VITC1 timecode on interlaced frame - result = %08x\n", result);
-				goto bail;
+				return;
 			}
 		}
 
@@ -859,22 +693,22 @@ void SignalGenerator::scheduleNextFrame(bool prerolling)
 			if (result != S_OK)
 			{
 				fprintf(stderr, "Could not set VITC1 timecode on interlaced frame - result = %08x\n", result);
-				goto bail;
+				return;
 			}
 		}
 	}
 
 	printf("Output frame: %02d:%02d:%02d:%03d\n", timeCode->hours(), timeCode->minutes(), timeCode->seconds(), timeCode->frames());
 
-	if (deckLinkOutput->ScheduleVideoFrame(currentFrame, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale) != S_OK)
-		goto bail;
-	
-bail:
+	result = deckLinkOutput->ScheduleVideoFrame(currentFrame.get(), (totalFramesScheduled * frameDuration), frameDuration, frameTimescale);
+	if (result != S_OK)
+	{
+		fprintf(stderr, "Could not schedule video output frame - result = %08x\n", result);
+		return;
+	}
+
 	totalFramesScheduled += 1;
 	timeCode->update();
-
-	if (outputDisplayMode != nullptr)
-		outputDisplayMode->Release();
 }
 
 void SignalGenerator::writeNextAudioSamples()
@@ -884,13 +718,13 @@ void SignalGenerator::writeNextAudioSamples()
 	if (outputSignal == kOutputSignalPip)
 	{
 		// Schedule one-frame of audio tone
-		if (selectedDevice->GetDeviceOutput()->ScheduleAudioSamples(audioBuffer, audioSamplesPerFrame, (totalAudioSecondsScheduled * audioBufferSampleLength), audioSampleRate, NULL) != S_OK)
+		if (selectedDevice->getDeviceOutput()->ScheduleAudioSamples(audioBuffer, audioSamplesPerFrame, (totalAudioSecondsScheduled * audioBufferSampleLength), audioSampleRate, nullptr) != S_OK)
 			return;
 	}
 	else
 	{
 		// Schedule one-second (minus one frame) of audio tone
-		if (selectedDevice->GetDeviceOutput()->ScheduleAudioSamples(audioBuffer, (audioBufferSampleLength - audioSamplesPerFrame), (totalAudioSecondsScheduled * audioBufferSampleLength) + audioSamplesPerFrame, audioSampleRate, NULL) != S_OK)
+		if (selectedDevice->getDeviceOutput()->ScheduleAudioSamples(audioBuffer, (audioBufferSampleLength - audioSamplesPerFrame), (totalAudioSecondsScheduled * audioBufferSampleLength) + audioSamplesPerFrame, audioSampleRate, nullptr) != S_OK)
 			return;
 	}
 	
@@ -903,16 +737,22 @@ void SignalGenerator::outputDeviceChanged(int selectedDeviceIndex)
 		return;
 
 	// Release profile callback from existing selected device
-	if ((selectedDevice != NULL) && (selectedDevice->GetProfileManager() != NULL))
-		selectedDevice->GetProfileManager()->SetCallback(NULL);
+	if ((selectedDevice) && (selectedDevice->getProfileManager()))
+		selectedDevice->getProfileManager()->SetCallback(nullptr);
 
 	QVariant selectedDeviceVariant = ui->outputDevicePopup->itemData(selectedDeviceIndex);
-	
-	selectedDevice = (DeckLinkOutputDevice*)(selectedDeviceVariant.value<void*>());
+	intptr_t deckLinkPtr = (intptr_t)selectedDeviceVariant.value<intptr_t>();
+
+	// Find output device based on IDeckLink* object
+	auto iter = outputDevices.find(deckLinkPtr);
+	if (iter == outputDevices.end())
+		return;
+
+	selectedDevice = iter->second;
 
 	// Register profile callback with newly selected device's profile manager
-	if (selectedDevice->GetProfileManager() != NULL)
-		selectedDevice->GetProfileManager()->SetCallback(profileCallback);
+	if (selectedDevice->getProfileManager())
+		selectedDevice->getProfileManager()->SetCallback(profileCallback.get());
 
 	// Update the video mode popup menu
 	refreshDisplayModeMenu();
@@ -995,7 +835,7 @@ void	FillSine (void* audioBuffer, uint32_t samplesToWrite, uint32_t channels, ui
 	}
 }
 
-void	FillColourBars (IDeckLinkVideoFrame* theFrame)
+void	FillColorBars (com_ptr<IDeckLinkMutableVideoFrame>& theFrame)
 {
 	uint32_t*		nextWord;
 	uint32_t		width;
@@ -1024,7 +864,7 @@ void	FillColourBars (IDeckLinkVideoFrame* theFrame)
 	}
 }
 
-void	FillBlack (IDeckLinkVideoFrame* theFrame)
+void	FillBlack (com_ptr<IDeckLinkMutableVideoFrame>& theFrame)
 {
 	uint32_t*		nextWord;
 	uint32_t		width;

@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,16 +24,15 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-// ProfileCallback.cpp : implementation file
-// DeckLink Device Profile Callback
-//
 
 
 #include "stdafx.h"
 #include "ProfileCallback.h"
 
-ProfileCallback::ProfileCallback(CSignalGeneratorDlg* delegate)
-	: m_uiDelegate(delegate), m_refCount(1)
+ProfileCallback::ProfileCallback() : 
+	m_refCount(1),
+	m_haltStreamsCallback(nullptr),
+	m_profileActivatedCallback(nullptr)
 {
 }
 
@@ -42,15 +41,23 @@ HRESULT ProfileCallback::ProfileChanging(IDeckLinkProfile *profileToBeActivated,
 	// When streamsWillBeForcedToStop is true, the profile to be activated is incompatible with the current
 	// profile and capture will be stopped by the DeckLink driver. It is better to notify the
 	// controller to gracefully stop capture, so that the UI is set to a known state.
-	if (streamsWillBeForcedToStop)
-		m_uiDelegate->HaltStreams();
+	if (m_haltStreamsCallback && streamsWillBeForcedToStop)
+	{
+		CComPtr<IDeckLinkProfile> profile = profileToBeActivated;
+		m_haltStreamsCallback(profile);
+	}
+
 	return S_OK;
 }
 
 HRESULT ProfileCallback::ProfileActivated(IDeckLinkProfile *activatedProfile)
 {
-	// New profile activated, inform owner to update popup menus
-	PostMessage(m_uiDelegate->GetSafeHwnd(), WM_UPDATE_PROFILE_MESSAGE, 0, 0);
+	// New profile activated
+	if (m_profileActivatedCallback)
+	{
+		CComPtr<IDeckLinkProfile> profile = activatedProfile;
+		m_profileActivatedCallback(profile);
+	}
 
 	return S_OK;
 }
@@ -59,16 +66,22 @@ HRESULT ProfileCallback::QueryInterface(REFIID iid, LPVOID *ppv)
 {
 	HRESULT result = E_NOINTERFACE;
 
-	if (ppv == NULL)
+	if (!ppv)
 		return E_INVALIDARG;
 
 	// Initialise the return result
-	*ppv = NULL;
+	*ppv = nullptr;
 
 	// Obtain the IUnknown interface and compare it the provided REFIID
 	if (iid == IID_IUnknown)
 	{
 		*ppv = this;
+		AddRef();
+		result = S_OK;
+	}
+	else if (iid == IID_IDeckLinkProfileCallback)
+	{
+		*ppv = static_cast<IDeckLinkProfileCallback*>(this);
 		AddRef();
 		result = S_OK;
 	}
@@ -78,12 +91,13 @@ HRESULT ProfileCallback::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG ProfileCallback::AddRef(void)
 {
-	return InterlockedIncrement((LONG*)&m_refCount);
+	return ++m_refCount;
 }
 
 ULONG ProfileCallback::Release(void)
 {
-	ULONG newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+	ULONG newRefValue = --m_refCount;
+
 	if (newRefValue == 0)
 		delete this;
 

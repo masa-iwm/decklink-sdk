@@ -4,12 +4,13 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+lessThan(QT_VERSION, 5.7):error("CapturePreview SDK sample requires at least Qt version 5.7")
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT       += core gui widgets opengl
 
 TARGET = CapturePreview
 TEMPLATE = app
+CONFIG += c++11
 INCLUDEPATH = ../../include
 LIBS += -ldl
 

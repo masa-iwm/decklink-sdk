@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -27,33 +27,58 @@
 
 #pragma once
 
-#include <QMutex>
+#include <atomic>
+#include <mutex>
 #include <QOpenGLWidget>
-#include <DeckLinkAPI.h>
+#include "com_ptr.h"
+#include "DeckLinkAPI.h"
 
-class DeckLinkOpenGLWidget : public QOpenGLWidget, public IDeckLinkScreenPreviewCallback
+class DeckLinkOpenGLDelegate : public QObject, public IDeckLinkScreenPreviewCallback
 {
-private:
-	QAtomicInt 							m_refCount;
-	QMutex								m_mutex;
-	IDeckLinkGLScreenPreviewHelper*		m_deckLinkScreenPreviewHelper;
-        
+	Q_OBJECT
+
 public:
-	DeckLinkOpenGLWidget(QWidget* parent = 0);
-	virtual ~DeckLinkOpenGLWidget();
+	DeckLinkOpenGLDelegate();
+	virtual ~DeckLinkOpenGLDelegate() = default;
 	
 	// IUnknown
-	virtual HRESULT		QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG		AddRef();
-	virtual ULONG		Release();
+	HRESULT		QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG		AddRef() override;
+	ULONG		Release() override;
 
 	// IDeckLinkScreenPreviewCallback
-	virtual HRESULT		DrawFrame(IDeckLinkVideoFrame* theFrame);
-        
-protected:
-	// QOpenGLWidget
-	void				initializeGL();
-	void				paintGL();
-	void				resizeGL(int width, int height);
+	HRESULT		DrawFrame(IDeckLinkVideoFrame* theFrame) override;
+
+signals:
+	void		frameArrived(com_ptr<IDeckLinkVideoFrame> frame);
+
+private:
+	std::atomic<ULONG>		m_refCount;
 };
 
+class DeckLinkOpenGLWidget : public QOpenGLWidget
+{
+	Q_OBJECT
+
+public:
+	DeckLinkOpenGLWidget(QWidget* parent = nullptr);
+	virtual ~DeckLinkOpenGLWidget() = default;
+
+	IDeckLinkScreenPreviewCallback* delegate(void) const { return m_delegate.get(); }
+
+	void clear();
+
+protected:
+	// QOpenGLWidget
+	void	initializeGL() override;
+	void	paintGL() override;
+	void	resizeGL(int width, int height) override;
+
+private slots:
+	void	setFrame(com_ptr<IDeckLinkVideoFrame> frame);
+
+private:
+	com_ptr<DeckLinkOpenGLDelegate>			m_delegate;
+	com_ptr<IDeckLinkGLScreenPreviewHelper>	m_deckLinkScreenPreviewHelper;
+	std::mutex								m_mutex;
+};

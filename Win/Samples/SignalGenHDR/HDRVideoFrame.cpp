@@ -177,3 +177,11 @@ HRESULT HDRVideoFrame::GetString(BMDDeckLinkFrameMetadataID metadataID, BSTR* va
 	// Not expecting GetString
 	return E_INVALIDARG;
 }
+
+HRESULT	HDRVideoFrame::GetBytes(BMDDeckLinkFrameMetadataID metadataID, void* buffer, uint32_t* bufferSize)
+{
+	*bufferSize = 0;
+	// Not expecting GetBytes
+	return E_INVALIDARG;
+}
+

@@ -420,6 +420,16 @@ void	print_attributes (IDeckLink* deckLink, bool showConnectorAttributes)
 	{
 		fprintf(stderr, "Could not query the external keying attribute- result = %08x\n", result);
 	}
+
+	result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHDMITimecode, &supported);
+	if (result == S_OK)
+	{
+		printf(" %-40s %s\n", "HDMI timecode support:", supported ? "LTC" : "None");
+	}
+	else
+	{
+		fprintf(stderr, "Could not query the HDMI timecode support attribute- result = %08x\n", result);
+	}
 	
 bail:
 	printf("\n");

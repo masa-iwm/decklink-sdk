@@ -15,6 +15,10 @@
 		08A4811518517D2700C11683 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 085EF2D7181894CD00D5805C /* DeckLinkAPIDispatch.cpp */; };
 		08A4811618517D4100C11683 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085EF2D31818946000D5805C /* CoreFoundation.framework */; };
 		08AFDC0A181E06F700C86C10 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08AFDC09181E06F700C86C10 /* platform.cpp */; };
+		16FE1C75227AAF3F00282213 /* VancCapture.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 16FE1C68227AAE9000282213 /* VancCapture.cpp */; };
+		16FE1C76227AAF4900282213 /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08AFDC09181E06F700C86C10 /* platform.cpp */; };
+		16FE1C77227AAF5400282213 /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 085EF2D7181894CD00D5805C /* DeckLinkAPIDispatch.cpp */; };
+		16FE1C78227AAF6100282213 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085EF2D31818946000D5805C /* CoreFoundation.framework */; };
 		A82F1FFA19AC706B006B6B3D /* platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08AFDC09181E06F700C86C10 /* platform.cpp */; };
 		A82F1FFB19AC706B006B6B3D /* DeckLinkAPIDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 085EF2D7181894CD00D5805C /* DeckLinkAPIDispatch.cpp */; };
 		A82F1FFD19AC706B006B6B3D /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085EF2D31818946000D5805C /* CoreFoundation.framework */; };
@@ -38,6 +42,15 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		16FE1C6C227AAF0200282213 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		A837E7B22186B9DF00C083AF /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -68,6 +81,8 @@
 		08A4F41D185028F500462953 /* DeviceNotification.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DeviceNotification.cpp; sourceTree = SOURCE_ROOT; };
 		08AFDC08181E019600C86C10 /* platform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = "<group>"; };
 		08AFDC09181E06F700C86C10 /* platform.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = platform.cpp; path = Mac/platform.cpp; sourceTree = "<group>"; };
+		16FE1C68227AAE9000282213 /* VancCapture.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VancCapture.cpp; sourceTree = "<group>"; };
+		16FE1C6E227AAF0200282213 /* VancCapture */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = VancCapture; sourceTree = BUILT_PRODUCTS_DIR; };
 		A82F200119AC706B006B6B3D /* RP188VitcOutput */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = RP188VitcOutput; sourceTree = BUILT_PRODUCTS_DIR; };
 		A82F200219AC70AB006B6B3D /* RP188VitcOutput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RP188VitcOutput.cpp; sourceTree = SOURCE_ROOT; };
 		A837E7B42186B9DF00C083AF /* SynchronizedCapture */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SynchronizedCapture; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,6 +109,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				08A4811618517D4100C11683 /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		16FE1C6B227AAF0200282213 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				16FE1C78227AAF6100282213 /* CoreFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -143,6 +166,7 @@
 		083BE8A1181892BD0067DA94 = {
 			isa = PBXGroup;
 			children = (
+				16FE1C67227AAE7C00282213 /* VancCapture */,
 				A8F503E91C0D11C900212771 /* StatusMonitor */,
 				08A4810A185059A400C11683 /* DeviceNotification */,
 				DEAE2E491958EC2700DE9F48 /* VancOutput */,
@@ -166,6 +190,7 @@
 				A8F503E61C0D119500212771 /* StatusMonitor */,
 				A882B3232154AFBD0058E063 /* SynchronizedPlayback */,
 				A837E7B42186B9DF00C083AF /* SynchronizedCapture */,
+				16FE1C6E227AAF0200282213 /* VancCapture */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -195,6 +220,14 @@
 				08A4F41D185028F500462953 /* DeviceNotification.cpp */,
 			);
 			path = DeviceNotification;
+			sourceTree = "<group>";
+		};
+		16FE1C67227AAE7C00282213 /* VancCapture */ = {
+			isa = PBXGroup;
+			children = (
+				16FE1C68227AAE9000282213 /* VancCapture.cpp */,
+			);
+			name = VancCapture;
 			sourceTree = "<group>";
 		};
 		A82F1FEF19AC704D006B6B3D /* RP188VitcOutput */ = {
@@ -278,6 +311,23 @@
 			name = DeviceNotification;
 			productName = DeviceNotification;
 			productReference = 08A48109185059A400C11683 /* DeviceNotification */;
+			productType = "com.apple.product-type.tool";
+		};
+		16FE1C6D227AAF0200282213 /* VancCapture */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 16FE1C72227AAF0200282213 /* Build configuration list for PBXNativeTarget "VancCapture" */;
+			buildPhases = (
+				16FE1C6A227AAF0200282213 /* Sources */,
+				16FE1C6B227AAF0200282213 /* Frameworks */,
+				16FE1C6C227AAF0200282213 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VancCapture;
+			productName = VancCapture;
+			productReference = 16FE1C6E227AAF0200282213 /* VancCapture */;
 			productType = "com.apple.product-type.tool";
 		};
 		A82F1FF719AC706B006B6B3D /* RP188VitcOutput */ = {
@@ -371,6 +421,9 @@
 				LastUpgradeCheck = 0460;
 				ORGANIZATIONNAME = "Blackmagic Design";
 				TargetAttributes = {
+					16FE1C6D227AAF0200282213 = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
 					A837E7B32186B9DF00C083AF = {
 						CreatedOnToolsVersion = 7.2.1;
 					};
@@ -398,6 +451,7 @@
 				A8F503DC1C0D119500212771 /* StatusMonitor */,
 				A882B3222154AFBD0058E063 /* SynchronizedPlayback */,
 				A837E7B32186B9DF00C083AF /* SynchronizedCapture */,
+				16FE1C6D227AAF0200282213 /* VancCapture */,
 			);
 		};
 /* End PBXProject section */
@@ -420,6 +474,16 @@
 				08A481121850640E00C11683 /* DeviceNotification.cpp in Sources */,
 				08A4811318506BB800C11683 /* platform.cpp in Sources */,
 				08A4811518517D2700C11683 /* DeckLinkAPIDispatch.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		16FE1C6A227AAF0200282213 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				16FE1C77227AAF5400282213 /* DeckLinkAPIDispatch.cpp in Sources */,
+				16FE1C76227AAF4900282213 /* platform.cpp in Sources */,
+				16FE1C75227AAF3F00282213 /* VancCapture.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -573,6 +637,24 @@
 			};
 			name = Release;
 		};
+		16FE1C73227AAF0200282213 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
+				PRODUCT_NAME = "$(TARGET_NAME)";			};
+			name = Debug;
+		};
+		16FE1C74227AAF0200282213 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
+				PRODUCT_NAME = "$(TARGET_NAME)";			};
+			name = Release;
+		};
 		A82F1FFF19AC706B006B6B3D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -596,25 +678,9 @@
 		A837E7B82186B9DF00C083AF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CODE_SIGN_IDENTITY = "-";
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
-				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -622,25 +688,9 @@
 		A837E7B92186B9DF00C083AF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COPY_PHASE_STRIP = NO;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
-				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -648,25 +698,9 @@
 		A882B3282154AFBD0058E063 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CODE_SIGN_IDENTITY = "-";
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
-				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -674,25 +708,9 @@
 		A882B3292154AFBD0058E063 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CODE_SIGN_IDENTITY = "-";
-				COPY_PHASE_STRIP = NO;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
-				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -702,7 +720,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_ARC = YES;
 				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
-				PRODUCT_NAME = StatusMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
 		};
@@ -711,7 +729,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_ARC = YES;
 				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
-				PRODUCT_NAME = StatusMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -763,6 +781,14 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		16FE1C72227AAF0200282213 /* Build configuration list for PBXNativeTarget "VancCapture" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				16FE1C73227AAF0200282213 /* Debug */,
+				16FE1C74227AAF0200282213 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
 		A82F1FFE19AC706B006B6B3D /* Build configuration list for PBXNativeTarget "RP188VitcOutput" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -779,6 +805,7 @@
 				A837E7B92186B9DF00C083AF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		A882B3272154AFBD0058E063 /* Build configuration list for PBXNativeTarget "SynchronizedPlayback" */ = {
 			isa = XCConfigurationList;

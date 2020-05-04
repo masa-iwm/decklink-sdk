@@ -198,6 +198,9 @@ static const NSDictionary* kInputConnections = @{
 	[modeListPopup removeAllItems];
 	[ancillaryDataTable reloadData];
 	
+	// Set device list popup for manual enabling, so we can disable inactive devices
+	[deviceListPopup setAutoenablesItems:NO];
+
 	// Disable the interface
 	[startStopButton setEnabled:NO];
 	[self enableInterface:NO];
@@ -230,16 +233,21 @@ static const NSDictionary* kInputConnections = @{
 		device->Release();
 		return;
 	}
+	
+	// Register profile callback with newly added device's profile manager
+	if (device->deckLinkProfileManager != NULL)
+		device->deckLinkProfileManager->SetCallback(profileCallback);
 
 	[[deviceListPopup menu] addItemWithTitle:(NSString*)device->getDeviceName() action:nil keyEquivalent:@""];
 	[[deviceListPopup lastItem] setTag:(NSInteger)device];
-	
+	[[deviceListPopup lastItem] setEnabled:IsDeviceActive(deckLink)];
+
 	if ([deviceListPopup numberOfItems] == 1)
 	{
 		// We have added our first item, enable the interface
-		[self enableInterface:YES];
 		[deviceListPopup selectItemAtIndex:0];
 		[self newDeviceSelected:nil];
+		[self enableInterface:YES];
 	}
 	
 }
@@ -270,6 +278,10 @@ static const NSDictionary* kInputConnections = @{
 	if (deviceToRemove->isCapturing())
 		deviceToRemove->stopCapture();
 	
+	// Release profile callback from device to remove
+	if (deviceToRemove->deckLinkProfileManager != NULL)
+		deviceToRemove->deckLinkProfileManager->SetCallback(NULL);
+
 	[deviceListPopup removeItemAtIndex:index];
 	
 	[startStopButton setTitle:@"Start Capture"];
@@ -292,19 +304,46 @@ static const NSDictionary* kInputConnections = @{
 	deviceToRemove->Release();
 }
 
-- (void)haltStreams
+- (void)haltStreams:(IDeckLinkProfile*)newProfile
 {
+	IDeckLink* deckLink = NULL;
+
 	// Profile is changing, stop capture if active
-	if (selectedDevice->isCapturing())
-		[self stopCapture];
+	if (newProfile->GetDevice(&deckLink) == S_OK)
+	{
+		if ((selectedDevice->deckLink == deckLink) && (selectedDevice->isCapturing()))
+			[self stopCapture];
+	
+		deckLink->Release();
+	}
 }
 
 - (void)updateProfile:(IDeckLinkProfile*)newProfile
 {
+	IDeckLink*			updatedDeckLink = NULL;
+	DeckLinkDevice*		updatedDeckLinkDevice = NULL;
+
 	// Action as if new device selected to check whether device is active/inactive
 	// This call will subsequently updated input connections and video mode popups if active
 	[self newDeviceSelected:nil];
-	
+
+	// Update the enable state of the device menu item in output device popoup
+	if (newProfile->GetDevice(&updatedDeckLink) == S_OK)
+	{
+		// Find menu item that corresponds with the device with updated profile
+		for (NSMenuItem* item in [deviceListPopup itemArray])
+		{
+			updatedDeckLinkDevice = (DeckLinkDevice*)[item tag];
+			
+			if (updatedDeckLinkDevice->deckLink == updatedDeckLink)
+			{
+				[item setEnabled:IsDeviceActive(updatedDeckLink)];
+				break;
+			}
+		}
+		updatedDeckLink->Release();
+	}
+
 	// A reference was added in IDeckLinkProfileCallback::ProfileActivated callback
 	newProfile->Release();
 }
@@ -401,52 +440,17 @@ static const NSDictionary* kInputConnections = @{
 
 - (IBAction)newDeviceSelected:(id)sender
 {
-	// Release profile callback from existing selected device
-	if ((selectedDevice != NULL) && (selectedDevice->deckLinkProfileManager != NULL))
-		selectedDevice->deckLinkProfileManager->SetCallback(NULL);
-	
 	// Get the DeckLinkDevice object for the selected menu item.
 	selectedDevice = (DeckLinkDevice*)[[deviceListPopup selectedItem] tag];
 	
 	if (selectedDevice != NULL)
 	{
-		IDeckLinkProfileAttributes*	deckLinkAttributes = NULL;
-		int64_t						duplexMode;
-		
-		// Register profile callback with newly selected device's profile manager
-		if (selectedDevice->deckLinkProfileManager != NULL)
-			selectedDevice->deckLinkProfileManager->SetCallback(profileCallback);
-		
-		// Query Duplex mode attribute to check whether sub-device is active
-		if (selectedDevice->deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) == S_OK)
-		{
-			if ((deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &duplexMode) == S_OK)
-				&& (duplexMode != bmdDuplexInactive))
-			{
-				// Update the input connections popup menu
-				[self refreshInputConnectionList];
+		// Update the input connections popup menu
+		[self refreshInputConnectionList];
 				
-				// Enable the interface
-				[inputConnectionPopup setEnabled:YES];
-				[modeListPopup setEnabled:YES];
-				[applyDetectedVideoMode setEnabled:YES];
-				
-				// Set default state for apply detected video mode checkbox
-				[applyDetectedVideoMode setState:(selectedDevice->deviceSupportsFormatDetection() ? NSOnState : NSOffState)];
-				[self toggleApplyDetectionVideoMode:nil];
-			}
-			else
-			{
-				[inputConnectionPopup removeAllItems];
-				[inputConnectionPopup setEnabled:NO];
-				[modeListPopup removeAllItems];
-				[modeListPopup setEnabled:NO];
-				[applyDetectedVideoMode setState:NSOffState];
-				[startStopButton setEnabled:NO];
-			}
-			
-			deckLinkAttributes->Release();
-		}
+		// Set default state for apply detected video mode checkbox
+		[applyDetectedVideoMode setState:(selectedDevice->deviceSupportsFormatDetection() ? NSOnState : NSOffState)];
+		[self toggleApplyDetectionVideoMode:nil];
 	}
 }
 
@@ -636,7 +640,14 @@ static const NSDictionary* kInputConnections = @{
 	while([deviceListPopup numberOfItems] > 0)
 	{
 		DeckLinkDevice* device = (DeckLinkDevice*)[[deviceListPopup itemAtIndex:0] tag];
-		device->Release();
+		if (device != NULL)
+		{
+			// Release profile callback from device
+			if (device->deckLinkProfileManager != NULL)
+				device->deckLinkProfileManager->SetCallback(NULL);
+			
+			device->Release();
+		}
 		[deviceListPopup removeItemAtIndex:0];
 	}
 

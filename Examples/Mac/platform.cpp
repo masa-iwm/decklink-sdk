@@ -141,3 +141,8 @@ INT32_SIGNED AtomicDecrement(volatile INT32_SIGNED* value)
 {
 	return OSAtomicDecrement32(value);
 }
+
+bool operator==(const REFIID& lhs, const REFIID& rhs)
+{
+	return memcmp(&lhs, &rhs, sizeof(REFIID)) == 0;
+}

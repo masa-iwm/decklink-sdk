@@ -42,7 +42,8 @@ all: \
 	${BIN_PATH}/RP188VitcOutput \
 	${BIN_PATH}/StatusMonitor \
 	${BIN_PATH}/SynchronizedPlayback \
-	${BIN_PATH}/SynchronizedCapture
+	${BIN_PATH}/SynchronizedCapture \
+	${BIN_PATH}/VancCapture
 
 $(BIN_PATH)/AutomaticModeDetection: AutomaticModeDetection.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
@@ -63,6 +64,9 @@ $(BIN_PATH)/SynchronizedPlayback: SynchronizedPlayback.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 $(BIN_PATH)/SynchronizedCapture: SynchronizedCapture.cpp $(COMMON_SOURCES)
+	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
+
+$(BIN_PATH)/VancCapture: VancCapture.cpp $(COMMON_SOURCES)
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS)
 
 clean:

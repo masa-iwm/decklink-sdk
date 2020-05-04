@@ -39,6 +39,9 @@
     <ClCompile Include="ProfileCallback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DeckLinkDeviceDiscovery.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CapturePreview.h">
@@ -63,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ProfileCallback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DeckLinkDeviceDiscovery.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

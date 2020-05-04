@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -42,20 +42,23 @@ const QVector<QPair<BMDVideoConnection, QString>> kVideoInputConnections =
 
 
 CapturePreview::CapturePreview(QWidget *parent) :
-	QDialog(parent), ui(new Ui::CapturePreviewDialog),
-	m_selectedDevice(nullptr), m_deckLinkDiscovery(nullptr),
-	m_profileCallback(nullptr), m_selectedInputConnection(bmdVideoConnectionUnspecified)
+	QDialog(parent),
+	ui(new Ui::CapturePreviewDialog),
+	m_selectedDevice(nullptr),
+	m_deckLinkDiscovery(nullptr),
+	m_profileCallback(nullptr),
+	m_selectedInputConnection(bmdVideoConnectionUnspecified)
 {
 	ui->setupUi(this);
 
 	layout = new QGridLayout(ui->previewContainer);
 	layout->setMargin(0);
 
-	m_previewView = new DeckLinkOpenGLWidget(this);
+	m_previewView = new DeckLinkOpenGLWidget(dynamic_cast<QWidget*>(this));
 	m_previewView->resize(ui->previewContainer->size());
 	m_previewView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	layout->addWidget(m_previewView, 0, 0, 0, 0);
-	m_previewView->DrawFrame(nullptr);
+	m_previewView->clear();
 
 	m_ancillaryDataTable = new AncillaryDataTable(this);
 	ui->ancillaryTableView->setModel(m_ancillaryDataTable);
@@ -64,57 +67,34 @@ CapturePreview::CapturePreview(QWidget *parent) :
 
 	ui->invalidSignalLabel->setVisible(false);
 
-	connect(ui->startButton, SIGNAL(clicked()), this, SLOT(ToggleStart()));
-	connect(ui->inputDevicePopup, SIGNAL(currentIndexChanged(int)), this, SLOT(InputDeviceChanged(int)));
-	QObject::connect(ui->inputConnectionPopup, SIGNAL(currentIndexChanged(int)), this, SLOT(InputConnectionChanged(int)));
-	EnableInterface(false);
+	connect(ui->startButton, &QPushButton::clicked, this, &CapturePreview::toggleStart);
+	connect(ui->inputDevicePopup, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &CapturePreview::inputDeviceChanged);
+	connect(ui->inputConnectionPopup, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &CapturePreview::inputConnectionChanged);
+	enableInterface(false);
 	show();
 }
 
 CapturePreview::~CapturePreview()
 {
-	if (m_previewView != nullptr)
-	{
-		m_previewView->Release();
-		m_previewView = nullptr;
-	}
-
-	if (m_profileCallback != nullptr)
-	{
-		m_profileCallback->Release();
-		m_profileCallback = nullptr;
-	}
-
-	if (m_deckLinkDiscovery != nullptr)
-	{
-		m_deckLinkDiscovery->Release();
-		m_deckLinkDiscovery = nullptr;
-	}
-
-	while (ui->inputDevicePopup->count() > 0)
-	{
-		DeckLinkInputDevice* deckLinkInputDevice = (DeckLinkInputDevice*)(((QVariant)ui->inputDevicePopup->itemData(0)).value<void*>());
-		deckLinkInputDevice->Release();
-		deckLinkInputDevice = nullptr;
-		ui->inputDevicePopup->removeItem(0);
-	}
-
 	delete ui;
 }
 
 void CapturePreview::setup()
 {
-	// Create and initialise DeckLink device discovery and profile objects
-	m_deckLinkDiscovery = new DeckLinkDeviceDiscovery(this);
-	m_profileCallback = new ProfileCallback(this);
-
-	if ((m_deckLinkDiscovery != nullptr) && (m_profileCallback != nullptr))
+	// Create and initialise DeckLink device discovery
+	m_deckLinkDiscovery = make_com_ptr<DeckLinkDeviceDiscovery>(this);
+	if (m_deckLinkDiscovery)
 	{
 		if (!m_deckLinkDiscovery->enable())
 		{
 			QMessageBox::critical(this, "This application requires the DeckLink drivers installed.", "Please install the Blackmagic DeckLink drivers to use the features of this application.");
 		}
 	}
+
+	// Create DeckLink profile callback objects
+	m_profileCallback = make_com_ptr<ProfileCallback>(this);
+	if (m_profileCallback)
+		m_profileCallback->onProfileChanging(std::bind(&CapturePreview::haltStreams, this));
 }
 
 void CapturePreview::customEvent(QEvent *event)
@@ -122,17 +102,19 @@ void CapturePreview::customEvent(QEvent *event)
 	if (event->type() == kAddDeviceEvent)
 	{
 		DeckLinkDeviceDiscoveryEvent* discoveryEvent = dynamic_cast<DeckLinkDeviceDiscoveryEvent*>(event);
-		AddDevice(discoveryEvent->DeckLink());
+		com_ptr<IDeckLink> deckLink(discoveryEvent->deckLink());
+		addDevice(deckLink);
 	}
 	else if (event->type() == kRemoveDeviceEvent)
 	{
 		DeckLinkDeviceDiscoveryEvent* discoveryEvent = dynamic_cast<DeckLinkDeviceDiscoveryEvent*>(event);
-		RemoveDevice(discoveryEvent->DeckLink());
+		com_ptr<IDeckLink> deckLink(discoveryEvent->deckLink());
+		removeDevice(deckLink);
 	}
 	else if (event->type() == kVideoFormatChangedEvent)
 	{
 		DeckLinkInputFormatChangedEvent* formatEvent = dynamic_cast<DeckLinkInputFormatChangedEvent*>(event);
-		VideoFormatChanged(formatEvent->DisplayMode());
+		videoFormatChanged(formatEvent->DisplayMode());
 	}
 	else if (event->type() == kVideoFrameArrivedEvent)
 	{
@@ -144,40 +126,41 @@ void CapturePreview::customEvent(QEvent *event)
 	}
 	else if (event->type() == kProfileActivatedEvent)
 	{
-		DeckLinkProfileCallbackEvent* profileChangedEvent = dynamic_cast<DeckLinkProfileCallbackEvent*>(event);
-		UpdateProfile(profileChangedEvent->Profile());
+		ProfileActivatedEvent* profileEvent = dynamic_cast<ProfileActivatedEvent*>(event);
+		com_ptr<IDeckLinkProfile> deckLinkProfile(profileEvent->deckLinkProfile());
+		updateProfile(deckLinkProfile);
 	}
 }
 
 void CapturePreview::closeEvent(QCloseEvent *)
 {
-	if (m_selectedDevice != nullptr)
+	if (m_selectedDevice)
 	{
 		// Stop capturing
-		if (m_selectedDevice->IsCapturing())
-			StopCapture();
+		if (m_selectedDevice->isCapturing())
+			stopCapture();
 
 		// Disable profile callback
-		if (m_selectedDevice->GetProfileManager() != nullptr)
-			m_selectedDevice->GetProfileManager()->SetCallback(nullptr);
+		if (m_selectedDevice->getProfileManager())
+			m_selectedDevice->getProfileManager()->SetCallback(nullptr);
 	}
 
 	// Disable DeckLink device discovery
 	m_deckLinkDiscovery->disable();
 }
 
-void CapturePreview::ToggleStart()
+void CapturePreview::toggleStart()
 {
-	if (m_selectedDevice == nullptr)
+	if (!m_selectedDevice)
 		return;
 	
-	if (!m_selectedDevice->IsCapturing())
-		StartCapture();
+	if (!m_selectedDevice->isCapturing())
+		startCapture();
 	else
-		StopCapture();
+		stopCapture();
 }
 
-void CapturePreview::StartCapture()
+void CapturePreview::startCapture()
 {
 	BMDDisplayMode displayMode = bmdModeUnknown;
 	bool applyDetectedInputMode = ui->autoDetectCheckBox->isChecked();
@@ -186,26 +169,26 @@ void CapturePreview::StartCapture()
 	displayMode = (BMDDisplayMode)v.value<unsigned int>();
 
 	if (m_selectedDevice && 
-		m_selectedDevice->StartCapture(displayMode, m_previewView, applyDetectedInputMode))
+		m_selectedDevice->startCapture(displayMode, m_previewView->delegate(), applyDetectedInputMode))
 	{
 		// Update UI
 		ui->startButton->setText("Stop");
-		EnableInterface(false);
+		enableInterface(false);
 	}
 }
 
-void CapturePreview::StopCapture()
+void CapturePreview::stopCapture()
 {
 	if (m_selectedDevice)
-		m_selectedDevice->StopCapture();
+		m_selectedDevice->stopCapture();
 
 	// Update UI
 	ui->invalidSignalLabel->setVisible(false);
 	ui->startButton->setText("Start");
-	EnableInterface(true);
+	enableInterface(true);
 }
 
-void CapturePreview::EnableInterface(bool enable)
+void CapturePreview::enableInterface(bool enable)
 {
 	// Set the enable state of capture preview properties elements
 	for (auto& combobox : ui->propertiesGroupBox->findChildren<QComboBox*>())
@@ -215,16 +198,16 @@ void CapturePreview::EnableInterface(bool enable)
 	ui->autoDetectCheckBox->setEnabled(enable);
 }
 
-void CapturePreview::RefreshInputConnectionMenu(void)
+void CapturePreview::refreshInputConnectionMenu(void)
 {
 	BMDVideoConnection		supportedConnections;
 	int64_t					currentInputConnection;
 
 	// Get the available input video connections for the device
-	supportedConnections = m_selectedDevice->GetVideoConnections();
+	supportedConnections = m_selectedDevice->getVideoConnections();
 	
 	// Get the current selected input connection
-	if (m_selectedDevice->GetDeckLinkConfiguration()->GetInt(bmdDeckLinkConfigVideoInputConnection, &currentInputConnection) != S_OK)
+	if (m_selectedDevice->getDeckLinkConfiguration()->GetInt(bmdDeckLinkConfigVideoInputConnection, &currentInputConnection) != S_OK)
 	{
 		currentInputConnection = bmdVideoConnectionUnspecified;
 	}
@@ -241,118 +224,98 @@ void CapturePreview::RefreshInputConnectionMenu(void)
 	}
 }
 
-void CapturePreview::RefreshDisplayModeMenu(void)
+void CapturePreview::refreshDisplayModeMenu(void)
 {
-	IDeckLinkDisplayModeIterator*	displayModeIterator;
-	IDeckLinkDisplayMode*			displayMode;
-	IDeckLinkInput*					deckLinkInput;
-
 	ui->videoFormatPopup->clear();
 	
-	deckLinkInput = m_selectedDevice->GetDeckLinkInput();
-	
-	if (deckLinkInput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
-		return;
-
-	// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
-	while (displayModeIterator->Next(&displayMode) == S_OK)
-	{
-		char*					modeName;
-		bool					supported = false;
-		BMDDisplayMode			mode = displayMode->GetDisplayMode();
+	m_selectedDevice->queryDisplayModes([this](com_ptr<IDeckLinkDisplayMode>& displayMode)
+ 	{
+		// Populate the display mode menu with a list of display modes supported by the installed DeckLink card
+		const char*			modeName;
+		BMDDisplayMode		mode = displayMode->GetDisplayMode();
 		
-		if ((deckLinkInput->DoesSupportVideoMode(m_selectedInputConnection, mode, bmdFormatUnspecified, bmdNoVideoInputConversion, bmdSupportedVideoModeDefault, NULL, &supported) == S_OK)
-			&& supported)
+		if (displayMode->GetName(&modeName) == S_OK)
 		{
-			if (displayMode->GetName(const_cast<const char**>(&modeName)) == S_OK)
-			{
-				ui->videoFormatPopup->addItem(QString(modeName), QVariant::fromValue((uint64_t)mode));
-				free(modeName);
-			}
+			ui->videoFormatPopup->addItem(QString(modeName), QVariant::fromValue((uint64_t)mode));
+			free((void*)modeName);
 		}
-		
-		displayMode->Release();
-		displayMode = nullptr;
-	}
-	displayModeIterator->Release();
+	});
 
 	ui->videoFormatPopup->setCurrentIndex(0);
 	ui->startButton->setEnabled(ui->videoFormatPopup->count() != 0);
 }
 
-void CapturePreview::AddDevice(IDeckLink* deckLink)
+void CapturePreview::addDevice(com_ptr<IDeckLink>& deckLink)
 {
-	DeckLinkInputDevice* newDevice = new DeckLinkInputDevice(this, deckLink);
+	com_ptr<DeckLinkInputDevice> inputDevice = make_com_ptr<DeckLinkInputDevice>(this, deckLink);
 
 	// Initialise new DeckLinkDevice object
-	if (!newDevice->Init())
+	if (!inputDevice->Init())
 	{
 		// Device does not have IDeckLinkInput interface, eg it is a DeckLink Mini Monitor
-		newDevice->Release();
 		return;
 	}
 
+	// Store input device to map to maintain reference
+	m_inputDevices[(intptr_t)deckLink.get()] = inputDevice;
+
 	// Add this DeckLink input device to the device list
-	ui->inputDevicePopup->addItem(newDevice->GetDeviceName(), QVariant::fromValue((void*)newDevice));
+	ui->inputDevicePopup->addItem(inputDevice->getDeviceName(), QVariant::fromValue<intptr_t>((intptr_t)deckLink.get()));
 
 	if (ui->inputDevicePopup->count() == 1)
 	{
 		// We have added our first item, refresh and enable UI
 		ui->inputDevicePopup->setCurrentIndex(0);
-		InputDeviceChanged(0);
+		inputDeviceChanged(0);
 
 		ui->startButton->setText("Start");
-		EnableInterface(true);
+		enableInterface(true);
 	}
 }
 
-void CapturePreview::RemoveDevice(IDeckLink* deckLink)
+void CapturePreview::removeDevice(com_ptr<IDeckLink>& deckLink)
 {
-	int deviceIndex = -1; 
-	DeckLinkInputDevice* deviceToRemove = nullptr;
+	// If device to remove is selected device, stop capture if active
+	if (m_selectedDevice->getDeckLinkInstance().get() == deckLink.get())
+	{
+		if (m_selectedDevice->isCapturing())
+			m_selectedDevice->stopCapture();
+		m_selectedDevice = nullptr;
+	}
 
 	// Find the combo box entry to remove .
-	for (deviceIndex = 0; deviceIndex < ui->inputDevicePopup->count(); ++deviceIndex)
+	for (int i = 0; i < ui->inputDevicePopup->count(); ++i)
 	{
-		DeckLinkInputDevice* inputDevice = (DeckLinkInputDevice*)(((QVariant)ui->inputDevicePopup->itemData(deviceIndex)).value<void*>());
-		if (inputDevice->GetDeckLinkInstance() == deckLink)
+		if (deckLink.get() == (IDeckLink*)(((QVariant)ui->inputDevicePopup->itemData(i)).value<void*>()))
 		{
-			deviceToRemove = inputDevice;
+			ui->inputDevicePopup->removeItem(i);
 			break;
 		}
 	}
 
-	if (deviceToRemove == nullptr)
-		return;
-
-	// Remove device from list
-	ui->inputDevicePopup->removeItem(deviceIndex);
-
-	// If playback is ongoing, stop it
-	if ((m_selectedDevice == deviceToRemove) && m_selectedDevice->IsCapturing())
-		m_selectedDevice->StopCapture();
+	// Dereference input device by removing from list 
+	auto iter = m_inputDevices.find((intptr_t)deckLink.get());
+	if (iter != m_inputDevices.end())
+	{
+		m_inputDevices.erase(iter);
+	}
 
 	// Check how many devices are left
 	if (ui->inputDevicePopup->count() == 0)
 	{
 		// We have removed the last device, disable the interface.
-		EnableInterface(false);
-
-		m_selectedDevice = nullptr;
+		enableInterface(false);
 	}
-	else if (m_selectedDevice == deviceToRemove)
+	else if (!m_selectedDevice)
 	{
 		// The device that was removed was the one selected in the UI.
 		// Select the first available device in the list and reset the UI.
 		ui->inputDevicePopup->setCurrentIndex(0);
-		InputDeviceChanged(0);
+		inputDeviceChanged(0);
 	}
-
-	// Release DeckLinkDevice instance
-	deviceToRemove->Release();
 }
 
-void CapturePreview::VideoFormatChanged(BMDDisplayMode newDisplayMode)
+void CapturePreview::videoFormatChanged(BMDDisplayMode newDisplayMode)
 {
 	// Update videoFormatPopup with auto-detected display mode
 	for (int i = 0; i < ui->videoFormatPopup->count(); ++i)
@@ -365,43 +328,49 @@ void CapturePreview::VideoFormatChanged(BMDDisplayMode newDisplayMode)
 	}
 }
 
-void CapturePreview::HaltStreams(void)
+void CapturePreview::haltStreams(void)
 {
 	// Profile is changing, stop capture if running
-	if ((m_selectedDevice != nullptr) && m_selectedDevice->IsCapturing())
-		StopCapture();
+	if (m_selectedDevice && m_selectedDevice->isCapturing())
+		stopCapture();
 }
 
-void CapturePreview::UpdateProfile(IDeckLinkProfile* /* newProfile */)
+void CapturePreview::updateProfile(com_ptr<IDeckLinkProfile>& /* newProfile */)
 {
 	// Action as if new device selected to check whether device is active/inactive
 	// This will subsequently update input connections and video modes combo boxes
-	InputDeviceChanged(ui->inputDevicePopup->currentIndex());
+	inputDeviceChanged(ui->inputDevicePopup->currentIndex());
 }
 
-void CapturePreview::InputDeviceChanged(int selectedDeviceIndex)
+void CapturePreview::inputDeviceChanged(int selectedDeviceIndex)
 {
 	if (selectedDeviceIndex == -1)
 		return;
 
 	// Disable profile callback for previous selected device
-	if ((m_selectedDevice != nullptr) && (m_selectedDevice->GetProfileManager() != nullptr))
-		m_selectedDevice->GetProfileManager()->SetCallback(nullptr);
+	if (m_selectedDevice && (m_selectedDevice->getProfileManager()))
+		m_selectedDevice->getProfileManager()->SetCallback(nullptr);
 
 	QVariant selectedDeviceVariant = ui->inputDevicePopup->itemData(selectedDeviceIndex);
-	
-	m_selectedDevice = (DeckLinkInputDevice*)(selectedDeviceVariant.value<void*>());
+	intptr_t deckLinkPtr = (intptr_t)selectedDeviceVariant.value<intptr_t>();
+
+	// Find input device based on IDeckLink* object
+	auto iter = m_inputDevices.find(deckLinkPtr);
+	if (iter == m_inputDevices.end())
+		return;
+
+	m_selectedDevice = iter->second;
 
 	// Register profile callback with newly selected device's profile manager
-	if (m_selectedDevice != nullptr)
+	if (m_selectedDevice)
 	{
-		IDeckLinkProfileAttributes*		deckLinkAttributes = nullptr;
+		com_ptr<IDeckLinkProfileAttributes> deckLinkAttributes(IID_IDeckLinkProfileAttributes, m_selectedDevice->getDeckLinkInstance());
 
-		if (m_selectedDevice->GetProfileManager() != nullptr)
-			m_selectedDevice->GetProfileManager()->SetCallback(m_profileCallback);
+		if (m_selectedDevice->getProfileManager())
+			m_selectedDevice->getProfileManager()->SetCallback(m_profileCallback.get());
 
 		// Query duplex mode attribute to check whether sub-device is active
-		if (m_selectedDevice->GetDeckLinkInstance()->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) == S_OK)
+		if (deckLinkAttributes)
 		{
 			int64_t		duplexMode;
 
@@ -409,10 +378,10 @@ void CapturePreview::InputDeviceChanged(int selectedDeviceIndex)
 					(duplexMode != bmdDuplexInactive))
 			{
 				// Update the input connector popup menu
-				RefreshInputConnectionMenu();
+				refreshInputConnectionMenu();
 
-				ui->autoDetectCheckBox->setEnabled(m_selectedDevice->SupportsFormatDetection());
-				ui->autoDetectCheckBox->setChecked(m_selectedDevice->SupportsFormatDetection());
+				ui->autoDetectCheckBox->setEnabled(m_selectedDevice->supportsFormatDetection());
+				ui->autoDetectCheckBox->setChecked(m_selectedDevice->supportsFormatDetection());
 			}
 			else
 			{
@@ -422,29 +391,24 @@ void CapturePreview::InputDeviceChanged(int selectedDeviceIndex)
 				ui->autoDetectCheckBox->setEnabled(false);
 				ui->startButton->setEnabled(false);
 			}
-
-			deckLinkAttributes->Release();
 		}
 	}
 }
 
-void CapturePreview::InputConnectionChanged(int selectedConnectionIndex)
+void CapturePreview::inputConnectionChanged(int selectedConnectionIndex)
 {
-	HRESULT result;
-
 	if (selectedConnectionIndex == -1)
 		return;
 
 	QVariant selectedConnectionVariant = ui->inputConnectionPopup->itemData(selectedConnectionIndex);
 	m_selectedInputConnection = selectedConnectionVariant.value<BMDVideoConnection>();
 
-	result = m_selectedDevice->GetDeckLinkConfiguration()->SetInt(bmdDeckLinkConfigVideoInputConnection, (int64_t)m_selectedInputConnection);
-	if (result != S_OK)
+	if (m_selectedDevice->getDeckLinkConfiguration()->SetInt(bmdDeckLinkConfigVideoInputConnection, (int64_t)m_selectedInputConnection) != S_OK)
 	{
 		QMessageBox::critical(this, "Input connection error", "Unable to set video input connector");
 	}
 	
 	// Update the video mode popup menu
-	RefreshDisplayModeMenu();
+	refreshDisplayModeMenu();
 }
 

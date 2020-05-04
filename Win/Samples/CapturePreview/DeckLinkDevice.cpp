@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,65 +24,29 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
+
 #include "stdafx.h"
 #include <stdint.h>
 #include <comutil.h>
 #include "DeckLinkDevice.h"
 
-using namespace std;
-
-
-DeckLinkDevice::DeckLinkDevice(CCapturePreviewDlg* ui, IDeckLink* device)
-	: m_uiDelegate(ui), m_refCount(1), m_deckLink(device), m_deckLinkInput(NULL), 
-	m_deckLinkConfig(NULL),	m_deckLinkHDMIInputEDID(NULL), m_deckLinkProfileManager(NULL), 
-	m_deckLinkAttributes(NULL), m_supportsFormatDetection(false), 
-	m_currentlyCapturing(false), m_applyDetectedInputMode(false)
+DeckLinkDevice::DeckLinkDevice(CComPtr<IDeckLink>& device) : 
+	m_refCount(1), 
+	m_deckLink(device), 
+	m_deckLinkInput(device), 
+	m_deckLinkConfig(device),	
+	m_deckLinkHDMIInputEDID(device), 
+	m_supportsFormatDetection(false),
+	m_currentlyCapturing(false),
+	m_applyDetectedInputMode(false)
 {
-	m_deckLink->AddRef();
+	if (!m_deckLinkInput)
+		throw std::runtime_error("DeckLink device does not have an input interface.");
 }
 
-DeckLinkDevice::~DeckLinkDevice()
+HRESULT	DeckLinkDevice::QueryInterface(REFIID iid, LPVOID *ppv)
 {
-	if (m_deckLinkHDMIInputEDID != NULL)
-	{
-		m_deckLinkHDMIInputEDID->Release();
-		m_deckLinkHDMIInputEDID = NULL;
-	}
-
-	if (m_deckLinkProfileManager)
-	{
-		m_deckLinkProfileManager->Release();
-		m_deckLinkProfileManager = NULL;
-	}
-
-	if (m_deckLinkAttributes)
-	{
-		m_deckLinkAttributes->Release();
-		m_deckLinkAttributes = NULL;
-	}
-
-	if (m_deckLinkConfig)
-	{
-		m_deckLinkConfig->Release();
-		m_deckLinkConfig = NULL;
-	}
-
-	if (m_deckLinkInput != NULL)
-	{
-		m_deckLinkInput->Release();
-		m_deckLinkInput = NULL;
-	}
-
-	if (m_deckLink != NULL)
-	{
-		m_deckLink->Release();
-		m_deckLink = NULL;
-	}
-}
-
-HRESULT	STDMETHODCALLTYPE DeckLinkDevice::QueryInterface(REFIID iid, LPVOID *ppv)
-{
-	HRESULT			result = E_NOINTERFACE;
+	HRESULT result = E_NOINTERFACE;
 
 	if (ppv == NULL)
 		return E_INVALIDARG;
@@ -99,13 +63,7 @@ HRESULT	STDMETHODCALLTYPE DeckLinkDevice::QueryInterface(REFIID iid, LPVOID *ppv
 	}
 	else if (iid == IID_IDeckLinkInputCallback)
 	{
-		*ppv = (IDeckLinkInputCallback*)this;
-		AddRef();
-		result = S_OK;
-	}
-	else if (iid == IID_IDeckLinkNotificationCallback)
-	{
-		*ppv = (IDeckLinkNotificationCallback*)this;
+		*ppv = static_cast<IDeckLinkInputCallback*>(this);
 		AddRef();
 		result = S_OK;
 	}
@@ -113,48 +71,34 @@ HRESULT	STDMETHODCALLTYPE DeckLinkDevice::QueryInterface(REFIID iid, LPVOID *ppv
 	return result;
 }
 
-ULONG STDMETHODCALLTYPE DeckLinkDevice::AddRef(void)
+ULONG DeckLinkDevice::AddRef(void)
 {
-	return InterlockedIncrement((LONG*)&m_refCount);
+	return ++m_refCount;
 }
 
-ULONG STDMETHODCALLTYPE DeckLinkDevice::Release(void)
+ULONG DeckLinkDevice::Release(void)
 {
-	int		newRefValue;
-
-	newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 
 	return newRefValue;
 }
 
-bool		DeckLinkDevice::Init()
+bool DeckLinkDevice::init()
 {
-	BSTR							deviceNameBSTR = NULL;
+	CComBSTR								deviceNameBSTR;
+	CComQIPtr<IDeckLinkProfileAttributes>	deckLinkAttributes(m_deckLink);
 
-	// Get input interface
-	if (m_deckLink->QueryInterface(IID_IDeckLinkInput, (void**) &m_deckLinkInput) != S_OK)
+	if (!deckLinkAttributes)
 		return false;
 
-	// Get attributes interface
-	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&m_deckLinkAttributes) != S_OK)
-		return false;
-
-	// Check if input mode detection is supported.
-	if (m_deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &m_supportsFormatDetection) != S_OK)
+	// Check if input mode detection is supported by the device.
+	if (deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &m_supportsFormatDetection) != S_OK)
 		m_supportsFormatDetection = false;
 
-	// Get configuration interface to allow changing of input connector
-	// We hold onto IDeckLinkConfiguration for lifetime of DeckLinkDevice to retain input connector setting
-	if (m_deckLink->QueryInterface(IID_IDeckLinkConfiguration, (void**)&m_deckLinkConfig) != S_OK)
-		return false;
-
 	// Enable all EDID functionality if possible
-	if (m_deckLink->QueryInterface(IID_IDeckLinkHDMIInputEDID, (void**)&m_deckLinkHDMIInputEDID) == S_OK && m_deckLinkHDMIInputEDID)
+	if (m_deckLinkHDMIInputEDID)
 	{
 		int64_t allKnownRanges = bmdDynamicRangeSDR | bmdDynamicRangeHDRStaticPQ | bmdDynamicRangeHDRStaticHLG;
 		m_deckLinkHDMIInputEDID->SetInt(bmdDeckLinkHDMIInputEDIDDynamicRange, allKnownRanges);
@@ -172,25 +116,18 @@ bool		DeckLinkDevice::Init()
 		m_deviceName = _T("DeckLink");
 	}
 
-	// Get the profile manager interface
-	// Will return S_OK when the device has > 1 profiles
-	if (m_deckLink->QueryInterface(IID_IDeckLinkProfileManager, (void**)&m_deckLinkProfileManager) != S_OK)
-	{
-		m_deckLinkProfileManager = NULL;
-	}
-
 	return true;
 }
 
-bool		DeckLinkDevice::StartCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode)
+bool DeckLinkDevice::startCapture(BMDDisplayMode displayMode, IDeckLinkScreenPreviewCallback* screenPreviewCallback, bool applyDetectedInputMode)
 {
 	BMDVideoInputFlags		videoInputFlags = bmdVideoInputFlagDefault;
 
 	m_applyDetectedInputMode = applyDetectedInputMode;
 
 	// Enable input video mode detection if the device supports it
-	if (m_supportsFormatDetection == TRUE)
-		videoInputFlags |=  bmdVideoInputEnableFormatDetection;
+	if (m_supportsFormatDetection)
+		videoInputFlags |= bmdVideoInputEnableFormatDetection;
 
 	// Set the screen preview
 	m_deckLinkInput->SetScreenPreviewCallback(screenPreviewCallback);
@@ -201,14 +138,18 @@ bool		DeckLinkDevice::StartCapture(BMDDisplayMode displayMode, IDeckLinkScreenPr
 	// Set the video input mode
 	if (m_deckLinkInput->EnableVideoInput(displayMode, bmdFormat8BitYUV, videoInputFlags) != S_OK)
 	{
-		m_uiDelegate->ShowErrorMessage(_T("This application was unable to select the chosen video mode. Perhaps, the selected device is currently in-use."), _T("Error starting the capture"));
+		if (m_errorListener)
+			m_errorListener(DeviceError::EnableVideoInputFailed);
+
 		return false;
 	}
 
 	// Start the capture
 	if (m_deckLinkInput->StartStreams() != S_OK)
 	{
-		m_uiDelegate->ShowErrorMessage(_T("This application was unable to start the capture. Perhaps, the selected device is currently in-use."), _T("Error starting the capture"));
+		if (m_errorListener)
+			m_errorListener(DeviceError::StartStreamsFailed);
+
 		return false;
 	}
 
@@ -217,31 +158,51 @@ bool		DeckLinkDevice::StartCapture(BMDDisplayMode displayMode, IDeckLinkScreenPr
 	return true;
 }
 
-void		DeckLinkDevice::StopCapture()
+void DeckLinkDevice::stopCapture()
 {
-	if (m_deckLinkInput != NULL)
+	if (m_deckLinkInput)
 	{
 		// Stop the capture
 		m_deckLinkInput->StopStreams();
 
-		//
-		m_deckLinkInput->SetScreenPreviewCallback(NULL);
+		// Unregister screen preview callback
+		m_deckLinkInput->SetScreenPreviewCallback(nullptr);
 
 		// Delete capture callback
-		m_deckLinkInput->SetCallback(NULL);
+		m_deckLinkInput->SetCallback(nullptr);
+
+		// Disable video input
+		m_deckLinkInput->DisableVideoInput();
 	}
 
 	m_currentlyCapturing = false;
 }
 
+void DeckLinkDevice::queryDisplayModes(QueryDisplayModeFunc func)
+{
+	CComPtr<IDeckLinkDisplayModeIterator>	displayModeIterator;
+	CComPtr<IDeckLinkDisplayMode>			displayMode;
 
-HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
+	if (!func)
+		return;
+
+	if (m_deckLinkInput->GetDisplayModeIterator(&displayModeIterator) != S_OK)
+		return;
+
+	while (displayModeIterator->Next(&displayMode) == S_OK)
+	{
+		func(displayMode);
+		displayMode.Release();
+	}
+}
+
+HRESULT DeckLinkDevice::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {	
 	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
 
 	// Restart capture with the new video mode if told to
-	if (! m_applyDetectedInputMode)
-		goto bail;
+	if (!m_applyDetectedInputMode)
+		return S_OK;
 
 	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
 		pixelFormat = bmdFormat10BitRGB;
@@ -253,283 +214,37 @@ HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatCh
 	if (m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection) != S_OK)
 	{
 		// Let the UI know we couldnt restart the capture with the detected input mode
-		PostMessage(m_uiDelegate->GetSafeHwnd(), WM_ERROR_RESTARTING_CAPTURE_MESSAGE, 0, 0);
-		goto bail;
+		if (m_errorListener)
+			m_errorListener(DeviceError::ReenableVideoInputFailed);
+
+		return E_FAIL;
 	}
 
 	// Start the capture
 	if (m_deckLinkInput->StartStreams() != S_OK)
 	{
 		// Let the UI know we couldnt restart the capture with the detected input mode
-		PostMessage(m_uiDelegate->GetSafeHwnd(), WM_ERROR_RESTARTING_CAPTURE_MESSAGE, 0, 0);
-		goto bail;
+		if (m_errorListener)
+			m_errorListener(DeviceError::ReenableVideoInputFailed);
+		
+		return E_FAIL;
 	}		
 
 	// Update the UI with detected display mode
-	PostMessage(m_uiDelegate->GetSafeHwnd(), WM_DETECT_VIDEO_MODE_MESSAGE, 0, newMode->GetDisplayMode());
-
-bail:
-	return S_OK;
-}
-
-HRESULT 	DeckLinkDevice::VideoInputFrameArrived (/* in */ IDeckLinkVideoInputFrame* videoFrame, /* in */ IDeckLinkAudioInputPacket* audioPacket)
-{
-	AncillaryDataStruct		ancillaryData;
-	MetadataStruct			metadata;
-
-	if (videoFrame == NULL)
-		return S_OK;
-
-	// Get the various timecodes and userbits attached to this frame
-	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeVITC, &ancillaryData.vitcF1Timecode, &ancillaryData.vitcF1UserBits);
-	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeVITCField2, &ancillaryData.vitcF2Timecode, &ancillaryData.vitcF2UserBits);
-	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC1, &ancillaryData.rp188vitc1Timecode, &ancillaryData.rp188vitc1UserBits);
-	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188LTC, &ancillaryData.rp188ltcTimecode, &ancillaryData.rp188ltcUserBits);
-	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188VITC2, &ancillaryData.rp188vitc2Timecode, &ancillaryData.rp188vitc2UserBits);
-	GetAncillaryDataFromFrame(videoFrame, bmdTimecodeRP188HighFrameRate, &ancillaryData.rp188hfrtcTimecode, &ancillaryData.rp188hfrtcUserBits);
-	GetMetadataFromFrame(videoFrame, metadata);
-
-	m_uiDelegate->UpdateFrameData(ancillaryData, metadata);
-
-	// Update the UI
-	PostMessage(m_uiDelegate->GetSafeHwnd(), WM_REFRESH_INPUT_STREAM_DATA_MESSAGE, (videoFrame->GetFlags() & bmdFrameHasNoInputSource), 0);
+	if (m_videoFormatChangedCallback)
+		m_videoFormatChangedCallback(newMode->GetDisplayMode());
 
 	return S_OK;
 }
 
-void	DeckLinkDevice::GetAncillaryDataFromFrame(IDeckLinkVideoInputFrame* videoFrame, BMDTimecodeFormat timecodeFormat, CString* timecodeString, CString* userBitsString)
+HRESULT DeckLinkDevice::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioPacket)
 {
-	IDeckLinkTimecode*		timecode = NULL;
-	BSTR					timecodeBstr;
-	BMDTimecodeUserBits		userBits = 0;
-
-	if ((videoFrame != NULL) && (timecodeString != NULL) && (userBitsString != NULL)
-		&& (videoFrame->GetTimecode(timecodeFormat, &timecode) == S_OK))
+	if ((videoFrame != nullptr) &&  (m_videoFrameArrivedCallback != nullptr))
 	{
-		if (timecode->GetString(&timecodeBstr) == S_OK)
-		{
-			*timecodeString = timecodeBstr;
-			SysFreeString(timecodeBstr);
-		}
-		else
-		{
-			*timecodeString = _T("");
-		}
-
-		timecode->GetTimecodeUserBits(&userBits);
-		userBitsString->Format(_T("0x%08X"), userBits);
-
-		timecode->Release();
-	}
-	else
-	{
-		*timecodeString = _T("");
-		*userBitsString = _T("");
+		CComPtr<IDeckLinkVideoInputFrame> inputFrame = videoFrame;
+		m_videoFrameArrivedCallback(inputFrame);
 	}
 
-
-}
-
-void DeckLinkDevice::GetMetadataFromFrame(IDeckLinkVideoInputFrame* videoFrame, MetadataStruct& metadata)
-{
-	metadata.electroOpticalTransferFunction = _T("");
-	metadata.displayPrimariesRedX = _T("");
-	metadata.displayPrimariesRedY = _T("");
-	metadata.displayPrimariesGreenX = _T("");
-	metadata.displayPrimariesGreenY = _T("");
-	metadata.displayPrimariesBlueX = _T("");
-	metadata.displayPrimariesBlueY = _T("");
-	metadata.whitePointX = _T("");
-	metadata.whitePointY = _T("");
-	metadata.maxDisplayMasteringLuminance = _T("");
-	metadata.minDisplayMasteringLuminance = _T("");
-	metadata.maximumContentLightLevel = _T("");
-	metadata.maximumFrameAverageLightLevel = _T("");
-	metadata.colorspace = _T("");
-
-	IDeckLinkVideoFrameMetadataExtensions* metadataExtensions = NULL;
-	if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameMetadataExtensions, (void**)&metadataExtensions) == S_OK)
-	{
-		double doubleValue = 0.0;
-		int64_t intValue = 0;
-
-		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataHDRElectroOpticalTransferFunc, &intValue) == S_OK)
-		{
-			switch (intValue)
-			{
-			case 0:
-				metadata.electroOpticalTransferFunction = _T("SDR");
-				break;
-			case 1:
-				metadata.electroOpticalTransferFunction = _T("HDR");
-				break;
-			case 2:
-				metadata.electroOpticalTransferFunction = _T("PQ (ST2084)");
-				break;
-			case 3:
-				metadata.electroOpticalTransferFunction = _T("HLG");
-				break;
-			default:
-				metadata.electroOpticalTransferFunction.Format(_T("Unknown EOTF: %d"), (int32_t)intValue);
-				break;
-			}
-		}
-
-		if (videoFrame->GetFlags() & bmdFrameContainsHDRMetadata)
-		{
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedX, &doubleValue) == S_OK)
-				metadata.displayPrimariesRedX.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesRedY, &doubleValue) == S_OK)
-				metadata.displayPrimariesRedY.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenX, &doubleValue) == S_OK)
-				metadata.displayPrimariesGreenX.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesGreenY, &doubleValue) == S_OK)
-				metadata.displayPrimariesGreenY.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueX, &doubleValue) == S_OK)
-				metadata.displayPrimariesBlueX.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRDisplayPrimariesBlueY, &doubleValue) == S_OK)
-				metadata.displayPrimariesBlueY.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointX, &doubleValue) == S_OK)
-				metadata.whitePointX.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRWhitePointY, &doubleValue) == S_OK)
-				metadata.whitePointY.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaxDisplayMasteringLuminance, &doubleValue) == S_OK)
-				metadata.maxDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMinDisplayMasteringLuminance, &doubleValue) == S_OK)
-				metadata.minDisplayMasteringLuminance.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumContentLightLevel, &doubleValue) == S_OK)
-				metadata.maximumContentLightLevel.Format(_T("%.04f"), doubleValue);
-
-			if (metadataExtensions->GetFloat(bmdDeckLinkFrameMetadataHDRMaximumFrameAverageLightLevel, &doubleValue) == S_OK)
-				metadata.maximumFrameAverageLightLevel.Format(_T("%.04f"), doubleValue);
-		}
-
-		if (metadataExtensions->GetInt(bmdDeckLinkFrameMetadataColorspace, &intValue) == S_OK)
-		{
-			switch (intValue)
-			{
-			case bmdColorspaceRec601:
-				metadata.colorspace = _T("Rec.601");
-				break;
-			case bmdColorspaceRec709:
-				metadata.colorspace = _T("Rec.709");
-				break;
-			case bmdColorspaceRec2020:
-				metadata.colorspace = _T("Rec.2020");
-				break;
-			}
-		}
-
-		metadataExtensions->Release();
-	}
-}
-
-DeckLinkDeviceDiscovery::DeckLinkDeviceDiscovery(CCapturePreviewDlg* delegate)
-: m_uiDelegate(delegate), m_deckLinkDiscovery(NULL), m_refCount(1)
-{
-	if (CoCreateInstance(CLSID_CDeckLinkDiscovery, NULL, CLSCTX_ALL, IID_IDeckLinkDiscovery, (void**)&m_deckLinkDiscovery) != S_OK)
-		m_deckLinkDiscovery = NULL;
-}
-
-
-DeckLinkDeviceDiscovery::~DeckLinkDeviceDiscovery()
-{
-	if (m_deckLinkDiscovery != NULL)
-	{
-		// Uninstall device arrival notifications and release discovery object
-		m_deckLinkDiscovery->UninstallDeviceNotifications();
-		m_deckLinkDiscovery->Release();
-		m_deckLinkDiscovery = NULL;
-	}
-}
-
-bool        DeckLinkDeviceDiscovery::Enable()
-{
-	HRESULT     result = E_FAIL;
-
-	// Install device arrival notifications
-	if (m_deckLinkDiscovery != NULL)
-		result = m_deckLinkDiscovery->InstallDeviceNotifications(this);
-
-	return result == S_OK;
-}
-
-void        DeckLinkDeviceDiscovery::Disable()
-{
-	// Uninstall device arrival notifications
-	if (m_deckLinkDiscovery != NULL)
-		m_deckLinkDiscovery->UninstallDeviceNotifications();
-}
-
-HRESULT     DeckLinkDeviceDiscovery::DeckLinkDeviceArrived (/* in */ IDeckLink* deckLink)
-{
-	deckLink->AddRef();
-	// Update UI (add new device to menu) from main thread
-	PostMessage(m_uiDelegate->GetSafeHwnd(), WM_ADD_DEVICE_MESSAGE, (WPARAM)deckLink, 0); 
 	return S_OK;
-}
-
-HRESULT     DeckLinkDeviceDiscovery::DeckLinkDeviceRemoved (/* in */ IDeckLink* deckLink)
-{
-	// Update UI (remove device from menu) from main thread
-	PostMessage(m_uiDelegate->GetSafeHwnd(), WM_REMOVE_DEVICE_MESSAGE, (WPARAM)deckLink, 0); 
-	deckLink->Release();
-	return S_OK;
-}
-
-HRESULT	STDMETHODCALLTYPE DeckLinkDeviceDiscovery::QueryInterface(REFIID iid, LPVOID *ppv)
-{
-	HRESULT			result = E_NOINTERFACE;
-
-	if (ppv == NULL)
-		return E_INVALIDARG;
-
-	// Initialise the return result
-	*ppv = NULL;
-
-	// Obtain the IUnknown interface and compare it the provided REFIID
-	if (iid == IID_IUnknown)
-	{
-		*ppv = this;
-		AddRef();
-		result = S_OK;
-	}
-	else if (iid == IID_IDeckLinkDeviceNotificationCallback)
-	{
-		*ppv = (IDeckLinkDeviceNotificationCallback*)this;
-		AddRef();
-		result = S_OK;
-	}
-
-	return result;
-}
-
-ULONG STDMETHODCALLTYPE DeckLinkDeviceDiscovery::AddRef(void)
-{
-	return InterlockedIncrement((LONG*)&m_refCount);
-}
-
-ULONG STDMETHODCALLTYPE DeckLinkDeviceDiscovery::Release(void)
-{
-	ULONG		newRefValue;
-
-	newRefValue = InterlockedDecrement((LONG*)&m_refCount);
-	if (newRefValue == 0)
-	{
-		delete this;
-		return 0;
-	}
-
-	return newRefValue;
 }
 

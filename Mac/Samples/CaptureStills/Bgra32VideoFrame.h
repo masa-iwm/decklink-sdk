@@ -39,7 +39,7 @@ private:
 	BMDFrameFlags			m_flags;
 	std::vector<uint8_t>	m_pixelBuffer;
 
-	std::atomic<uint32_t>	m_refCount;
+	std::atomic<ULONG>	m_refCount;
 
 public:
 	Bgra32VideoFrame(long width, long height, BMDFrameFlags flags);

@@ -39,7 +39,7 @@
  * An example class which may be used to output a frame or pair of frames to
  * a 3D capable output.
  *
- * This class implements the IDeckLinkVideoFrame interface which can
+ * This class implements the IDeckLinkMutableVideoFrame interface which can
  * be used to operate on the left frame.
  *
  * Access to the right frame through the IDeckLinkVideoFrame3DExtensions
@@ -52,7 +52,7 @@
  * on the rightEyeFrame object.
  */
 
-class SignalGenerator3DVideoFrame : public IDeckLinkVideoFrame, public IDeckLinkVideoFrame3DExtensions
+class SignalGenerator3DVideoFrame : public IDeckLinkMutableVideoFrame, public IDeckLinkVideoFrame3DExtensions
 {
 public:
 	// IUnknown methods
@@ -68,9 +68,16 @@ public:
 	virtual BMDFrameFlags GetFlags(void);
 	virtual HRESULT GetBytes(/* out */ void **buffer);
 
-	virtual HRESULT GetTimecode (/* in */ BMDTimecodeFormat format, /* out */ IDeckLinkTimecode **timecode) ;
+	virtual HRESULT GetTimecode (/* in */ BMDTimecodeFormat format, /* out */ IDeckLinkTimecode **timecode);
 	virtual HRESULT GetAncillaryData (/* out */ IDeckLinkVideoFrameAncillary **ancillary);
 
+	// IDeckLinkMutableVideoFrame methods
+	virtual HRESULT SetFlags(BMDFrameFlags newFlags);
+	virtual HRESULT SetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode* timecode);
+	virtual HRESULT SetTimecodeFromComponents(BMDTimecodeFormat format, uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t frames, BMDTimecodeFlags flags);
+	virtual HRESULT SetAncillaryData(IDeckLinkVideoFrameAncillary* ancillary);
+	virtual HRESULT SetTimecodeUserBits(BMDTimecodeFormat format, BMDTimecodeUserBits userBits);
+	
 	// IDeckLinkVideoFrame3DExtensions methods
 	virtual BMDVideo3DPackingFormat Get3DPackingFormat(void);
 	virtual HRESULT GetFrameForRightEye(/* out */ IDeckLinkVideoFrame* *rightEyeFrame);

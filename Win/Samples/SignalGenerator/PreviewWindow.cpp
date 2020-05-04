@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2017 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -25,39 +25,47 @@
 ** -LICENSE-END-
 */
 
-
 #include "stdafx.h"
 #include <gl/gl.h>
 #include "PreviewWindow.h"
 
-PreviewWindow::PreviewWindow()
- : m_refCount(1), m_deckLinkScreenPreviewHelper(NULL), m_previewBox(NULL), m_previewBoxDC(NULL), m_openGLctx(NULL)
-{}
+PreviewWindow::PreviewWindow() : 
+	m_refCount(1), 
+	m_deckLinkScreenPreviewHelper(nullptr), 
+	m_previewBox(nullptr),
+	m_previewBoxDC(nullptr),
+	m_openGLctx(nullptr),
+	m_previewBoxWidth(0),
+	m_previewBoxHeight(0)
+{
+}
 
 PreviewWindow::~PreviewWindow()
 {
-	if (m_deckLinkScreenPreviewHelper != NULL)
-	{
-		m_deckLinkScreenPreviewHelper->Release();
-		m_deckLinkScreenPreviewHelper = NULL;
-	}
-
-	if (m_openGLctx != NULL)
+	if (m_openGLctx)
 	{
 		wglDeleteContext(m_openGLctx);
-		m_openGLctx = NULL;
+		m_openGLctx = nullptr;
 	}
 
-	if (m_previewBoxDC != NULL)
+	if (m_previewBoxDC)
 	{
 		m_previewBox->ReleaseDC(m_previewBoxDC);
-		m_previewBoxDC = NULL;
+		m_previewBoxDC = nullptr;
 	}
 }
 
 bool		PreviewWindow::init(CStatic *previewBox)
 {
 	m_previewBox = previewBox;
+
+	if (!m_previewBox)
+		return false;
+
+	RECT rectWindow;
+	m_previewBox->GetWindowRect(&rectWindow);
+	m_previewBoxWidth = rectWindow.right - rectWindow.left;
+	m_previewBoxHeight = rectWindow.bottom - rectWindow.top;
 
 	// Create the DeckLink screen preview helper
 	if (CoCreateInstance(CLSID_CDeckLinkGLScreenPreviewHelper, NULL, CLSCTX_ALL, IID_IDeckLinkGLScreenPreviewHelper, (void**)&m_deckLinkScreenPreviewHelper) != S_OK)
@@ -79,7 +87,7 @@ bool		PreviewWindow::initOpenGL()
 
 	// Get the preview box drawing context
 	m_previewBoxDC = m_previewBox->GetDC();
-	if (m_previewBoxDC == NULL)
+	if (!m_previewBoxDC)
 		return false;
 
 	// Ensure the preview box DC uses ARGB pixel format
@@ -98,7 +106,7 @@ bool		PreviewWindow::initOpenGL()
 
 	// Create OpenGL rendering context
 	m_openGLctx = wglCreateContext(m_previewBoxDC->m_hDC);
-	if (m_openGLctx == NULL)
+	if (!m_openGLctx)
 		return false;
 
 	// Make the new OpenGL context the current rendering context so
@@ -110,23 +118,46 @@ bool		PreviewWindow::initOpenGL()
 		result = true;
 
 	// Reset the OpenGL rendering context
-	wglMakeCurrent(NULL, NULL);
+	wglMakeCurrent(nullptr, nullptr);
 
 	return result;
 }
 
 HRESULT 	PreviewWindow::QueryInterface(REFIID iid, LPVOID *ppv)
 {
-	*ppv = NULL;
-	return E_NOINTERFACE;
+	HRESULT result = E_NOINTERFACE;
+
+	if (!ppv)
+		return E_INVALIDARG;
+
+	// Initialise the return result
+	*ppv = nullptr;
+
+	// Obtain the IUnknown interface and compare it the provided REFIID
+	if (iid == IID_IUnknown)
+	{
+		*ppv = this;
+		AddRef();
+		result = S_OK;
+	}
+	else if (iid == IID_IDeckLinkScreenPreviewCallback)
+	{
+		*ppv = static_cast<IDeckLinkScreenPreviewCallback*>(this);
+		AddRef();
+		result = S_OK;
+	}
+
+	return result;
 }
+
 ULONG		PreviewWindow::AddRef()
 {
-	return InterlockedIncrement((LONG*)&m_refCount);
+	return ++m_refCount;
 }
+
 ULONG		PreviewWindow::Release()
 {
-	ULONG newRefValue = InterlockedDecrement((LONG*)&m_refCount);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
 		delete this;
 
@@ -136,7 +167,7 @@ ULONG		PreviewWindow::Release()
 HRESULT			PreviewWindow::DrawFrame(IDeckLinkVideoFrame* theFrame)
 {
 	// Make sure we are initialised
-	if ((m_deckLinkScreenPreviewHelper == NULL) || (m_previewBoxDC == NULL) || (m_openGLctx == NULL))
+	if (!m_deckLinkScreenPreviewHelper || !m_previewBoxDC || !m_openGLctx || !m_previewBox)
 		return E_FAIL;
 
 	// First, pass the frame to the DeckLink screen preview helper
@@ -145,11 +176,21 @@ HRESULT			PreviewWindow::DrawFrame(IDeckLinkVideoFrame* theFrame)
 	// Then set the OpenGL rendering context to the one we created before
 	wglMakeCurrent(m_previewBoxDC->m_hDC, m_openGLctx);
 
+	// Set the viewport size to preview box, for when dialog size has changed
+	RECT rectWindow;
+	m_previewBox->GetWindowRect(&rectWindow);
+	if ((m_previewBoxWidth != rectWindow.right - rectWindow.left) || (m_previewBoxHeight != rectWindow.bottom - rectWindow.top))
+	{
+		glViewport(0, 0, rectWindow.right - rectWindow.left, rectWindow.bottom - rectWindow.top);
+		m_previewBoxWidth = rectWindow.right - rectWindow.left;
+		m_previewBoxHeight = rectWindow.bottom - rectWindow.top;
+	}
+
 	// and let the helper take care of the drawing
 	m_deckLinkScreenPreviewHelper->PaintGL();
 
 	// Last, reset the OpenGL rendering context
-	wglMakeCurrent(NULL, NULL);
+	wglMakeCurrent(nullptr, nullptr);
 
 	return S_OK;
 }

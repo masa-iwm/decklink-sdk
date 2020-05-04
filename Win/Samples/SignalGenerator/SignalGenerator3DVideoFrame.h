@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2013 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,22 +24,17 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  SignalGenerator3DVideoFrame.h
-//  Signal Generator
-//
 
-#ifndef SignalGenerator_SignalGenerator3DVideoFrame_h
-#define SignalGenerator_SignalGenerator3DVideoFrame_h
+#pragma once
 
+#include <atomic>
 #include "DeckLinkAPI_h.h"
-typedef __int32 int32_t;
 
 /*
  * An example class which may be used to output a frame or pair of frames to
  * a 3D capable output.
  *
- * This class implements the IDeckLinkVideoFrame interface which can
+ * This class implements the IDeckLinkMutableVideoFrame interface which can
  * be used to operate on the left frame.
  *
  * Access to the right frame through the IDeckLinkVideoFrame3DExtensions
@@ -52,37 +47,42 @@ typedef __int32 int32_t;
  * on the rightEyeFrame object.
  */
 
-class SignalGenerator3DVideoFrame : public IDeckLinkVideoFrame, public IDeckLinkVideoFrame3DExtensions
+class SignalGenerator3DVideoFrame : public IDeckLinkMutableVideoFrame, public IDeckLinkVideoFrame3DExtensions
 {
 public:
+	SignalGenerator3DVideoFrame(CComPtr<IDeckLinkMutableVideoFrame>& left, CComPtr<IDeckLinkMutableVideoFrame>& right);
+	virtual ~SignalGenerator3DVideoFrame() = default;
+
 	// IUnknown methods
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG STDMETHODCALLTYPE AddRef(void);
-	virtual ULONG STDMETHODCALLTYPE Release(void);
+	HRESULT	STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG	STDMETHODCALLTYPE AddRef(void) override;
+	ULONG	STDMETHODCALLTYPE Release(void) override;
 
 	// IDeckLinkVideoFrame methods
-	virtual long STDMETHODCALLTYPE GetWidth(void);
-	virtual long STDMETHODCALLTYPE GetHeight(void);
-	virtual long STDMETHODCALLTYPE GetRowBytes(void);
-	virtual BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat(void);
-	virtual BMDFrameFlags STDMETHODCALLTYPE GetFlags(void);
-	virtual HRESULT STDMETHODCALLTYPE GetBytes(/* out */ void **buffer);
+	long			STDMETHODCALLTYPE GetWidth(void) override;
+	long			STDMETHODCALLTYPE GetHeight(void) override;
+	long			STDMETHODCALLTYPE GetRowBytes(void) override;
+	BMDPixelFormat	STDMETHODCALLTYPE GetPixelFormat(void) override;
+	BMDFrameFlags	STDMETHODCALLTYPE GetFlags(void) override;
+	HRESULT			STDMETHODCALLTYPE GetBytes(void **buffer) override;
 
-	virtual HRESULT STDMETHODCALLTYPE GetTimecode (/* in */ BMDTimecodeFormat format, /* out */ IDeckLinkTimecode **timecode) ;
-	virtual HRESULT STDMETHODCALLTYPE GetAncillaryData (/* out */ IDeckLinkVideoFrameAncillary **ancillary);
+	HRESULT			STDMETHODCALLTYPE GetTimecode (BMDTimecodeFormat format, IDeckLinkTimecode** timecode) override;
+	HRESULT			STDMETHODCALLTYPE GetAncillaryData (IDeckLinkVideoFrameAncillary** ancillary) override;
+
+	// IDeckLinkMutableVideoFrame methods
+	HRESULT	STDMETHODCALLTYPE SetFlags(BMDFrameFlags newFlags) override;
+	HRESULT	STDMETHODCALLTYPE SetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode* timecode) override;
+	HRESULT	STDMETHODCALLTYPE SetTimecodeFromComponents(BMDTimecodeFormat format, unsigned char hours, unsigned char minutes, unsigned char seconds, unsigned char frames, BMDTimecodeFlags flags) override;
+	HRESULT	STDMETHODCALLTYPE SetAncillaryData(IDeckLinkVideoFrameAncillary* ancillary) override;
+	HRESULT	STDMETHODCALLTYPE SetTimecodeUserBits(BMDTimecodeFormat format, BMDTimecodeUserBits userBits) override;
 
 	// IDeckLinkVideoFrame3DExtensions methods
-	virtual BMDVideo3DPackingFormat STDMETHODCALLTYPE Get3DPackingFormat(void);
-	virtual HRESULT STDMETHODCALLTYPE GetFrameForRightEye(/* out */ IDeckLinkVideoFrame* *rightEyeFrame);
-
-	SignalGenerator3DVideoFrame(IDeckLinkMutableVideoFrame *left,
-									IDeckLinkMutableVideoFrame *right = NULL);
-	virtual ~SignalGenerator3DVideoFrame();
+	BMDVideo3DPackingFormat	STDMETHODCALLTYPE Get3DPackingFormat(void) override;
+	HRESULT					STDMETHODCALLTYPE GetFrameForRightEye(IDeckLinkVideoFrame** rightEyeFrame) override;
 
 protected:
-	IDeckLinkMutableVideoFrame* m_frameLeft;
-	IDeckLinkMutableVideoFrame* m_frameRight;
-	int32_t						m_refCount;
+	CComPtr<IDeckLinkMutableVideoFrame>		m_frameLeft;
+	CComPtr<IDeckLinkMutableVideoFrame>		m_frameRight;
+	std::atomic<ULONG>						m_refCount;
 };
 
-#endif

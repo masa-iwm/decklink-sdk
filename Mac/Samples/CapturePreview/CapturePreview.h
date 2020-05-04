@@ -146,7 +146,7 @@ class ProfileCallback;
 - (void)addDevice:(IDeckLink*)deckLink;
 - (void)removeDevice:(IDeckLink*)deckLink;
 
-- (void)haltStreams;
+- (void)haltStreams:(IDeckLinkProfile*)newProfile;
 - (void)updateProfile:(IDeckLinkProfile*)newProfile;
 
 - (void)updateInputSourceState:(BOOL)state;
@@ -167,3 +167,19 @@ class ProfileCallback;
 
 @end
 
+namespace
+{
+	inline bool IsDeviceActive(IDeckLink* deckLink)
+	{
+		IDeckLinkProfileAttributes*		deckLinkAttributes = NULL;
+		int64_t							intAttribute = bmdDuplexInactive;
+		
+		if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**) &deckLinkAttributes) != S_OK)
+			return false;
+		
+		deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &intAttribute);
+		deckLinkAttributes->Release();
+		
+		return ((BMDDuplexMode) intAttribute) != bmdDuplexInactive;
+	}
+}

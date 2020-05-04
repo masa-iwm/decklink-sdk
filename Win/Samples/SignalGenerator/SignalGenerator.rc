@@ -70,6 +70,7 @@ END
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\SignalGenerator.ico"
 
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Dialog
@@ -87,7 +88,7 @@ BEGIN
 END
 
 IDD_SIGNALGENERATOR_DIALOG DIALOGEX 0, 0, 511, 210
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "Signal Generator"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
@@ -204,6 +205,33 @@ BEGIN
     IDC_COMBO_AUDIO_DEPTH, 0x403, 7, 0
 0x3233, 0x4220, 0x7469, "\000" 
     0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_SIGNALGENERATOR_DIALOG AFX_DIALOG_LAYOUT
+BEGIN
+    0,
+    0, 100, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 100, 100,
+    0, 0, 100, 100
 END
 
 

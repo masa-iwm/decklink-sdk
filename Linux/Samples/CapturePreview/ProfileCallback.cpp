@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2019 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,45 +24,28 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-// ProfileCallback.cpp : implementation file
-// DeckLink Device Profile Callback
-//
 
+#include <QCoreApplication>
 #include "ProfileCallback.h"
 
-ProfileCallback::ProfileCallback(CapturePreview* owner)
-	: m_uiDelegate(owner), m_refCount(1)
+ProfileCallback::ProfileCallback(QObject* owner) : 
+	m_owner(owner), 
+	m_refCount(1)
 {
 }
 
-HRESULT ProfileCallback::ProfileChanging(IDeckLinkProfile* /* profileToBeActivated */, bool streamsWillBeForcedToStop)
-{
-	// When streamsWillBeForcedToStop is true, the profile to be activated is incompatible with the current
-	// profile and capture will be stopped by the DeckLink driver. It is better to notify the
-	// controller to gracefully stop capture, so that the UI is set to a known state.
-	if (streamsWillBeForcedToStop)
-		m_uiDelegate->HaltStreams();
-	return S_OK;
-}
-
-HRESULT ProfileCallback::ProfileActivated(IDeckLinkProfile *activatedProfile)
-{
-	// New profile activated, inform owner to update popup menus
-	QCoreApplication::postEvent(m_uiDelegate, new DeckLinkProfileCallbackEvent(kProfileActivatedEvent, activatedProfile));
-
-	return S_OK;
-}
+/// IUnknown methods
 
 HRESULT ProfileCallback::QueryInterface(REFIID iid, LPVOID *ppv)
 {
 	CFUUIDBytes		iunknown;
 	HRESULT			result = E_NOINTERFACE;
 
-	if (ppv == NULL)
+	if (ppv == nullptr)
 		return E_INVALIDARG;
 
 	// Initialise the return result
-	*ppv = NULL;
+	*ppv = nullptr;
 
 	// Obtain the IUnknown interface and compare it the provided REFIID
 	iunknown = CFUUIDGetUUIDBytes(IUnknownUUID);
@@ -78,18 +61,35 @@ HRESULT ProfileCallback::QueryInterface(REFIID iid, LPVOID *ppv)
 
 ULONG ProfileCallback::AddRef(void)
 {
-	return (ULONG) m_refCount.fetchAndAddAcquire(1);
+	return ++m_refCount;
 }
 
 ULONG ProfileCallback::Release(void)
 {
-	ULONG newRefValue = (ULONG) m_refCount.fetchAndAddAcquire(-1);
+	ULONG newRefValue = --m_refCount;
 	if (newRefValue == 0)
-	{
 		delete this;
-		return 0;
-	}
 
 	return newRefValue;
 }
 
+/// IDeckLinkProfileCallback methods
+
+HRESULT ProfileCallback::ProfileChanging(IDeckLinkProfile* /* profileToBeActivated */, bool streamsWillBeForcedToStop)
+{
+	// When streamsWillBeForcedToStop is true, the profile to be activated is incompatible with the current
+	// profile and capture will be stopped by the DeckLink driver. It is better to notify the
+	// controller to gracefully stop capture, so that the UI is set to a known state.
+	if ((streamsWillBeForcedToStop) && (m_profileChangingCallback != nullptr))
+		m_profileChangingCallback();
+
+	return S_OK;
+}
+
+HRESULT ProfileCallback::ProfileActivated(IDeckLinkProfile *activatedProfile)
+{
+	// New profile activated, inform owner to update popup menus
+	QCoreApplication::postEvent(m_owner, new ProfileActivatedEvent(activatedProfile));
+
+	return S_OK;
+}

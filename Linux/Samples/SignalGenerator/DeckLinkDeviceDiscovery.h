@@ -1,5 +1,5 @@
 /* -LICENSE-START-
-** Copyright (c) 2018 Blackmagic Design
+** Copyright (c) 2020 Blackmagic Design
 **
 ** Permission is hereby granted, free of charge, to any person or organization
 ** obtaining a copy of the software and accompanying documentation covered by
@@ -24,39 +24,48 @@
 ** DEALINGS IN THE SOFTWARE.
 ** -LICENSE-END-
 */
-//
-//  DeckLinkDeviceDiscovery.h
-//  DeckLink Device Discovery Callback
-//
 
 #pragma once
 
+#include <QEvent>
+#include <atomic>
+#include "com_ptr.h"
 #include "DeckLinkAPI.h"
-#include "SignalGenerator.h"
-
-// Forward declarations
-class SignalGenerator;
 
 class DeckLinkDeviceDiscovery : public IDeckLinkDeviceNotificationCallback
 {
-private:
-	IDeckLinkDiscovery*		m_deckLinkDiscovery;
-	SignalGenerator*		m_uiDelegate;
-	QAtomicInt				m_refCount;
-
 public:
-	DeckLinkDeviceDiscovery(SignalGenerator* uiDelegate);
+	DeckLinkDeviceDiscovery(QObject* owner);
 	virtual ~DeckLinkDeviceDiscovery();
 
-	bool				enable();
-	void				disable();
+	// IUnknown interface
+	HRESULT		QueryInterface(REFIID iid, LPVOID *ppv) override;
+	ULONG		AddRef() override;
+	ULONG		Release() override;
 
 	// IDeckLinkDeviceArrivalNotificationCallback interface
-	virtual HRESULT		DeckLinkDeviceArrived(/* in */ IDeckLink* deckLinkDevice);
-	virtual HRESULT		DeckLinkDeviceRemoved(/* in */ IDeckLink* deckLinkDevice);
+	HRESULT		DeckLinkDeviceArrived(IDeckLink* deckLinkDevice) override;
+	HRESULT		DeckLinkDeviceRemoved(IDeckLink* deckLinkDevice) override;
 
-	// IUnknown needs only a dummy implementation
-	virtual HRESULT		QueryInterface(REFIID iid, LPVOID *ppv);
-	virtual ULONG		AddRef();
-	virtual ULONG		Release();
+	// Other methods
+	bool		enable();
+	void		disable();
+
+private:
+	com_ptr<IDeckLinkDiscovery>		m_deckLinkDiscovery;
+	QObject*						m_owner;
+	std::atomic<ULONG>				m_refCount;
+};
+
+class DeckLinkDeviceDiscoveryEvent : public QEvent
+{
+public:
+	DeckLinkDeviceDiscoveryEvent(QEvent::Type type, IDeckLink* deckLinkDevice)
+		: QEvent(type), m_deckLink(deckLinkDevice) { }
+	virtual ~DeckLinkDeviceDiscoveryEvent() = default;
+
+	com_ptr<IDeckLink> deckLink() const { return m_deckLink; }
+
+private:
+	com_ptr<IDeckLink> m_deckLink;
 };

@@ -30,7 +30,6 @@
 //
 
 #import <CoreFoundation/CFString.h>
-#include <libkern/OSAtomic.h>
 
 #import "SyncController.h"
 #import "SignalGenerator3DVideoFrame.h"
@@ -81,8 +80,13 @@ constexpr bool PixelFormatIsRGB(BMDPixelFormat pf) { return (pf == bmdFormat8Bit
 		return;
 	}
 
+	// Register profile callback with newly added device's profile manager
+	if (device->getDeckLinkProfileManager() != NULL)
+		device->getDeckLinkProfileManager()->SetCallback(profileCallback);
+
 	[[deviceListPopup menu] addItemWithTitle:(NSString*)device->getDeviceName() action:nil keyEquivalent:@""];
 	[[deviceListPopup lastItem] setTag:(NSInteger)device];
+	[[deviceListPopup lastItem] setEnabled:IsDeviceActive(deckLink)];
 
 	if ([deviceListPopup numberOfItems] == 1)
 	{
@@ -119,6 +123,10 @@ constexpr bool PixelFormatIsRGB(BMDPixelFormat pf) { return (pf == bmdFormat8Bit
 	if ( (selectedDevice == deviceToRemove) && (running == YES) )
 		[self stopRunning];
 
+	// Release profile callback from device to remove
+	if (deviceToRemove->getDeckLinkProfileManager() != NULL)
+		deviceToRemove->getDeckLinkProfileManager()->SetCallback(NULL);
+
 	[deviceListPopup removeItemAtIndex:index];
 
 	if ([deviceListPopup numberOfItems] == 0)
@@ -139,18 +147,44 @@ constexpr bool PixelFormatIsRGB(BMDPixelFormat pf) { return (pf == bmdFormat8Bit
 	deviceToRemove->Release();
 }
 
-- (void)haltStreams
+- (void)haltStreams:(IDeckLinkProfile*)newProfile
 {
+	IDeckLink* deckLink = NULL;
+
 	// Stop playback if running
-	if (running == YES)
-		[self stopRunning];
+	if (newProfile->GetDevice(&deckLink) == S_OK)
+	{
+		if ((selectedDevice->getDeckLinkDevice() == deckLink) && (running == YES))
+			[self stopRunning];
+		
+		deckLink->Release();
+	}
 }
 
 - (void)updateProfile:(IDeckLinkProfile*)newProfile
 {
+	IDeckLink*			updatedDeckLink = NULL;
+	PlaybackDelegate*	updatedCandidate = NULL;
+	
 	// Update popups with new profile
 	[self refreshDisplayModeMenu];
 	[self refreshAudioChannelMenu];
+	
+	if (newProfile->GetDevice(&updatedDeckLink) == S_OK)
+	{
+		// Find menu item that corresponds with the device with updated profile
+		for (NSMenuItem* item in [deviceListPopup itemArray])
+		{
+			updatedCandidate = (PlaybackDelegate*)[item tag];
+		
+			if (updatedCandidate->getDeckLinkDevice() == updatedDeckLink)
+			{
+				[item setEnabled:IsDeviceActive(updatedDeckLink)];
+				break;
+			}
+		}
+		updatedDeckLink->Release();
+	}
 	
 	// A reference was added in IDeckLinkProfileCallback::ProfileActivated callback
 	newProfile->Release();
@@ -313,18 +347,11 @@ bail:
 
 - (IBAction)newDeviceSelected:(id)sender
 {
-	IDeckLinkOutput*	deckLinkOutput;
-
-	// Release profile callback from existing selected device
-	if ((selectedDevice != NULL) && (selectedDevice->getDeckLinkProfileManager() != NULL))
-		selectedDevice->getDeckLinkProfileManager()->SetCallback(NULL);
+	IDeckLinkOutput*				deckLinkOutput;
+	IDeckLinkProfileAttributes*		deckLinkAttributes;
 
 	// Get the DeckLinkDevice object for the selected menu item.
 	selectedDevice = (PlaybackDelegate*)[[deviceListPopup selectedItem] tag];
-	
-	// Register profile callback with newly selected device's profile manager
-	if (selectedDevice->getDeckLinkProfileManager() != NULL)
-		selectedDevice->getDeckLinkProfileManager()->SetCallback(profileCallback);
 	
 	// Update the display mode popup menu
 	[self refreshDisplayModeMenu];
@@ -332,6 +359,13 @@ bail:
 	// Set Screen Preview callback for selected device
 	deckLinkOutput = selectedDevice->getDeviceOutput();
 	deckLinkOutput->SetScreenPreviewCallback(CreateCocoaScreenPreview(previewView));
+	
+	// Check whether HFRTC is supported by the selected device
+	if ((deckLinkOutput->QueryInterface(IID_IDeckLinkProfileAttributes, (void**)&deckLinkAttributes) != S_OK) ||
+		(deckLinkAttributes->GetFlag(BMDDeckLinkSupportsHighFrameRateTimecode, &hfrtcSupported) != S_OK))
+	{
+		hfrtcSupported = false;
+	}
 	
 	// Update available audio channels
 	[self refreshAudioChannelMenu];
@@ -343,6 +377,7 @@ bail:
 - (IBAction)newDisplayModeSelected:(id)sender
 {
 	NSMenuItem*				videoFormatItem;
+	BMDDisplayMode			bmdDisplayMode;
 	
 	selectedVideoOutputFlags = bmdVideoOutputFlagDefault;
 	
@@ -353,6 +388,21 @@ bail:
 		selectedVideoOutputFlags |= bmdVideoOutputDualStream3D;
 
 	selectedDisplayMode = (IDeckLinkDisplayMode*)[videoFormatItem tag];
+
+	bmdDisplayMode = selectedDisplayMode->GetDisplayMode();
+	
+	if (bmdDisplayMode == bmdModeNTSC ||
+		bmdDisplayMode == bmdModeNTSC2398 ||
+		bmdDisplayMode == bmdModePAL)
+	{
+		timeCodeFormat = bmdTimecodeVITC;
+		selectedVideoOutputFlags |= bmdVideoOutputVITC;
+	}
+	else
+	{
+		timeCodeFormat = bmdTimecodeRP188Any;
+		selectedVideoOutputFlags |= bmdVideoOutputRP188;
+	}
 	
 	[self refreshPixelFormatMenu];
 }
@@ -532,6 +582,9 @@ bail:
 	[deviceListPopup removeAllItems];
 	[videoFormatPopup removeAllItems];
 
+	// Set device list popup for manual enabling, so we can disable inactive devices
+	[deviceListPopup setAutoenablesItems:NO];
+	
 	// Disable the interface
 	[startButton setEnabled:NO];
 	[self enableInterface:NO];
@@ -594,6 +647,14 @@ bail:
 	// Calculate the number of frames per second, rounded up to the nearest integer.  For example, for NTSC (29.97 FPS), framesPerSecond == 30.
 	framesPerSecond = (frameTimescale + (frameDuration-1))  /  frameDuration;
 
+	// m-rate frame rates with multiple 30-frame counting should implement Drop Frames compensation, refer to SMPTE 12-1
+	if (frameDuration == 1001 && frameTimescale % 30000 == 0)
+		dropFrames = 2 * (frameTimescale / 30000);
+	else
+		dropFrames = 0;
+	
+	timeCode = std::make_unique<Timecode>(framesPerSecond, dropFrames);
+	
 	// Set the SDI output to 444 if RGB mode is selected.
 	pixelFormatRGB = PixelFormatIsRGB([[pixelFormatPopup selectedItem] tag]);
 	deckLinkConfiguration = selectedDevice->getDeviceConfiguration();
@@ -696,7 +757,11 @@ bail:
 
 - (void)scheduleNextFrame:(BOOL)prerolling
 {
-	IDeckLinkOutput* deckLinkOutput = selectedDevice->getDeviceOutput();
+	HRESULT							result = S_OK;
+	IDeckLinkOutput*				deckLinkOutput = selectedDevice->getDeviceOutput();
+	SignalGenerator3DVideoFrame*	currentFrame;
+	bool							setVITC1Timecode = false;
+	bool							setVITC2Timecode = false;
 
 	if (prerolling == NO)
 	{
@@ -710,14 +775,12 @@ bail:
 		if ((totalFramesScheduled % framesPerSecond) == 0)
 		{
 			// On each second, schedule a frame of bars
-			if (deckLinkOutput->ScheduleVideoFrame(videoFrameBars, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale) != S_OK)
-				return;
+			currentFrame = videoFrameBars;
 		}
 		else
 		{
 			// Schedue frames of black
-			if (deckLinkOutput->ScheduleVideoFrame(videoFrameBlack, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale) != S_OK)
-				return;
+			currentFrame = videoFrameBlack;
 		}
 	}
 	else
@@ -725,18 +788,108 @@ bail:
 		if ((totalFramesScheduled % framesPerSecond) == 0)
 		{
 			// On each second, schedule a frame of black
-			if (deckLinkOutput->ScheduleVideoFrame(videoFrameBlack, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale) != S_OK)
-				return;
+			currentFrame = videoFrameBlack;
 		}
 		else
 		{
 			// Schedue frames of color bars
-			if (deckLinkOutput->ScheduleVideoFrame(videoFrameBars, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale) != S_OK)
-				return;
+			currentFrame = videoFrameBars;
 		}
 	}
 		
+	if (timeCodeFormat == bmdTimecodeVITC)
+	{
+		result = currentFrame->SetTimecodeFromComponents(bmdTimecodeVITC,
+														 timeCode->hours(),
+														 timeCode->minutes(),
+														 timeCode->seconds(),
+														 timeCode->frames(),
+														 bmdTimecodeFlagDefault);
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Could not set VITC timecode on frame - result = %08x\n", result);
+			goto bail;
+		}
+	}
+	else
+	{
+		int frames = timeCode->frames();
+		
+		if (hfrtcSupported)
+		{
+			result = currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188HighFrameRate,
+															 timeCode->hours(),
+															 timeCode->minutes(),
+															 timeCode->seconds(),
+															 frames,
+															 bmdTimecodeFlagDefault);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Could not set HFRTC timecode on frame - result = %08x\n", result);
+				goto bail;
+			}
+		}
+		
+		if (selectedDisplayMode->GetFieldDominance() != bmdProgressiveFrame)
+		{
+			// An interlaced or PsF frame has both VITC1 and VITC2 set with the same timecode value (SMPTE ST 12-2:2014 7.2)
+			setVITC1Timecode = true;
+			setVITC2Timecode = true;
+		}
+		else if (framesPerSecond <= 30)
+		{
+			// If this isn't a High-P mode, then just use VITC1 (SMPTE ST 12-2:2014 7.2)
+			setVITC1Timecode = true;
+		}
+		else if (framesPerSecond <= 60)
+		{
+			// If this is a High-P mode then use VITC1 on even frames and VITC2 on odd frames. This is done because the
+			// frames field of the RP188 VITC timecode cannot hold values greater than 30 (SMPTE ST 12-2:2014 7.2, 9.2)
+			if ((frames & 1) == 0)
+				setVITC1Timecode = true;
+			else
+				setVITC2Timecode = true;
+			
+			frames >>= 1;
+		}
+		
+		if (setVITC1Timecode)
+		{
+			result = currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188VITC1,
+															 timeCode->hours(),
+															 timeCode->minutes(),
+															 timeCode->seconds(),
+															 frames,
+															 bmdTimecodeFlagDefault);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Could not set VITC1 timecode on interlaced frame - result = %08x\n", result);
+				goto bail;
+			}
+		}
+		
+		if (setVITC2Timecode)
+		{
+			// The VITC2 timecode also has the field mark flag set
+			result = currentFrame->SetTimecodeFromComponents(bmdTimecodeRP188VITC2,
+															 timeCode->hours(),
+															 timeCode->minutes(),
+															 timeCode->seconds(),
+															 frames,
+															 bmdTimecodeFieldMark);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Could not set VITC1 timecode on interlaced frame - result = %08x\n", result);
+				goto bail;
+			}
+		}
+	}
+
+	deckLinkOutput->ScheduleVideoFrame(currentFrame, (totalFramesScheduled * frameDuration), frameDuration, frameTimescale);
+
+bail:
 	totalFramesScheduled += 1;
+	timeCode->update();
 }
 
 - (void)writeNextAudioSamples
@@ -781,7 +934,14 @@ bail:
 	while([deviceListPopup numberOfItems] > 0)
 	{
 		PlaybackDelegate* device = (PlaybackDelegate*)[[deviceListPopup itemAtIndex:0] tag];
-		device->Release();
+		if (device != NULL)
+		{
+			// Release profile callback from device
+			if (device->getDeckLinkProfileManager() != NULL)
+				device->getDeckLinkProfileManager()->SetCallback(NULL);
+
+			device->Release();
+		}
 		[deviceListPopup removeItemAtIndex:0];
 	}
 
@@ -955,7 +1115,7 @@ HRESULT		ProfileCallback::ProfileChanging (IDeckLinkProfile *profileToBeActivate
 	// profile and playback will be stopped by the DeckLink driver. It is better to notify the
 	// controller to gracefully stop playback, so that the UI is set to a known state.
 	if (streamsWillBeForcedToStop)
-		[m_controller haltStreams];
+		[m_controller haltStreams:profileToBeActivated];
 	return S_OK;
 }
 
@@ -1219,4 +1379,18 @@ int		GetRowBytes (BMDPixelFormat pixelFormat, int frameWidth)
 	}
 	
 	return bytesPerRow;
+}
+
+bool	IsDeviceActive(IDeckLink* deckLink)
+{
+	IDeckLinkProfileAttributes*		deckLinkAttributes = NULL;
+	int64_t							intAttribute = bmdDuplexInactive;
+	
+	if (deckLink->QueryInterface(IID_IDeckLinkProfileAttributes, (void**) &deckLinkAttributes) != S_OK)
+		return false;
+	
+	deckLinkAttributes->GetInt(BMDDeckLinkDuplex, &intAttribute);
+	deckLinkAttributes->Release();
+	
+	return ((BMDDuplexMode) intAttribute) != bmdDuplexInactive;
 }
