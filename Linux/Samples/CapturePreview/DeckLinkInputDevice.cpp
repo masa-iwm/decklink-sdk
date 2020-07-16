@@ -217,38 +217,65 @@ void DeckLinkInputDevice::stopCapture()
 HRESULT DeckLinkInputDevice::VideoInputFormatChanged (BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {
 	HRESULT 		result;
-	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
+	BMDPixelFormat	pixelFormat;
 
 	// Unexpected callback when auto-detect mode not enabled
 	if (!m_applyDetectedInputMode)
-		return E_FAIL;;
+		return E_FAIL;
 
 	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
-		pixelFormat = bmdFormat10BitRGB;
-
-	// Stop the capture
-	m_deckLinkInput->StopStreams();
-
-	// Set the video input mode
-	result = m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection);
-	if (result != S_OK)
 	{
-		QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "Error restarting the capture", "This application was unable to set new display mode");
-		return result;
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitARGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitRGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput12BitDepth)
+			pixelFormat = bmdFormat12BitRGB;
+		else
+			// Invalid color depth for RGB 444
+			return E_INVALIDARG;
+	}
+	else if (detectedSignalFlags & bmdDetectedVideoInputYCbCr422)
+	{
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitYUV;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitYUV;
+		else
+			// Invalid color depth for YUV 422
+			return E_INVALIDARG;
+	}
+	else
+		// Unexpected detected video input format flags
+		return E_INVALIDARG;
+
+	// Restart stream if either display mode or colorspace has changed
+	if (notificationEvents & (bmdVideoInputDisplayModeChanged | bmdVideoInputColorspaceChanged))
+	{
+		// Stop the capture
+		m_deckLinkInput->StopStreams();
+
+		// Set the video input mode
+		result = m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection);
+		if (result != S_OK)
+		{
+			QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "Error restarting the capture", "This application was unable to set new display mode");
+			return result;
+		}
+
+		// Start the capture
+		result = m_deckLinkInput->StartStreams();
+		if (result != S_OK)
+		{
+			QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "Error restarting the capture", "This application was unable to restart capture");
+			return result;
+		}
+
+		// Notify UI of new display mode
+		if ((m_owner != nullptr) && (notificationEvents & bmdVideoInputDisplayModeChanged))
+			QCoreApplication::postEvent(m_owner, new DeckLinkInputFormatChangedEvent(newMode->GetDisplayMode()));
 	}
 
-	// Start the capture
-	result = m_deckLinkInput->StartStreams();
-	if (result != S_OK)
-	{
-		QMessageBox::critical(qobject_cast<QWidget*>(m_owner), "Error restarting the capture", "This application was unable to restart capture");
-		return result;
-	}
-
-	// Notify UI of new display mode
-	if ((m_owner != nullptr) && (notificationEvents & bmdVideoInputDisplayModeChanged))
-		QCoreApplication::postEvent(m_owner, new DeckLinkInputFormatChangedEvent(newMode->GetDisplayMode()));
-	
 	return S_OK;
 }
 

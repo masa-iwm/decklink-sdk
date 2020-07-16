@@ -137,7 +137,10 @@ typedef [v1_enum] enum _BMDPacketType {
 [v1_enum] enum _BMDDetectedVideoInputFormatFlags {
     bmdDetectedVideoInputYCbCr422                                = 1 << 0,
     bmdDetectedVideoInputRGB444                                  = 1 << 1,
-    bmdDetectedVideoInputDualStream3D                            = 1 << 2
+    bmdDetectedVideoInputDualStream3D                            = 1 << 2,
+    bmdDetectedVideoInput12BitDepth                              = 1 << 3,
+    bmdDetectedVideoInput10BitDepth                              = 1 << 4,
+    bmdDetectedVideoInput8BitDepth                               = 1 << 5
 };
 
 /* Enum BMDDeckLinkCapturePassthroughMode - Enumerates whether the video output is electrically connected to the video input or if the clean switching mode is enabled */
@@ -477,7 +480,11 @@ typedef [v1_enum] enum _BMDDeckLinkStatusID {
     /* Integers */
 
     bmdDeckLinkStatusDetectedVideoInputMode                      = /* 'dvim' */ 0x6476696D,
-    bmdDeckLinkStatusDetectedVideoInputFlags                     = /* 'dvif' */ 0x64766966,
+    bmdDeckLinkStatusDetectedVideoInputFormatFlags               = /* 'dvff' */ 0x64766666,
+    bmdDeckLinkStatusDetectedVideoInputFieldDominance            = /* 'dvfd' */ 0x64766664,
+    bmdDeckLinkStatusDetectedVideoInputColorspace                = /* 'dscl' */ 0x6473636C,
+    bmdDeckLinkStatusDetectedVideoInputDynamicRange              = /* 'dsdr' */ 0x64736472,
+    bmdDeckLinkStatusDetectedSDILinkConfiguration                = /* 'dslc' */ 0x64736C63,
     bmdDeckLinkStatusCurrentVideoInputMode                       = /* 'cvim' */ 0x6376696D,
     bmdDeckLinkStatusCurrentVideoInputPixelFormat                = /* 'cvip' */ 0x63766970,
     bmdDeckLinkStatusCurrentVideoInputFlags                      = /* 'cvif' */ 0x63766966,
@@ -616,7 +623,7 @@ interface IDeckLinkDiscovery;
 
 [
     object,
-    uuid(DD04E5EC-7415-42AB-AE4A-E80C4DFC044A),
+    uuid(C6FCE4C9-C4E4-4047-82FB-5D238232A902),
     helpstring("Frame arrival callback.")
 ] interface IDeckLinkInputCallback : IUnknown
 {
@@ -745,7 +752,7 @@ interface IDeckLinkDiscovery;
 
 [
     object,
-    uuid(9434C6E4-B15D-4B1C-979E-661E3DDCB4B9),
+    uuid(C21CDB6E-F414-46E4-A636-80A566E0ED37),
     helpstring("Created by QueryInterface from IDeckLink.")
 ] interface IDeckLinkInput : IUnknown
 {
@@ -1300,6 +1307,7 @@ importlib("stdole2.tlb");
 // import deprecated interfaces
 #include "DeckLinkAPI_v11_4.idl"
 #include "DeckLinkAPI_v10_11.idl"
+#include "DeckLinkAPI_v11_5_1.idl"
 #include "DeckLinkAPI_v11_5.idl"
 #include "DeckLinkAPI_v10_9.idl"
 #include "DeckLinkAPIStreaming_v10_8.idl"

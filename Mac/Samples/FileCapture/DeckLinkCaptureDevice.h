@@ -127,6 +127,7 @@ private:
 	com_ptr<IDeckLinkConfiguration>			m_deckLinkConfiguration;
 	com_ptr<IDeckLinkVideoConversion>		m_deckLinkVideoConversion;
 	BMDDisplayMode							m_displayMode;
+	BMDPixelFormat							m_pixelFormat;
 	BMDTimeValue							m_frameDuration;
 	BMDTimeScale							m_timeScale;
 	std::shared_ptr<DeckLinkMediaWriter>	m_mediaWriter;

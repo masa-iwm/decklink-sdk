@@ -39,7 +39,8 @@ DeckLinkInputDevice::DeckLinkInputDevice(CComPtr<IDeckLink> device)
 	m_supportsFormatDetection(false), 
 	m_currentlyCapturing(false),
 	m_lastValidFrameStatus(DeviceStatus::InputSignalUnknown),
-	m_applyDetectedInputMode(false)
+	m_applyDetectedInputMode(false),
+	m_pixelFormat(bmdFormat8BitYUV)
 {
 }
 
@@ -158,7 +159,7 @@ bool DeckLinkInputDevice::StartCapture(BMDDisplayMode displayMode, BMDAudioSampl
 		return false;
 
 	// Set the video input mode
-	if (m_deckLinkInput->EnableVideoInput(displayMode, bmdFormat8BitYUV, videoInputFlags) != S_OK)
+	if (m_deckLinkInput->EnableVideoInput(displayMode, m_pixelFormat, videoInputFlags) != S_OK)
 		return false;
 
 	// Enable audio input
@@ -218,42 +219,49 @@ bool DeckLinkInputDevice::RestartStreams()
 
 HRESULT DeckLinkInputDevice::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {	
-	BMDPixelFormat	pixelFormat = bmdFormat8BitYUV;
+	BMDPixelFormat	pixelFormat = m_pixelFormat;
 
 	// Restart capture with the new video mode if told to
 	if (!m_applyDetectedInputMode)
 		goto bail;
 
 	// Restart capture with the new video mode if told to
-	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
-		pixelFormat = bmdFormat8BitBGRA;
-
-	// Stop and flush the capture
-	m_deckLinkInput->StopStreams();
-	m_deckLinkInput->FlushStreams();
-
-	// Set the video input mode
-	if (m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection) != S_OK)
+	if (notificationEvents & bmdVideoInputColorspaceChanged)
 	{
-		// Let the UI know we couldnt restart the capture with the detected input mode
-		if (m_deviceStatusChangedCallback != nullptr)
-			m_deviceStatusChangedCallback(DeviceStatus::ErrorRestartingCapture);
-		goto bail;
+		if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
+			pixelFormat = bmdFormat8BitBGRA;
+		else if (detectedSignalFlags & bmdDetectedVideoInputYCbCr422)
+			pixelFormat = bmdFormat8BitYUV;
+		else
+			goto bail;
 	}
 
-	// Start the capture
-	if (m_deckLinkInput->StartStreams() != S_OK)
+	// Restart streams if either dispay mode or colorspace has changed
+	if ((notificationEvents & bmdVideoInputDisplayModeChanged) || (pixelFormat != m_pixelFormat))
 	{
-		// Let the UI know we couldnt restart the capture with the detected input mode
-		m_deviceStatusChangedCallback(DeviceStatus::ErrorRestartingCapture);
-		goto bail;
-	}		
+		// Stop and flush the capture
+		m_deckLinkInput->StopStreams();
+		m_deckLinkInput->FlushStreams();
 
-	// Send event if colorspace has changed
-	if ((notificationEvents & bmdVideoInputColorspaceChanged) &&
-		((detectedSignalFlags & bmdDetectedVideoInputYCbCr422) || (detectedSignalFlags & bmdDetectedVideoInputRGB444)))
-		if (m_pixelFormatChangedCallback != nullptr)
-			m_pixelFormatChangedCallback(pixelFormat);
+		// Set the video input mode
+		if (m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection) != S_OK)
+		{
+			// Let the UI know we couldnt restart the capture with the detected input mode
+			if (m_deviceStatusChangedCallback != nullptr)
+				m_deviceStatusChangedCallback(DeviceStatus::ErrorRestartingCapture);
+			goto bail;
+		}
+
+		// Start the capture
+		if (m_deckLinkInput->StartStreams() != S_OK)
+		{
+			// Let the UI know we couldnt restart the capture with the detected input mode
+			m_deviceStatusChangedCallback(DeviceStatus::ErrorRestartingCapture);
+			goto bail;
+		}
+
+		m_pixelFormat = pixelFormat;
+	}
 
 	// Send event with detected display mode
 	if (notificationEvents & (bmdVideoInputDisplayModeChanged | bmdVideoInputFieldDominanceChanged))

@@ -138,7 +138,6 @@ private:
 	std::thread							m_sinkWriterThread;
 
 	BMDDisplayMode						m_displayMode;
-	BMDPixelFormat						m_pixelFormat;
 	BMDTimeValue						m_frameDuration;
 	BMDTimeScale						m_timeScale;
 	UINT								m_dropFrames;

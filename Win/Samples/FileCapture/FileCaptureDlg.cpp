@@ -486,7 +486,7 @@ void CFileCaptureDlg::StartRecording()
 		return;
 	}
 
-	if (m_sinkWriter->Initialize(displayMode, m_pixelFormat, kAudioSampleDepth, kAudioChannelCount, CString(m_tempFileName)) != S_OK)
+	if (m_sinkWriter->Initialize(displayMode, m_selectedDevice->GetPixelFormat(), kAudioSampleDepth, kAudioChannelCount, CString(m_tempFileName)) != S_OK)
 	{
 		ShowErrorMessage(_T("Unable to initialize sink writer"), _T("Error"));
 		return;
@@ -615,7 +615,6 @@ BOOL	CFileCaptureDlg::OnInitDialog()
 	// Base on default values for NTSC
 	m_dropFrames = 2;
 	m_displayMode = bmdModeNTSC;
-	m_pixelFormat = bmdFormat8BitYUV;
 	m_frameDuration = 1001;
 	m_timeScale = 30000;
 	m_frameCount = 0;
@@ -704,8 +703,6 @@ void CFileCaptureDlg::AddDevice(CComPtr<IDeckLink> deckLink)
 
 	// Register callback handlers
 	newDevice->OnVideoFormatChange(std::bind(&CFileCaptureDlg::VideoFormatChanged, this, std::placeholders::_1));
-
-	newDevice->OnPixelFormatChange([this](BMDPixelFormat pf) { m_pixelFormat = pf; });
 
 	newDevice->OnVideoFrameArrival([this](CComPtr<IDeckLinkVideoInputFrame> frame) {
 		if (m_captureState == CaptureState::Recording)

@@ -49,7 +49,9 @@ static IDeckLinkInput*	g_deckLinkInput = NULL;
 
 static unsigned long	g_frameCount = 0;
 
-DeckLinkCaptureDelegate::DeckLinkCaptureDelegate() : m_refCount(1)
+DeckLinkCaptureDelegate::DeckLinkCaptureDelegate() : 
+	m_refCount(1),
+	m_pixelFormat(g_config.m_pixelFormat)
 {
 }
 
@@ -159,35 +161,43 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChan
 	// when enabling video input
 	HRESULT	result;
 	char*	displayModeName = NULL;
-	BMDPixelFormat	pixelFormat = g_config.m_pixelFormat;
+	BMDPixelFormat	pixelFormat = m_pixelFormat;
 	
 	if (events & bmdVideoInputColorspaceChanged)
 	{
 		// Detected a change in colorspace, change pixel format to match detected format
 		if (formatFlags & bmdDetectedVideoInputRGB444)
 			pixelFormat = bmdFormat10BitRGB;
+		else if (formatFlags & bmdDetectedVideoInputYCbCr422)
+			pixelFormat = (g_config.m_pixelFormat == bmdFormat8BitYUV) ? bmdFormat8BitYUV : bmdFormat10BitYUV;
 		else
-			pixelFormat = bmdFormat10BitYUV;
+			goto bail;
 	}
 
-	mode->GetName((const char**)&displayModeName);
-	printf("Video format changed to %s %s\n", displayModeName, formatFlags & bmdDetectedVideoInputRGB444 ? "RGB" : "YUV");
-
-	if (displayModeName)
-		free(displayModeName);
-
-	if (g_deckLinkInput)
+	// Restart streams if either display mode or pixel format have changed
+	if ((events & bmdVideoInputDisplayModeChanged) || (m_pixelFormat != pixelFormat))
 	{
-		g_deckLinkInput->StopStreams();
+		mode->GetName((const char**)&displayModeName);
+		printf("Video format changed to %s %s\n", displayModeName, formatFlags & bmdDetectedVideoInputRGB444 ? "RGB" : "YUV");
 
-		result = g_deckLinkInput->EnableVideoInput(mode->GetDisplayMode(), pixelFormat, g_config.m_inputFlags);
-		if (result != S_OK)
+		if (displayModeName)
+			free(displayModeName);
+
+		if (g_deckLinkInput)
 		{
-			fprintf(stderr, "Failed to switch video mode\n");
-			goto bail;
+			g_deckLinkInput->StopStreams();
+
+			result = g_deckLinkInput->EnableVideoInput(mode->GetDisplayMode(), pixelFormat, g_config.m_inputFlags);
+			if (result != S_OK)
+			{
+				fprintf(stderr, "Failed to switch video mode\n");
+				goto bail;
+			}
+
+			g_deckLinkInput->StartStreams();
 		}
 
-		g_deckLinkInput->StartStreams();
+		m_pixelFormat = pixelFormat;
 	}
 
 bail:

@@ -46,7 +46,6 @@ class DeckLinkInputDevice : public IDeckLinkInputCallback
 {
 public:
 	using DeviceStatusChangedCallback = std::function<void(DeviceStatus)>;
-	using PixelFormatChangedCallback = std::function<void(BMDPixelFormat)>;
 	using VideoFormatChangedCallback = std::function<void(BMDDisplayMode)>;
 	using VideoFrameArrivedCallback = std::function<void(CComPtr<IDeckLinkVideoInputFrame>&)>;
 	using AudioPacketArrivedCallback = std::function<void(CComPtr<IDeckLinkAudioInputPacket>&)>;
@@ -67,9 +66,9 @@ public:
 	CComQIPtr<IDeckLinkInput>				GetDeckLinkInput() const { return m_deckLinkInput; };
 	CComQIPtr<IDeckLinkConfiguration>		GetDeckLinkConfiguration() const { return m_deckLinkConfig; };
 	CComQIPtr<IDeckLinkProfileAttributes>	GetDeckLinkAttributes() const { return m_deckLinkAttributes; };
+	BMDPixelFormat							GetPixelFormat() const { return m_pixelFormat; }
 
 	void						OnDeviceStatusChange(const DeviceStatusChangedCallback& callback) { m_deviceStatusChangedCallback = callback; }
-	void						OnPixelFormatChange(const PixelFormatChangedCallback& callback) { m_pixelFormatChangedCallback = callback; }
 	void						OnVideoFormatChange(const VideoFormatChangedCallback& callback) { m_videoFormatChangedCallback = callback; }
 	void						OnVideoFrameArrival(const VideoFrameArrivedCallback& callback) { m_videoFrameArrivedCallback = callback; }
 	void						OnAudioPacketArrival(const AudioPacketArrivedCallback& callback) { m_audioPacketArrivedCallback = callback; }
@@ -95,7 +94,6 @@ private:
 	//
 	DeviceStatusChangedCallback				m_deviceStatusChangedCallback;
 	VideoFormatChangedCallback				m_videoFormatChangedCallback;
-	PixelFormatChangedCallback				m_pixelFormatChangedCallback;
 	VideoFrameArrivedCallback				m_videoFrameArrivedCallback;
 	AudioPacketArrivedCallback				m_audioPacketArrivedCallback;
 	//
@@ -103,4 +101,5 @@ private:
 	bool									m_currentlyCapturing;
 	bool									m_applyDetectedInputMode;
 	DeviceStatus							m_lastValidFrameStatus;
+	BMDPixelFormat							m_pixelFormat;
 };

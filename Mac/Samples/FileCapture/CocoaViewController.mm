@@ -44,7 +44,8 @@ static const DeviceErrorMessage kDeviceErrorMessage[] =
 	{ CFSTR("Capture Initialization Error"),	CFSTR("Failed to enable audio input in the required format.") },
 	{ CFSTR("Capture Initialization Error"),	CFSTR("Failed to enable capture.") },
 	{ CFSTR("Media Write Error"),				CFSTR("Video frames were dropped.") },
-	{ CFSTR("Media Write Error"),				CFSTR("Failed to write media file.") }
+	{ CFSTR("Media Write Error"),				CFSTR("Failed to write media file.") },
+	{ CFSTR("Invalid Format Change Error"),		CFSTR("Unexpected input format changed notification event.") }
 };
 
 static const std::list<std::pair<BMDVideoConnection, CFStringRef> > kInputConnections =
@@ -154,6 +155,7 @@ void CocoaViewController::deviceErrorOccurred(com_ptr<DeckLinkCaptureDevice> dev
 			case kEnableVideoInputFailed:
 			case kEnableAudioInputFailed:
 			case kStartCaptureFailed:
+			case kInvalidFormatChangedEvent:
 				[m_appDelegate showError:kDeviceErrorMessage[error].title detail:kDeviceErrorMessage[error].detail];
 				break;
 			case kMediaFileFrameDropped:

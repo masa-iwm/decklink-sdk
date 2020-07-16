@@ -212,18 +212,43 @@ void		DeckLinkDevice::stopCapture()
 HRESULT		DeckLinkDevice::VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {
 	UInt32				flags = bmdVideoInputEnableFormatDetection;
-	BMDPixelFormat		pixelFormat = bmdFormat10BitYUV;
+	BMDPixelFormat		pixelFormat;
 	
 	NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
 	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
-		pixelFormat = bmdFormat10BitRGB;
+	{
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitARGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitRGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput12BitDepth)
+			pixelFormat = bmdFormat12BitRGB;
+		else
+			// Invalid color depth for RGB
+			goto bail;
+	}
+	else if (detectedSignalFlags & bmdDetectedVideoInputYCbCr422)
+	{
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitYUV;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitYUV;
+		else
+			// Invalid color depth for YUV
+			goto bail;
+	}
+	else
+		// Unexpected detected signal flag
+		goto bail;
 
 	if (detectedSignalFlags & bmdDetectedVideoInputDualStream3D)
 		flags |= bmdVideoInputDualStream3D;
 
 	// Restart capture with the new video mode if told to
-	if ([uiDelegate shouldRestartCaptureWithNewVideoMode] == YES)
+	if (([uiDelegate shouldRestartCaptureWithNewVideoMode] == YES) &&
+		((notificationEvents & bmdVideoInputDisplayModeChanged) ||
+		(notificationEvents & bmdVideoInputColorspaceChanged)))
 	{
 		// Stop the capture
 		deckLinkInput->StopStreams();

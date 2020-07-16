@@ -198,41 +198,68 @@ void DeckLinkDevice::queryDisplayModes(QueryDisplayModeFunc func)
 
 HRESULT DeckLinkDevice::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {	
-	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
+	BMDPixelFormat pixelFormat;
 
 	// Restart capture with the new video mode if told to
 	if (!m_applyDetectedInputMode)
 		return S_OK;
 
 	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
-		pixelFormat = bmdFormat10BitRGB;
-
-	// Stop the capture
-	m_deckLinkInput->StopStreams();
-
-	// Set the video input mode
-	if (m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection) != S_OK)
 	{
-		// Let the UI know we couldnt restart the capture with the detected input mode
-		if (m_errorListener)
-			m_errorListener(DeviceError::ReenableVideoInputFailed);
-
-		return E_FAIL;
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitARGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitRGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput12BitDepth)
+			pixelFormat = bmdFormat12BitRGB;
+		else
+			// Invalid color depth for RGB
+			return E_INVALIDARG;
 	}
-
-	// Start the capture
-	if (m_deckLinkInput->StartStreams() != S_OK)
+	else if (detectedSignalFlags & bmdDetectedVideoInputYCbCr422)
 	{
-		// Let the UI know we couldnt restart the capture with the detected input mode
-		if (m_errorListener)
-			m_errorListener(DeviceError::ReenableVideoInputFailed);
-		
-		return E_FAIL;
-	}		
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitYUV;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitYUV;
+		else
+			// Invalid color depth for YUV
+			return E_INVALIDARG;
+	}
+	else
+		// Unexpected detected video input format flags
+		return E_INVALIDARG;
 
-	// Update the UI with detected display mode
-	if (m_videoFormatChangedCallback)
-		m_videoFormatChangedCallback(newMode->GetDisplayMode());
+	if ((notificationEvents & bmdVideoInputDisplayModeChanged) ||
+		(notificationEvents & bmdVideoInputColorspaceChanged))
+	{
+		// Stop the capture
+		m_deckLinkInput->StopStreams();
+
+		// Set the video input mode
+		if (m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection) != S_OK)
+		{
+			// Let the UI know we couldnt restart the capture with the detected input mode
+			if (m_errorListener)
+				m_errorListener(DeviceError::ReenableVideoInputFailed);
+
+			return E_FAIL;
+		}
+
+		// Start the capture
+		if (m_deckLinkInput->StartStreams() != S_OK)
+		{
+			// Let the UI know we couldnt restart the capture with the detected input mode
+			if (m_errorListener)
+				m_errorListener(DeviceError::ReenableVideoInputFailed);
+
+			return E_FAIL;
+		}
+
+		// Update the UI with detected display mode
+		if (m_videoFormatChangedCallback)
+			m_videoFormatChangedCallback(newMode->GetDisplayMode());
+	}
 
 	return S_OK;
 }

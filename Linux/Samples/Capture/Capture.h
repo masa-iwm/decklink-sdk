@@ -43,6 +43,7 @@ public:
 
 private:
 	int32_t				m_refCount;
+	BMDPixelFormat		m_pixelFormat;
 };
 
 #endif

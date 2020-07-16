@@ -136,7 +136,11 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 	switch (statusId)
 	{
 		case bmdDeckLinkStatusDetectedVideoInputMode:
-		case bmdDeckLinkStatusDetectedVideoInputFlags:
+		case bmdDeckLinkStatusDetectedVideoInputColorspace:
+		case bmdDeckLinkStatusDetectedVideoInputDynamicRange:
+		case bmdDeckLinkStatusDetectedVideoInputFormatFlags:
+		case bmdDeckLinkStatusDetectedVideoInputFieldDominance:
+		case bmdDeckLinkStatusDetectedSDILinkConfiguration:
 		case bmdDeckLinkStatusCurrentVideoInputMode:
 		case bmdDeckLinkStatusCurrentVideoInputPixelFormat:
 		case bmdDeckLinkStatusCurrentVideoInputFlags:
@@ -200,14 +204,46 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 				getInputDisplayModeName(deckLinkStatus, (BMDDisplayMode)intVal).c_str());
 			break;
 
-		case bmdDeckLinkStatusDetectedVideoInputFlags:
+
+		case bmdDeckLinkStatusDetectedVideoInputColorspace:
 			if (result == S_FALSE)
 				break;
 
-			printf("%-40s %08x\n", "Detected Video Input Flags:",
-				(BMDDeckLinkVideoStatusFlags)intVal);
+			printf("%-40s %08x\n", "Detected Video Input Colorspace:",
+				(BMDColorspace)intVal);
 			break;
 
+		case bmdDeckLinkStatusDetectedVideoInputDynamicRange:
+			if (result == S_FALSE)
+				break;
+
+			printf("%-40s %08x\n", "Detected Video Input Dynamic Range:",
+				(BMDDynamicRange)intVal);
+			break;
+
+		case bmdDeckLinkStatusDetectedVideoInputFormatFlags:
+			if (result == S_FALSE)
+				break;
+
+			printf("%-40s %08x\n", "Detected Video Input Format Flags:",
+				(BMDDetectedVideoInputFormatFlags)intVal);
+			break;
+
+		case bmdDeckLinkStatusDetectedVideoInputFieldDominance:
+			if (result == S_FALSE)
+				break;
+
+			printf("%-40s %08x\n", "Detected Video Input Field Dominance:",
+				(BMDFieldDominance)intVal);
+			break;
+
+		case bmdDeckLinkStatusDetectedSDILinkConfiguration:
+			if (result == S_FALSE)
+				break;
+
+			printf("%-40s %08x\n", "Detected SDI Link Configuration:",
+				(BMDLinkConfiguration)intVal);
+			break;
 		case bmdDeckLinkStatusCurrentVideoInputMode:
 			printf("%-40s %s\n", "Current Video Input Mode:",
 				getInputDisplayModeName(deckLinkStatus, (BMDDisplayMode)intVal).c_str());
@@ -381,7 +417,11 @@ int main(int argc, const char * argv[])
 	// Print video input status values
 	printStatus(deckLinkStatus, bmdDeckLinkStatusVideoInputSignalLocked);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusDetectedVideoInputMode);
-	printStatus(deckLinkStatus, bmdDeckLinkStatusDetectedVideoInputFlags);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusDetectedVideoInputFormatFlags);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusDetectedVideoInputFieldDominance);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusDetectedSDILinkConfiguration);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusDetectedVideoInputColorspace);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusDetectedVideoInputDynamicRange);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusCurrentVideoInputMode);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusCurrentVideoInputFlags);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusCurrentVideoInputPixelFormat);

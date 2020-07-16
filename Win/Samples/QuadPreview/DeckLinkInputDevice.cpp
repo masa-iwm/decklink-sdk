@@ -105,10 +105,10 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived(IDeckLinkVideoInputFrame* /*
 	return S_OK;
 }
 
-HRESULT DeckLinkInputDevice::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents /*notificationEvents*/, IDeckLinkDisplayMode *newMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
+HRESULT DeckLinkInputDevice::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {
 	HRESULT 		result;
-	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
+	BMDPixelFormat	pixelFormat;
 	BMDDisplayMode	displayMode = newMode->GetDisplayMode();
 
 	// Unexpected callback when auto-detect mode not enabled
@@ -116,23 +116,50 @@ HRESULT DeckLinkInputDevice::VideoInputFormatChanged(BMDVideoInputFormatChangedE
 		return E_FAIL;
 
 	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
-		pixelFormat = bmdFormat10BitRGB;
-
-	// Stop the capture
-	m_deckLinkInput->StopStreams();
-
-	// Set the video input mode
-	result = m_deckLinkInput->EnableVideoInput(displayMode, pixelFormat, bmdVideoInputEnableFormatDetection);
-
-	if (result == S_OK)
-		// Start the capture
-		result = m_deckLinkInput->StartStreams();
-
-	if (result != S_OK)
-		// Let owner know we couldn't restart capture with detected input video mode
-		QCoreApplication::postEvent(m_owner, new QEvent(kErrorRestartingCaptureEvent));
+	{
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitARGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitRGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput12BitDepth)
+			pixelFormat = bmdFormat12BitRGB;
+		else
+			// Invalid color depth for RGB
+			return E_INVALIDARG;
+	}
+	else if (detectedSignalFlags & bmdDetectedVideoInputYCbCr422)
+	{
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitYUV;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitYUV;
+		else
+			// Invalid color depth for YUV
+			return E_INVALIDARG;
+	}
 	else
-		QCoreApplication::postEvent(m_owner, new DeckLinkInputFormatChangedEvent(displayMode));
+		// Unexpected detected video input format flags
+		return E_INVALIDARG;
+
+	// Restart streams if either display mode or colorspace has changed
+	if (notificationEvents & (bmdVideoInputDisplayModeChanged | bmdVideoInputColorspaceChanged))
+	{
+		// Stop the capture
+		m_deckLinkInput->StopStreams();
+
+		// Set the video input mode
+		result = m_deckLinkInput->EnableVideoInput(displayMode, pixelFormat, bmdVideoInputEnableFormatDetection);
+
+		if (result == S_OK)
+			// Start the capture
+			result = m_deckLinkInput->StartStreams();
+
+		if (result != S_OK)
+			// Let owner know we couldn't restart capture with detected input video mode
+			QCoreApplication::postEvent(m_owner, new QEvent(kErrorRestartingCaptureEvent));
+		else
+			QCoreApplication::postEvent(m_owner, new DeckLinkInputFormatChangedEvent(displayMode));
+	}
 
 	return S_OK;
 }

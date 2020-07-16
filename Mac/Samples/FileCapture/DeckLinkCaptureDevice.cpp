@@ -42,6 +42,7 @@ m_deckLink(deckLink),
 m_deckLinkInput(nullptr),
 m_deckLinkVideoConversion(nullptr),
 m_displayMode(bmdModeNTSC),
+m_pixelFormat(kDevicePixelFormat),
 m_frameDuration(0),
 m_timeScale(0),
 m_mediaWriter(nullptr),
@@ -126,6 +127,8 @@ ULONG DeckLinkCaptureDevice::Release()
 
 HRESULT DeckLinkCaptureDevice::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode* newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {
+	BMDPixelFormat pixelFormat = m_pixelFormat;
+	
 	(void)notificationEvents; // unused
 
 	DeviceError error = kNoError;
@@ -134,11 +137,24 @@ HRESULT DeckLinkCaptureDevice::VideoInputFormatChanged(BMDVideoInputFormatChange
 	if (getDeviceIOState() == kFileIORunning)
 		stopRecording();
 
-	if (m_detectFormat)
+	if (notificationEvents & bmdVideoInputColorspaceChanged)
 	{
+		if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
+			pixelFormat = bmdFormat8BitBGRA;
+		else if (detectedSignalFlags & bmdDetectedVideoInputYCbCr422)
+			pixelFormat = bmdFormat10BitYUV;
+		else
+		{
+			error = kInvalidFormatChangedEvent;
+			goto bail;
+		}
+	}
+	if (m_detectFormat &&
+		((notificationEvents & bmdVideoInputDisplayModeChanged) ||
+		 (pixelFormat != m_pixelFormat)))
+	{
+		// Restart streams if either display mode or colorspace has changed
 		m_deckLinkInput->StopStreams();
-
-		BMDPixelFormat pixelFormat = (detectedSignalFlags & bmdDetectedVideoInputRGB444) ? bmdFormat8BitBGRA : bmdFormat10BitYUV;
 
 		if (m_deckLinkInput->EnableVideoInput(newDisplayMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection) != S_OK)
 		{
@@ -153,6 +169,7 @@ HRESULT DeckLinkCaptureDevice::VideoInputFormatChanged(BMDVideoInputFormatChange
 		}
 
 		m_displayMode = newDisplayMode->GetDisplayMode();
+		m_pixelFormat = pixelFormat;
 
 		notifyStatus(kCaptureFormatChanged);
 	}
@@ -343,7 +360,7 @@ void DeckLinkCaptureDevice::capture(com_ptr<IDeckLinkScreenPreviewCallback> prev
 	if (m_videoInputEnabled)
 		disableVideoInput();
 	
-	enableVideoInput(displayMode, kDevicePixelFormat, videoInputFlags);
+	enableVideoInput(displayMode, m_pixelFormat, videoInputFlags);
 	if (!m_videoInputEnabled)
 	{
 		error = kEnableVideoInputFailed;

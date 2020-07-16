@@ -30,8 +30,8 @@ INCLUDEPATH += .\
                src\
                ../../include
 
-lessThan(QT_VERSION, 5.2) {
-	error("Qt 5.2 or greater is required.")
+!versionAtLeast(QT_VERSION, 5.10) {
+	error("Qt 5.10 or greater is required.")
 }
 
 QT += widgets

@@ -63,5 +63,6 @@ enum DeviceError
 	kStartCaptureFailed,
 	kMediaFileFrameDropped,
 	kMediaFileWriteFailed,
+	kInvalidFormatChangedEvent,
 	kErrorCount
 };

@@ -195,43 +195,69 @@ bool DeckLinkInputDevice::WaitForVideoFrameArrived(IDeckLinkVideoFrame** frame, 
 
 HRESULT DeckLinkInputDevice::VideoInputFormatChanged(/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
 {	
-	HRESULT			result;
-	BMDPixelFormat	pixelFormat = bmdFormat10BitYUV;
+	HRESULT			result = S_OK;
+	BMDPixelFormat	pixelFormat;
 	dlstring_t		displayModeNameStr;
 
 	if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
-		pixelFormat = bmdFormat10BitRGB;
-
-	// Stop the capture
-	m_deckLinkInput->StopStreams();
-
-	// Set the detected video input mode
-	result = m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection);
-	if (result != S_OK)
 	{
-		fprintf(stderr, "Unable to re-enable video input on auto-format detection"); 
-		goto bail;
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitARGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitRGB;
+		else if (detectedSignalFlags & bmdDetectedVideoInput12BitDepth)
+			pixelFormat = bmdFormat12BitRGB;
+		else
+			// Invalid color depth for RGB
+			return E_INVALIDARG;
 	}
-
-	// Restart the capture
-	result = m_deckLinkInput->StartStreams();
-	if (result != S_OK)
+	else if (detectedSignalFlags & bmdDetectedVideoInputYCbCr422)
 	{
-		fprintf(stderr, "Unable to restart streams on auto-format detection"); 
-		goto bail;
-	}		
-
-	result = newMode->GetName(&displayModeNameStr);
-
-	if (result == S_OK)
-	{
-		fprintf(stderr, "Video format changed to %s %s\n", DlToCString(displayModeNameStr), (detectedSignalFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV");
-		DeleteString(displayModeNameStr);
+		if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+			pixelFormat = bmdFormat8BitYUV;
+		else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+			pixelFormat = bmdFormat10BitYUV;
+		else
+			// Invalid color depth for YUV
+			return E_INVALIDARG;
 	}
 	else
-		fprintf(stderr, "Unable to get new video format name\n");
+		// Unexpected detected video input format flags
+		return E_INVALIDARG;
 
-bail:
+	// Restart streams if either display mode or colorspace has changed
+	if (notificationEvents & (bmdVideoInputDisplayModeChanged | bmdVideoInputColorspaceChanged))
+	{
+		// Stop the capture
+		m_deckLinkInput->StopStreams();
+
+		// Set the detected video input mode
+		result = m_deckLinkInput->EnableVideoInput(newMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection);
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Unable to re-enable video input on auto-format detection");
+			return E_FAIL;
+		}
+
+		// Restart the capture
+		result = m_deckLinkInput->StartStreams();
+		if (result != S_OK)
+		{
+			fprintf(stderr, "Unable to restart streams on auto-format detection");
+			return E_FAIL;
+		}
+
+		result = newMode->GetName(&displayModeNameStr);
+
+		if (result == S_OK)
+		{
+			fprintf(stderr, "Video format changed to %s %s\n", DlToCString(displayModeNameStr), (detectedSignalFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV");
+			DeleteString(displayModeNameStr);
+		}
+		else
+			fprintf(stderr, "Unable to get new video format name\n");
+	}
+
 	return result;
 }
 

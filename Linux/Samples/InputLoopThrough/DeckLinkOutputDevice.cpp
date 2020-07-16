@@ -103,22 +103,24 @@ HRESULT	DeckLinkOutputDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame* compl
 	if (completedFrame)
 	{
 		// Get the time that scheduled frame was completely transmitted by the device
-		if (m_deckLinkOutput->GetFrameCompletionReferenceTimestamp(completedFrame, m_hardwareTimescale, &frameCompletionTimestamp) != S_OK)
-			return E_FAIL;
-
-		for (auto iter = m_scheduledFramesList.rbegin(); iter != m_scheduledFramesList.rend(); iter++)
+		if (m_deckLinkOutput->GetFrameCompletionReferenceTimestamp(completedFrame, m_hardwareTimescale, &frameCompletionTimestamp) == S_OK)
 		{
-			if (iter->get()->getVideoFramePtr() == completedFrame)
+			std::lock_guard<std::mutex> lock(m_mutex);
+
+			for (auto iter = m_scheduledFramesList.rbegin(); iter != m_scheduledFramesList.rend(); iter++)
 			{
-				if (m_scheduledFrameCompletedCallback != nullptr)
+				if (iter->get()->getVideoFramePtr() == completedFrame)
 				{
-					iter->get()->setOutputCompletionResult(result);
-					iter->get()->setOutputFrameCompletedHardwareTime(frameCompletionTimestamp - m_hardwareFrameDuration);
-					m_scheduledFrameCompletedCallback(std::move(*iter));
+					if (m_scheduledFrameCompletedCallback != nullptr)
+					{
+						iter->get()->setOutputCompletionResult(result);
+						iter->get()->setOutputFrameCompletedHardwareTime(frameCompletionTimestamp - m_hardwareFrameDuration);
+						m_scheduledFrameCompletedCallback(std::move(*iter));
+					}
+					// Erase item from reverse_iterator
+					m_scheduledFramesList.erase(std::next(iter).base());
+					break;
 				}
-				// Erase item from reverse_iterator
-				m_scheduledFramesList.erase(std::next(iter).base());
-				break;
 			}
 		}
 	}
