@@ -4,7 +4,8 @@
 #
 #-------------------------------------------------
 
-lessThan(QT_VERSION, 5.7):error("CapturePreview SDK sample requires at least Qt version 5.7")
+lessThan(QT_MAJOR_VERSION, 5):error("CapturePreview SDK sample requires Qt5")
+equals(QT_MAJOR_VERSION, 5):lessThan(QT_MINOR_VERSION, 7):error("CapturePreview SDK sample requires at least Qt version 5.7")
 
 QT       += core gui widgets opengl
 

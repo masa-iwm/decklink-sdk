@@ -4,7 +4,8 @@
 #
 #-------------------------------------------------
 
-lessThan(QT_VERSION, 5.4):error("SignalGenHDR SDK sample requires at least Qt version 5.4")
+lessThan(QT_MAJOR_VERSION, 5):error("SignalGenHDR SDK sample requires Qt5")
+equals(QT_MAJOR_VERSION, 5):lessThan(QT_MINOR_VERSION, 4):error("SignalGenHDR SDK sample requires at least Qt version 5.4")
 
 QT       += core gui widgets
 

@@ -62,8 +62,9 @@ public:
     // The callback that is called when a property of the video input stream has changed.
 	HRESULT		STDMETHODCALLTYPE VideoInputFormatChanged (/* in */ BMDVideoInputFormatChangedEvents notificationEvents, /* in */ IDeckLinkDisplayMode *newDisplayMode, /* in */ BMDDetectedVideoInputFormatFlags detectedSignalFlags)
     {
-        BMDPixelFormat pixelFormat = bmdFormat10BitYUV;
-        STRINGOBJ			displayModeString = NULL;
+        BMDPixelFormat      pixelFormat = bmdFormat10BitYUV;
+        STRINGOBJ           displayModeString = NULL;
+        BMDVideoInputFlags  videoInputFlags = bmdVideoInputEnableFormatDetection;
         
         // Check for video field changes
         if (notificationEvents & bmdVideoInputFieldDominanceChanged)
@@ -89,7 +90,8 @@ public:
                     printf("progressive segmented frame\n");
                     break;
                 default:
-                    break;
+                    printf("\n");
+                    return E_FAIL;
             }
         }
         
@@ -97,15 +99,48 @@ public:
         if (notificationEvents & bmdVideoInputColorspaceChanged)
         {
             printf("Input color space changed to ");
-            if (detectedSignalFlags == bmdDetectedVideoInputYCbCr422)
+            if (detectedSignalFlags & bmdDetectedVideoInputYCbCr422)
             {
-                printf("YCbCr422\n");
-                pixelFormat = bmdFormat10BitYUV;
+                printf("YCbCr422 ");
+                if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+                {
+                    printf("8-bit depth\n");
+                    pixelFormat = bmdFormat8BitYUV;
+                }
+                else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+                {
+                    printf("10-bit depth\n");
+                    pixelFormat = bmdFormat10BitYUV;
+                }
+                else
+                {
+                    printf("\n");
+                    return E_FAIL;
+                }
             }
-            if (detectedSignalFlags == bmdDetectedVideoInputRGB444)
+            else if (detectedSignalFlags & bmdDetectedVideoInputRGB444)
             {
-                printf("RGB444\n");
-                pixelFormat = bmdFormat10BitRGB;
+                printf("RGB444 ");
+                if (detectedSignalFlags & bmdDetectedVideoInput8BitDepth)
+                {
+                    printf("8-bit depth\n");
+                    pixelFormat = bmdFormat8BitARGB;
+                }
+                else if (detectedSignalFlags & bmdDetectedVideoInput10BitDepth)
+                {
+                    printf("10-bit depth\n");
+                    pixelFormat = bmdFormat10BitRGB;
+                }
+                else if (detectedSignalFlags & bmdDetectedVideoInput12BitDepth)
+                {
+                    printf("12-bit depth\n");
+                    pixelFormat = bmdFormat12BitRGB;
+                }
+                else
+                {
+                    printf("\n");
+                    return E_FAIL;
+                }
             }
         }
         
@@ -118,22 +153,34 @@ public:
             newDisplayMode->GetName(&displayModeString);
             StringToStdString(displayModeString, modeName);
             
-            printf("Input display mode changed to: %s\n", modeName.c_str());
+            printf("Input display mode changed to: %s", modeName.c_str());
+            
+            if (detectedSignalFlags & bmdDetectedVideoInputDualStream3D)
+            {
+                videoInputFlags |= bmdVideoInputDualStream3D;
+                printf(" (3D)");
+            }
+            printf("\n");
+            
             // Release the video mode name string
             STRINGFREE(displayModeString);
         }
         
-        // Pause video capture
-        m_deckLinkInput->PauseStreams();
+        if (notificationEvents & (bmdVideoInputDisplayModeChanged | bmdVideoInputColorspaceChanged))
+        {
+            // Pause video capture
+            m_deckLinkInput->PauseStreams();
+            
+            // Enable video input with the properties of the new video stream
+            m_deckLinkInput->EnableVideoInput(newDisplayMode->GetDisplayMode(), pixelFormat, videoInputFlags);
+
+            // Flush any queued video frames
+            m_deckLinkInput->FlushStreams();
+
+            // Start video capture
+            m_deckLinkInput->StartStreams();
+        }
         
-        // Enable video input with the properties of the new video stream
-        m_deckLinkInput->EnableVideoInput(newDisplayMode->GetDisplayMode(), pixelFormat, bmdVideoInputEnableFormatDetection);
-
-        // Flush any queued video frames
-        m_deckLinkInput->FlushStreams();
-
-        // Start video capture
-        m_deckLinkInput->StartStreams();
         return S_OK;
     }
 
