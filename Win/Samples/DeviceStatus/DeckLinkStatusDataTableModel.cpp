@@ -286,7 +286,7 @@ QString getStatusFlag(com_ptr<IDeckLinkStatus>& deckLinkStatus, const BMDDeckLin
 QString getStatusBytes(com_ptr<IDeckLinkStatus>& deckLinkStatus, const BMDDeckLinkStatusID id)
 {
 	uint32_t				bytesSize = 0;
-	std::vector<int8_t>		bytes;
+	std::vector<uint8_t>	bytes;
 	QStringList				bytesStringList;
 
 	// Get required size of buffer

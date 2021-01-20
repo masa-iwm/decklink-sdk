@@ -437,6 +437,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 083BE8A1181892BD0067DA94;
@@ -564,10 +565,8 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				ONLY_ACTIVE_ARCH = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				SDKROOT = macosx;
-				VALID_ARCHS = x86_64;
 			};
 			name = Debug;
 		};
@@ -589,9 +588,8 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
 				SDKROOT = macosx;
-				VALID_ARCHS = x86_64;
 			};
 			name = Release;
 		};
@@ -643,7 +641,8 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
-				PRODUCT_NAME = "$(TARGET_NAME)";			};
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
 			name = Debug;
 		};
 		16FE1C74227AAF0200282213 /* Release */ = {
@@ -652,7 +651,8 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				OTHER_CODE_SIGN_FLAGS = "-i com.blackmagic-design.desktopvideo.sdk.${PRODUCT_NAME}";
-				PRODUCT_NAME = "$(TARGET_NAME)";			};
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
 			name = Release;
 		};
 		A82F1FFF19AC706B006B6B3D /* Debug */ = {
@@ -788,6 +788,7 @@
 				16FE1C74227AAF0200282213 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		A82F1FFE19AC706B006B6B3D /* Build configuration list for PBXNativeTarget "RP188VitcOutput" */ = {
 			isa = XCConfigurationList;

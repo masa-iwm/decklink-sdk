@@ -9,11 +9,11 @@
 {\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{none\}.}{\leveltext\leveltemplateid1\'01.;}{\levelnumbers;}\fi-360\li720\lin720 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid2\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li1440\lin1440 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid3\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li2160\lin2160 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid4\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li2880\lin2880 }{\listname ;}\listid1}
 {\list\listtemplateid2\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{none\}.}{\leveltext\leveltemplateid101\'01.;}{\levelnumbers;}\fi-360\li720\lin720 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid102\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li1440\lin1440 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid103\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li2160\lin2160 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{hyphen\}}{\leveltext\leveltemplateid104\'01\uc0\u8259 ;}{\levelnumbers;}\fi-360\li2880\lin2880 }{\listname ;}\listid2}}
 {\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}}
-\paperw11900\paperh16840\vieww25560\viewh14980\viewkind0
+\paperw11900\paperh16840\vieww24820\viewh14980\viewkind0
 \deftab720
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\tx13563\pardeftab720\partightenfactor0
 
-\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 11.7\
+\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 12.0\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\partightenfactor0
 \cf0 \
 
@@ -21,11 +21,72 @@
 \
 \pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 11.7\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 12.0\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 	- Updated Examples\
+\f0\b \cf0 	- Updated Samples\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 		- 
+\f0\b All Mac Samples\
+\
+			
+\f1\b0 - Projects have been updated to build Universal binaries to run on both Apple M1 and Intel processors.\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+		- SignalGenerator\
+		- SignalGenHDR\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 			- Modified Mac sample to exit when closing the application window.\
+\
+		
+\f0\b - DeviceStatus\
+
+\f1\b0 \
+			- Fixed formatting of bmdDeckLinkStatusReceivedEDID status item.\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 \
+	- Updated Examples\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0 \cf0 		- 
+\f0\b All Mac Examples \
+\
+			
+\f1\b0 - Project is updated to build Universal binaries to run on both Apple M1 and Intel processors.\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf0 		- StatusMonitor\
+\
+			
+\f1\b0 - No longer reports unknown status IDs as they should be ignored.\
+			- Improved formatting of specific status items.\
+\
+		
+\f0\b - VancCapture\
+\
+			
+\f1\b0 - Added support for multiple Ancillary Data packets per line.\
+\
+
+\f0\b \
+Changes in Blackmagic DeckLink SDK 11.7\
+\pard\pardeftab720\partightenfactor0
+
+\f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b\fs24 \cf0 	- Updated Examples\
 \
 		- AutomaticModeDetection\
 \
@@ -194,10 +255,12 @@ BMDDetectedVideoInputFormatFlags
 \pard\pardeftab720\partightenfactor0
 
 \f0\b \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 Changes in Blackmagic DeckLink SDK 11.5.1\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 11.5.1\
 \
 	- New Types\
 \
@@ -1152,6 +1215,7 @@ Changes in Blackmagic DeckLink SDK 11.0\
 
 \f1\b0 \cf0 				- Flag to determine whether device supports grouping of outputs for synchronized playback \
 \
+\pard\pardeftab720\partightenfactor0
 \cf2 \expnd0\expndtw0\kerning0
 			
 \f0\b - 
@@ -2038,12 +2102,15 @@ IDeckLinkVideoFrameMetadataExtensions \
 \f1\b0 \kerning1\expnd0\expndtw0 metadata information items associated with an 
 \f0\b IDeckLinkVideoFrame\
 \
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 Changes in Blackmagic DeckLink SDK 10.9.11\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 10.9.11\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \fs24 \cf0 	- 
@@ -2068,10 +2135,12 @@ IDeckLinkVideoFrameMetadataExtensions \
 \pard\pardeftab720\partightenfactor0
 
 \fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 Changes in Blackmagic DeckLink SDK 10.9.10\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 10.9.10\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \fs24 \cf0 	- 
@@ -2108,8 +2177,9 @@ IDeckLinkVideoFrameMetadataExtensions \
 \pard\pardeftab720\partightenfactor0
 
 \f0\b \cf0 Changes in Blackmagic DeckLink SDK 10.9.5\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \fs24 \cf0 	- 
@@ -2166,8 +2236,9 @@ IDeckLinkVideoFrameMetadataExtensions \
 \f0\b\fs24 \cf0 \
 \
 Changes in Blackmagic DeckLink SDK 10.8.6\
+\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs28 \
+\f1\b0\fs28 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \fs24 \cf0 	- 
@@ -3683,8 +3754,9 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \pard\pardeftab720\partightenfactor0
 
 \fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 Changes in Blackmagic DeckLink SDK 8.1
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 8.1
 \f1\b0\fs28 \
 \
 
@@ -3696,8 +3768,9 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \f1\b0 \
 \
 			- new enumeration of\'a0possible busy states for a BMD device.\
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
 \pard\pardeftab720\partightenfactor0
 
 \fs24 \cf0 	- 
@@ -3948,8 +4021,9 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \pard\pardeftab720\partightenfactor0
 
 \fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 	- Updated interfaces
+\f0\b\fs24 \cf0 	- Updated interfaces
 \f1\b0\fs28 \
 \
 
@@ -3961,10 +4035,12 @@ Changes in Blackmagic DeckLink SDK 8.5\
 \f1\b0 method\
 \
 				- send custom commands conforming to the Sony 9 pin protocol to the deck\
+\pard\pardeftab720\partightenfactor0
 
-\fs28 \
+\fs28 \cf0 \
+\pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 Changes in Blackmagic DeckLink SDK 7.9.3
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 7.9.3
 \f1\b0\fs28 \
 \pard\pardeftab720\partightenfactor0
 
@@ -4701,6 +4777,6 @@ Some applications may use third party code under license. For details please ref
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab720\pardirnatural\partightenfactor0
 
 \fs18 \cf0 \
-\'a9 2020 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
+\'a9 2021 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
 \
-Updated November 12, 2020.}
+Updated January 15, 2021.}

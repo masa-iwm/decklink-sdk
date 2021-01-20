@@ -737,6 +737,11 @@ bail:
 	}
 }
 
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)theApplication
+{
+	return YES;
+}
+
 - (void)applicationWillTerminate:(NSNotification *)notification
 {
 	// Stop the output signal

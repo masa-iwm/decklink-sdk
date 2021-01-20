@@ -50,6 +50,95 @@ static FourCCNameMapping kPixelFormatMappings[] =
 	{ 0, NULL }
 };
 
+// Colorspace mappings
+static FourCCNameMapping kColorspaceMappings[] =
+{
+	{ bmdColorspaceRec601,	"Rec.601" },
+	{ bmdColorspaceRec709,	"Rec.709" },
+	{ bmdColorspaceRec2020,	"Rec.2020" },
+
+	{ 0, NULL }
+};
+
+// Dynamic range mappings
+static FourCCNameMapping kDynamicRangeMappings[] =
+{
+	{ bmdDynamicRangeSDR, 			"SDR" },
+	{ bmdDynamicRangeHDRStaticPQ,	"HDR PQ" },
+	{ bmdDynamicRangeHDRStaticHLG,	"HDR HLG" },
+
+	{ 0, NULL }
+};
+
+// Field dominance mappings
+static FourCCNameMapping kFieldDominanceMappings[] =
+{
+	{ bmdUnknownFieldDominance,		"Unknown" },
+	{ bmdLowerFieldFirst,			"Lower field first" },
+	{ bmdUpperFieldFirst,			"Upper field first" },
+	{ bmdProgressiveFrame,			"Progressive" },
+	{ bmdProgressiveSegmentedFrame,	"Progressive Segmented Frame" },
+
+	{ 0, NULL }
+};
+
+// Link configuration mappings
+static FourCCNameMapping kLinkConfigurationMappings[] =
+{
+	{ bmdLinkConfigurationSingleLink,	"Single-link" },
+	{ bmdLinkConfigurationDualLink,		"Dual-link" },
+	{ bmdLinkConfigurationQuadLink,		"Quad-link" },
+
+	{ 0, NULL }
+};
+
+// Panel type mappings
+static FourCCNameMapping kPanelTypeMappings[] =
+{
+	{ bmdPanelNotDetected,				"Not detected" },
+	{ bmdPanelTeranexMiniSmartPanel,	"Teranex Mini Smart Panel" },
+
+	{ 0, NULL }
+};
+
+struct FlagNameMapping
+{
+	INT32_UNSIGNED flag;
+	const char* name;
+};
+
+// Device busy flag mappings
+static FlagNameMapping kDeviceBusyFlagMappings[] =
+{
+	{ bmdDeviceCaptureBusy,		"Capture" },
+	{ bmdDevicePlaybackBusy,	"Playback" },
+	{ bmdDeviceSerialPortBusy,	"Serial-port" },
+
+	{ 0, NULL }
+};
+
+// Detected video input format flags mappings
+static FlagNameMapping kDetectedVideoInputFormatFlagMappings[] =
+{
+	{ bmdDetectedVideoInputYCbCr422,		"YCbCr 4:2:2" },
+	{ bmdDetectedVideoInputRGB444,			"RGB 4:4:4" },
+	{ bmdDetectedVideoInputDualStream3D,	"3D" },
+	{ bmdDetectedVideoInput12BitDepth,		"12-bit" },
+	{ bmdDetectedVideoInput10BitDepth,		"10-bit" },
+	{ bmdDetectedVideoInput8BitDepth,		"8-bit" },
+
+	{ 0, NULL }
+};
+
+// Video status flags mappings
+static FlagNameMapping kVideoStatusFlagMappings[] =
+{
+	{ bmdDeckLinkVideoStatusPsF,			"PsF" },
+	{ bmdDeckLinkVideoStatusDualStream3D,	"3D" },
+
+	{ 0, NULL }
+};
+
 static const char* getFourCCName(FourCCNameMapping* mappings, INT32_UNSIGNED fourcc)
 {
 	while (mappings->name != NULL)
@@ -114,6 +203,50 @@ bail:
 	return modeName;
 }
 
+static std::string getBusyStateString(BMDDeviceBusyState busyState)
+{
+	std::string busyString;
+	FlagNameMapping* mappings = kDeviceBusyFlagMappings;
+
+	if (busyState == (BMDDeviceBusyState)0)
+		return "Inactive";
+
+	while (mappings->name != NULL)
+	{
+		if (mappings->flag & busyState)
+		{
+			if (!busyString.empty())
+				busyString.append(" and ");
+			busyString.append(mappings->name);
+		}
+		++mappings;
+	}
+
+	busyString.append(" active");
+	return busyString;
+}
+
+static std::string getFlagsString(FlagNameMapping* mappings, INT32_UNSIGNED flags)
+{
+	std::string flagsString;
+
+	if (flags == 0)
+		return "None";
+
+	while (mappings->name != NULL)
+	{
+		if (mappings->flag & flags)
+		{
+			if (!flagsString.empty())
+				flagsString.append(" ");
+			flagsString.append(mappings->name);
+		}
+		++mappings;
+	}
+
+	return flagsString;
+}
+
 static void printHex(INT8_UNSIGNED* buffer, INT32_UNSIGNED size)
 {
 	for (INT32_UNSIGNED i = 0; i < size; )
@@ -150,7 +283,9 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 		case bmdDeckLinkStatusPCIExpressLinkSpeed:
 		case bmdDeckLinkStatusLastVideoOutputPixelFormat:
 		case bmdDeckLinkStatusReferenceSignalMode:
+		case bmdDeckLinkStatusReferenceSignalFlags:
 		case bmdDeckLinkStatusBusy:
+		case bmdDeckLinkStatusInterchangeablePanelType:
 		case bmdDeckLinkStatusDeviceTemperature:
 			result = deckLinkStatus->GetInt(statusId, &intVal);
 			break;
@@ -173,7 +308,7 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 			break;
 
 		default:
-			fprintf(stderr, "Unknown status ID: %08x", statusId);
+			// We can safely ignore any unneeded or unknown status IDs
 			return;
 	}
 
@@ -209,49 +344,50 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 			if (result == S_FALSE)
 				break;
 
-			printf("%-40s %08x\n", "Detected Video Input Colorspace:",
-				(BMDColorspace)intVal);
+			printf("%-40s %s\n", "Detected Video Input Colorspace:",
+				getFourCCName(kColorspaceMappings, (BMDColorspace)intVal));
 			break;
 
 		case bmdDeckLinkStatusDetectedVideoInputDynamicRange:
 			if (result == S_FALSE)
 				break;
 
-			printf("%-40s %08x\n", "Detected Video Input Dynamic Range:",
-				(BMDDynamicRange)intVal);
+			printf("%-40s %s\n", "Detected Video Input Dynamic Range:",
+				getFourCCName(kDynamicRangeMappings, (BMDDynamicRange)intVal));
 			break;
 
 		case bmdDeckLinkStatusDetectedVideoInputFormatFlags:
 			if (result == S_FALSE)
 				break;
 
-			printf("%-40s %08x\n", "Detected Video Input Format Flags:",
-				(BMDDetectedVideoInputFormatFlags)intVal);
+			printf("%-40s %s\n", "Detected Video Input Format Flags:",
+				getFlagsString(kDetectedVideoInputFormatFlagMappings, (BMDDetectedVideoInputFormatFlags)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusDetectedVideoInputFieldDominance:
 			if (result == S_FALSE)
 				break;
 
-			printf("%-40s %08x\n", "Detected Video Input Field Dominance:",
-				(BMDFieldDominance)intVal);
+			printf("%-40s %s\n", "Detected Video Input Field Dominance:",
+				getFourCCName(kFieldDominanceMappings, (BMDFieldDominance)intVal));
 			break;
 
 		case bmdDeckLinkStatusDetectedSDILinkConfiguration:
 			if (result == S_FALSE)
 				break;
 
-			printf("%-40s %08x\n", "Detected SDI Link Configuration:",
-				(BMDLinkConfiguration)intVal);
+			printf("%-40s %s\n", "Detected SDI Link Configuration:",
+				getFourCCName(kLinkConfigurationMappings, (BMDLinkConfiguration)intVal));
 			break;
+
 		case bmdDeckLinkStatusCurrentVideoInputMode:
 			printf("%-40s %s\n", "Current Video Input Mode:",
 				getInputDisplayModeName(deckLinkStatus, (BMDDisplayMode)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusCurrentVideoInputFlags:
-			printf("%-40s %08x\n", "Current Video Input Flags:",
-				(BMDDeckLinkVideoStatusFlags)intVal);
+			printf("%-40s %s\n", "Current Video Input Flags:",
+				getFlagsString(kVideoStatusFlagMappings, (BMDDeckLinkVideoStatusFlags)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusCurrentVideoInputPixelFormat:
@@ -265,8 +401,8 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 			break;
 
 		case bmdDeckLinkStatusCurrentVideoOutputFlags:
-			printf("%-40s %08x\n", "Current Video Output Flags:",
-				(BMDDeckLinkVideoStatusFlags)intVal);
+			printf("%-40s %s\n", "Current Video Output Flags:",
+				getFlagsString(kVideoStatusFlagMappings, (BMDDeckLinkVideoStatusFlags)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusPCIExpressLinkWidth:
@@ -290,18 +426,28 @@ static void printStatus(IDeckLinkStatus* deckLinkStatus, BMDDeckLinkStatusID sta
 			break;
 
 		case bmdDeckLinkStatusBusy:
-			printf("%-40s %08x\n", "Busy:",
-				(BMDDeviceBusyState)intVal);
+			printf("%-40s %s\n", "Busy:",
+				getBusyStateString((BMDDeviceBusyState)intVal).c_str());
 			break;
 
 		case bmdDeckLinkStatusVideoInputSignalLocked:
 			printf("%-40s %s\n", "Video Input Signal Locked:",
-				boolVal ? "yes" : "no");
+				boolVal ? "Yes" : "No");
 			break;
 
 		case bmdDeckLinkStatusReferenceSignalLocked:
 			printf("%-40s %s\n", "Reference Signal Locked:",
-				boolVal ? "yes" : "no");
+				boolVal ? "Yes" : "No");
+			break;
+
+		case bmdDeckLinkStatusReferenceSignalFlags:
+			printf("%-40s %s\n", "Reference Signal Flags:",
+				getFlagsString(kVideoStatusFlagMappings, (BMDDeckLinkVideoStatusFlags)intVal).c_str());
+			break;
+
+		case bmdDeckLinkStatusInterchangeablePanelType:
+			printf("%-40s %s\n", "Interchangable Panel Installed:",
+				getFourCCName(kPanelTypeMappings, (BMDPanelType)intVal));
 			break;
 
 		case bmdDeckLinkStatusReceivedEDID:
@@ -412,6 +558,7 @@ int main(int argc, const char * argv[])
 	printStatus(deckLinkStatus, bmdDeckLinkStatusBusy);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusPCIExpressLinkWidth);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusPCIExpressLinkSpeed);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusInterchangeablePanelType);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusDeviceTemperature);
 
 	// Print video input status values
@@ -432,6 +579,7 @@ int main(int argc, const char * argv[])
 	printStatus(deckLinkStatus, bmdDeckLinkStatusLastVideoOutputPixelFormat);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusReferenceSignalLocked);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusReferenceSignalMode);
+	printStatus(deckLinkStatus, bmdDeckLinkStatusReferenceSignalFlags);
 	printStatus(deckLinkStatus, bmdDeckLinkStatusReceivedEDID);
 
 	// Obtain the notification interface

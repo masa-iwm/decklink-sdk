@@ -40,11 +40,17 @@ struct AncillaryPacket
 	INT8_UNSIGNED				m_DID;
 	INT8_UNSIGNED				m_SDID;
 	std::vector<INT8_UNSIGNED>	m_data;
-	bool operator!=(const AncillaryPacket& other) const
-	{
-		return std::tie(m_DID, m_SDID, m_data) != std::tie(other.m_DID, other.m_SDID, other.m_data);
-	}
 };
+
+bool operator==(const AncillaryPacket& lhs, const AncillaryPacket& rhs)
+{
+	return lhs.m_DID == rhs.m_DID && lhs.m_SDID == rhs.m_SDID && lhs.m_data == rhs.m_data;
+}
+
+bool operator!=(const AncillaryPacket& lhs, const AncillaryPacket& rhs)
+{
+	return !(lhs == rhs);
+}
 
 // The input callback class
 class InputCallback : public IDeckLinkInputCallback
@@ -104,9 +110,9 @@ public:
 	}
 
 private:
-	IDeckLinkInput*								m_deckLinkInput;
-	std::map<INT32_UNSIGNED, AncillaryPacket>	m_prevAncillaryPackets;
-	std::atomic<ULONG>							m_refCount;
+	IDeckLinkInput*											m_deckLinkInput;
+	std::map<INT32_UNSIGNED, std::vector<AncillaryPacket>>	m_prevAncillaryPackets;
+	std::atomic<ULONG>										m_refCount;
 };
 
 HRESULT InputCallback::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents notificationEvents, IDeckLinkDisplayMode *newDisplayMode, BMDDetectedVideoInputFormatFlags detectedSignalFlags)
@@ -116,11 +122,11 @@ HRESULT InputCallback::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents 
 
 HRESULT InputCallback::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioPacket)
 {
-	std::map<INT32_UNSIGNED, AncillaryPacket>	capturedAncillaryPackets;
-	IDeckLinkVideoFrameAncillaryPackets*		videoFrameAncillaryPackets	= nullptr;
-	IDeckLinkAncillaryPacketIterator*			ancillaryPacketIterator		= nullptr;
-	IDeckLinkAncillaryPacket*					ancillaryPacket				= nullptr;
-	HRESULT										result;
+	std::map<INT32_UNSIGNED, std::vector<AncillaryPacket>>	capturedAncillaryPackets;
+	IDeckLinkVideoFrameAncillaryPackets*					videoFrameAncillaryPackets	= nullptr;
+	IDeckLinkAncillaryPacketIterator*						ancillaryPacketIterator		= nullptr;
+	IDeckLinkAncillaryPacket*								ancillaryPacket				= nullptr;
+	HRESULT													result;
 
 	if (!videoFrame || (videoFrame->GetFlags() & bmdFrameHasNoInputSource))
 		return S_OK;
@@ -146,35 +152,47 @@ HRESULT InputCallback::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFra
 		if (ancillaryPacket->GetBytes(kAncillaryFormat, (const void**)&ancillaryBufferPtr, &ancillaryBufferSize) == S_OK)
 		{
 			std::vector<INT8_UNSIGNED> ancillaryBuffer(ancillaryBufferPtr, ancillaryBufferPtr + ancillaryBufferSize);
-			capturedAncillaryPackets[ancillaryPacket->GetLineNumber()] = { ancillaryPacket->GetDID(), ancillaryPacket->GetSDID(), std::move(ancillaryBuffer) };
+			capturedAncillaryPackets[ancillaryPacket->GetLineNumber()].push_back({ ancillaryPacket->GetDID(), ancillaryPacket->GetSDID(), std::move(ancillaryBuffer) });
 		}
 
 		ancillaryPacket->Release();
 	}
 
 	// Check any VANC lines that no longer have data
-	for (auto& ancillaryPacketIter : m_prevAncillaryPackets)
+	for (auto& ancillaryPacketLineIter : m_prevAncillaryPackets)
 	{
-		auto vancLineSearch = capturedAncillaryPackets.find(ancillaryPacketIter.first);
+		auto vancLineSearch = capturedAncillaryPackets.find(ancillaryPacketLineIter.first);
 		if (vancLineSearch == capturedAncillaryPackets.end())
 		{
-			printf("Line %d:\t<empty>\n", ancillaryPacketIter.first);
+			std::string lineNumberStr = std::to_string(ancillaryPacketLineIter.first);
+			printf("Line %s:%*c<empty>\n", lineNumberStr.c_str(), 5-(int)lineNumberStr.length(), ' ');
 		}
 	}
 
 	// Check VANC lines that have new or modified data 
-	for (auto& ancillaryPacketIter : capturedAncillaryPackets)
+	for (auto& ancillaryPacketLineIter : capturedAncillaryPackets)
 	{
-		auto vancLineSearch = m_prevAncillaryPackets.find(ancillaryPacketIter.first);
-		if ((vancLineSearch == m_prevAncillaryPackets.end()) || (vancLineSearch->second != ancillaryPacketIter.second))
+		auto vancLineSearch = m_prevAncillaryPackets.find(ancillaryPacketLineIter.first);
+		if ((vancLineSearch == m_prevAncillaryPackets.end()) || (vancLineSearch->second != ancillaryPacketLineIter.second))
 		{
-			printf("Line %d:\t", ancillaryPacketIter.first);
-			printf("DID: %02x; ", ancillaryPacketIter.second.m_DID);
-			printf("SDID: %02x; ", ancillaryPacketIter.second.m_SDID);
-			printf("Data:");
-			for (int i = 0; i < (int)ancillaryPacketIter.second.m_data.size(); i++)
-				printf(" %02x", ancillaryPacketIter.second.m_data[i]);
-			printf("\n");
+			bool lineNumberPrinted = false;
+			for (auto& ancillaryPacketIter : ancillaryPacketLineIter.second)
+			{
+				if (!lineNumberPrinted)
+				{
+					std::string lineNumberStr = std::to_string(ancillaryPacketLineIter.first);
+					printf("Line %s:%*c", lineNumberStr.c_str(), 5-(int)lineNumberStr.length(), ' ');
+					lineNumberPrinted = true;
+				}
+				else
+					printf("%*c", 11, ' ');
+				printf("DID: %02x; ", ancillaryPacketIter.m_DID);
+				printf("SDID: %02x; ", ancillaryPacketIter.m_SDID);
+				printf("Data:");
+				for (int i = 0; i < (int)ancillaryPacketIter.m_data.size(); i++)
+					printf(" %02x", ancillaryPacketIter.m_data[i]);
+				printf("\n");
+			}
 		}
 	}
 
