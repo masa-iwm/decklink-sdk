@@ -75,14 +75,14 @@
 #endif
 
 #define DVP_MAJOR_VERSION  1
-#define DVP_MINOR_VERSION  63
+#define DVP_MINOR_VERSION  70
 
 typedef uint64_t DVPBufferHandle;
 typedef uint64_t DVPSyncObjectHandle;
 
 typedef enum
 {
-    DVP_STATUS_OK                        =  0, 
+    DVP_STATUS_OK                        =  0,
     DVP_STATUS_INVALID_PARAMETER         =  1,
     DVP_STATUS_UNSUPPORTED               =  2,
     DVP_STATUS_END_ENUMERATION           =  3,
@@ -97,7 +97,7 @@ typedef enum
     DVP_STATUS_UNSIGNALED                =  12,
     DVP_STATUS_SYNC_ERROR                =  13,
     DVP_STATUS_SYNC_STILL_BOUND          =  14,
-    DVP_STATUS_ERROR                     = -1, 
+    DVP_STATUS_ERROR                     = -1
 } DVPStatus;
 
 // Pixel component formats stored in the system memory buffer
@@ -138,7 +138,7 @@ typedef enum
     DVP_RGB_INTEGER,
     DVP_BGR_INTEGER,
     DVP_LUMINANCE_INTEGER,
-    DVP_LUMINANCE_ALPHA_INTEGER,
+    DVP_LUMINANCE_ALPHA_INTEGER
 } DVPBufferFormats;
 
 // Possible pixel component storage types for system memory buffers
@@ -163,7 +163,7 @@ typedef enum
     DVP_UNSIGNED_INT_8_8_8_8,
     DVP_UNSIGNED_INT_8_8_8_8_REV,
     DVP_UNSIGNED_INT_10_10_10_2,
-    DVP_UNSIGNED_INT_2_10_10_10_REV,
+    DVP_UNSIGNED_INT_2_10_10_10_REV
 } DVPBufferTypes;
 
 // System memory descriptor describing the size and storage formats
