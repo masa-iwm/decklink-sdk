@@ -95,6 +95,7 @@
 #include "DispatchQueue.h"
 #include "SampleQueue.h"
 #include "LatencyStatistics.h"
+#include "ReferenceTime.h"
 #include "DeckLinkAPI.h"
 #include "com_ptr.h"
 #include "platform.h"
@@ -109,9 +110,6 @@ const int					kOutputVideoPreroll			= 1;		// number of output preroll frames
 const int					kVideoDispatcherThreadCount	= 3;		// number of threads used by video processing dispatcher
 const int					kAudioDispatcherThreadCount	= 2;		// number of threads used by audio processing dispatcher
 const int					kPrintDispatcherThreadCount	= 1;		// number of threads used by print stdout dispatcher
-
-const BMDTimeScale			kDisplayTimescale			= 100000;	// Display latency in 10 us timescale
-const int					kMilliSecPrecision			= kDisplayTimescale / 1000;
 
 const bool					kPrintRollingAverage		= true;		// If true, display latency as rolling average, if false print latency for each frame
 const int					kRollingAverageSampleCount	= 300;		// Number of samples for calculating rolling average of latency
@@ -326,9 +324,9 @@ void printOutputCompletionResult(std::shared_ptr<LoopThroughVideoFrame> complete
 		dispatch_printf(printDispatchQueue,
 						"Frame %d (%s); Latency: Input = %.2f ms, Processing = %.2f ms, Output = %.2f ms\n",
 						completedFrame->getVideoStreamTime() / completedFrame->getVideoFrameDuration(), completionResultString,
-						(double)completedFrame->getInputLatency() / kMilliSecPrecision,
-						(double)completedFrame->getProcessingLatency() / kMilliSecPrecision,
-						(double)completedFrame->getOutputLatency() / kMilliSecPrecision);
+						(double)completedFrame->getInputLatency() / ReferenceTime::kTicksPerMilliSec,
+						(double)completedFrame->getProcessingLatency() / ReferenceTime::kTicksPerMilliSec,
+						(double)completedFrame->getOutputLatency() / ReferenceTime::kTicksPerMilliSec);
 	}
 	else
 	{
@@ -378,9 +376,9 @@ void printRollingAverage(DispatchQueue& printDispatchQueue)
 			dispatch_printf(printDispatchQueue,
 							"%d frames output; Average latency: Input = %.2f ms, Processing = %.2f ms, Output = %.2f ms\n",
 							g_outputFrameCount,
-							(double)g_videoInputLatencyStatistics.getRollingAverage() / kMilliSecPrecision,
-							(double)g_videoProcessingLatencyStatistics.getRollingAverage() / kMilliSecPrecision,
-							(double)g_videoOutputLatencyStatistics.getRollingAverage() / kMilliSecPrecision);
+							(double)g_videoInputLatencyStatistics.getRollingAverage() / ReferenceTime::kTicksPerMilliSec,
+							(double)g_videoProcessingLatencyStatistics.getRollingAverage() / ReferenceTime::kTicksPerMilliSec,
+							(double)g_videoOutputLatencyStatistics.getRollingAverage() / ReferenceTime::kTicksPerMilliSec);
 		}
 		else
 		{
@@ -414,34 +412,34 @@ void printOutputSummary(DispatchQueue& printDispatchQueue)
 		std::tie(mean, stddev) = g_videoInputLatencyStatistics.getMeanAndStdDev();
 		dispatch_printf(printDispatchQueue,
 						"\nVideo Input Latency:\t\tMinimum = %6.2f ms, Maximum = %6.2f ms, Mean = %6.2f ms, StdDev = %.2f ms\n",
-						(double)g_videoInputLatencyStatistics.getMinimum() / kMilliSecPrecision,
-						(double)g_videoInputLatencyStatistics.getMaximum() / kMilliSecPrecision,
-						(double)mean / kMilliSecPrecision,
-						(double)stddev / kMilliSecPrecision);
+						(double)g_videoInputLatencyStatistics.getMinimum() / ReferenceTime::kTicksPerMilliSec,
+						(double)g_videoInputLatencyStatistics.getMaximum() / ReferenceTime::kTicksPerMilliSec,
+						(double)mean / ReferenceTime::kTicksPerMilliSec,
+						(double)stddev / ReferenceTime::kTicksPerMilliSec);
 		
 		std::tie(mean, stddev) = g_videoProcessingLatencyStatistics.getMeanAndStdDev();
 		dispatch_printf(printDispatchQueue,
 						"Video Processing Latency:\tMinimum = %6.2f ms, Maximum = %6.2f ms, Mean = %6.2f ms, StdDev = %.2f ms\n",
-						(double)g_videoProcessingLatencyStatistics.getMinimum() / kMilliSecPrecision,
-						(double)g_videoProcessingLatencyStatistics.getMaximum() / kMilliSecPrecision,
-						(double)mean / kMilliSecPrecision,
-						(double)stddev / kMilliSecPrecision);
+						(double)g_videoProcessingLatencyStatistics.getMinimum() / ReferenceTime::kTicksPerMilliSec,
+						(double)g_videoProcessingLatencyStatistics.getMaximum() / ReferenceTime::kTicksPerMilliSec,
+						(double)mean / ReferenceTime::kTicksPerMilliSec,
+						(double)stddev / ReferenceTime::kTicksPerMilliSec);
 
 		std::tie(mean, stddev) = g_videoOutputLatencyStatistics.getMeanAndStdDev();
 		dispatch_printf(printDispatchQueue,
 						"Video Output Latency:\t\tMinimum = %6.2f ms, Maximum = %6.2f ms, Mean = %6.2f ms, StdDev = %.2f ms\n",
-						(double)g_videoOutputLatencyStatistics.getMinimum() / kMilliSecPrecision,
-						(double)g_videoOutputLatencyStatistics.getMaximum() / kMilliSecPrecision,
-						(double)mean / kMilliSecPrecision,
-						(double)stddev / kMilliSecPrecision);
+						(double)g_videoOutputLatencyStatistics.getMinimum() / ReferenceTime::kTicksPerMilliSec,
+						(double)g_videoOutputLatencyStatistics.getMaximum() / ReferenceTime::kTicksPerMilliSec,
+						(double)mean / ReferenceTime::kTicksPerMilliSec,
+						(double)stddev / ReferenceTime::kTicksPerMilliSec);
 		
 		std::tie(mean, stddev) = g_audioProcessingLatencyStatistics.getMeanAndStdDev();
 		dispatch_printf(printDispatchQueue,
 						"Audio Processing Latency:\tMinimum = %6.2f ms, Maximum = %6.2f ms, Mean = %6.2f ms, StdDev = %.2f ms\n",
-						(double)g_audioProcessingLatencyStatistics.getMinimum() / kMilliSecPrecision,
-						(double)g_audioProcessingLatencyStatistics.getMaximum() / kMilliSecPrecision,
-						(double)mean / kMilliSecPrecision,
-						(double)stddev / kMilliSecPrecision);	}
+						(double)g_audioProcessingLatencyStatistics.getMinimum() / ReferenceTime::kTicksPerMilliSec,
+						(double)g_audioProcessingLatencyStatistics.getMaximum() / ReferenceTime::kTicksPerMilliSec,
+						(double)mean / ReferenceTime::kTicksPerMilliSec,
+						(double)stddev / ReferenceTime::kTicksPerMilliSec);	}
 }
 
 void printReferenceStatus(com_ptr<DeckLinkOutputDevice>& deckLinkOutput, DispatchQueue& printDispatchQueue)
@@ -532,7 +530,7 @@ HRESULT InputLoopThrough(void)
 				{
 					try
 					{
-						deckLinkInput = make_com_ptr<DeckLinkInputDevice>(deckLink, kDisplayTimescale);
+						deckLinkInput = make_com_ptr<DeckLinkInputDevice>(deckLink);
 					}
 					catch (const std::exception& e)
 					{
@@ -566,7 +564,7 @@ HRESULT InputLoopThrough(void)
 
 				try
 				{
-					deckLinkOutput = make_com_ptr<DeckLinkOutputDevice>(deckLink, prerollFrames, kDisplayTimescale);
+					deckLinkOutput = make_com_ptr<DeckLinkOutputDevice>(deckLink, prerollFrames);
 				}
 				catch (const std::exception& e)
 				{

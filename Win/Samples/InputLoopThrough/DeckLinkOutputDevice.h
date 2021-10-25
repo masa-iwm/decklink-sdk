@@ -65,7 +65,7 @@ class DeckLinkOutputDevice : public IDeckLinkVideoOutputCallback, public IDeckLi
 	using ScheduledFramesList				= std::list<std::shared_ptr<LoopThroughVideoFrame>>;
 
 public:
-	DeckLinkOutputDevice(com_ptr<IDeckLink>& deckLink, int videoPrerollSize, BMDTimeScale hardwareTimescale);
+	DeckLinkOutputDevice(com_ptr<IDeckLink>& deckLink, int videoPrerollSize);
 	virtual ~DeckLinkOutputDevice() = default;
 
 	// IUnknown interface
@@ -102,8 +102,6 @@ private:
 	//
 	com_ptr<IDeckLink>										m_deckLink;
 	com_ptr<IDeckLinkOutput>								m_deckLinkOutput;
-	BMDTimeScale											m_hardwareTimescale;
-	BMDTimeValue											m_hardwareFrameDuration;
 	//
 	SampleQueue<std::shared_ptr<LoopThroughVideoFrame>>		m_outputVideoFrameQueue;
 	SampleQueue<std::shared_ptr<LoopThroughAudioPacket>>	m_outputAudioPacketQueue;

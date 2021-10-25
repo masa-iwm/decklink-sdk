@@ -58,7 +58,7 @@ public:
 	using AudioInputArrivedCallback			= std::function<void(std::shared_ptr<LoopThroughAudioPacket>)>;
 	using VideoInputFrameDroppedCallback	= std::function<void(BMDTimeValue, BMDTimeValue, BMDTimeScale)>;
 
-	DeckLinkInputDevice(com_ptr<IDeckLink>& deckLink, BMDTimeScale hardwareTimescale);
+	DeckLinkInputDevice(com_ptr<IDeckLink>& deckLink);
 	virtual ~DeckLinkInputDevice() = default;
 
 	// IUnknown interface
@@ -85,7 +85,6 @@ private:
 	//
 	com_ptr<IDeckLink>				m_deckLink;
 	com_ptr<IDeckLinkInput>			m_deckLinkInput;
-	BMDTimeScale					m_hardwareTimescale;
 	BMDTimeValue					m_frameDuration;
 	BMDTimeValue					m_lastStreamTime;
 	BMDTimeScale					m_frameTimescale;

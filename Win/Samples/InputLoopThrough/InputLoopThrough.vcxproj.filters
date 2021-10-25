@@ -65,6 +65,9 @@
     <ClInclude Include="LoopThroughVideoFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ReferenceTime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="..\..\..\Win\include\DeckLinkAPI.idl">

@@ -33,6 +33,7 @@
 		161F5DF3230FC55A00E27165 /* LatencyStatistics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LatencyStatistics.cpp; sourceTree = SOURCE_ROOT; };
 		161F5DF62316087F00E27165 /* LoopThroughVideoFrame.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LoopThroughVideoFrame.h; sourceTree = SOURCE_ROOT; };
 		161F5DF8231661D400E27165 /* LoopThroughAudioPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LoopThroughAudioPacket.h; sourceTree = SOURCE_ROOT; };
+		16800B98266F59E400F08B48 /* ReferenceTime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReferenceTime.h; sourceTree = SOURCE_ROOT; };
 		16B79BB4228B9E09002D1633 /* platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = SOURCE_ROOT; };
 		16B79BB5228B9E09002D1633 /* platform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = platform.cpp; sourceTree = SOURCE_ROOT; };
 		16B79BB7228B9E28002D1633 /* DeckLinkOutputDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeckLinkOutputDevice.h; sourceTree = SOURCE_ROOT; };
@@ -87,6 +88,7 @@
 				16D937B1230D3DE200959A6D /* LatencyStatistics.h */,
 				161F5DF3230FC55A00E27165 /* LatencyStatistics.cpp */,
 				16B79BC5228B9E83002D1633 /* SampleQueue.h */,
+				16800B98266F59E400F08B48 /* ReferenceTime.h */,
 			);
 			path = Common;
 			sourceTree = "<group>";

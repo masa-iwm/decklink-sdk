@@ -38,15 +38,16 @@
 ** -LICENSE-END-
 */
 
+#include <stdexcept>
 
 #include "platform.h"
 #include "DeckLinkInputDevice.h"
+#include "ReferenceTime.h"
 
-DeckLinkInputDevice::DeckLinkInputDevice(com_ptr<IDeckLink>& device, BMDTimeScale hardwareTimescale) :
+DeckLinkInputDevice::DeckLinkInputDevice(com_ptr<IDeckLink>& device) :
 	m_refCount(1),
 	m_deckLink(device),
 	m_deckLinkInput(IID_IDeckLinkInput, device),
-	m_hardwareTimescale(hardwareTimescale),
 	m_frameTimescale(1001),
 	m_seenValidSignal(false),
 	m_readyForCapture(false),
@@ -108,12 +109,9 @@ ULONG DeckLinkInputDevice::Release(void)
 
 HRESULT DeckLinkInputDevice::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioPacket)
 {
-	BMDTimeValue hardwareTime;
-
-	// Get the hardware time for the entry to callback for latency measurements.
-	if (m_deckLinkInput->GetHardwareReferenceClock(m_hardwareTimescale, &hardwareTime, nullptr, nullptr) != S_OK)
-		return E_FAIL;
-
+	// Get the current timestamp for the entry to callback for latency measurements.
+	BMDTimeValue referenceCount = ReferenceTime::getSteadyClockUptimeCount();
+	
 	if (videoFrame)
 	{
 		BMDTimeValue					streamTime;
@@ -148,18 +146,18 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived(IDeckLinkVideoInputFrame* vi
 			}
 			else if (m_videoInputArrivedCallback)
 			{
-				BMDTimeValue					hardwareFrameTime;
-				BMDTimeValue					hardwareFrameDuration;
+				BMDTimeValue	completedFrameTime;
+				BMDTimeValue	frameDuration;
 
 				auto loopThroughVideoFrame = std::make_shared<LoopThroughVideoFrame>(com_ptr<IDeckLinkVideoFrame>(videoFrame));
-				loopThroughVideoFrame->setInputFrameArrivedHardwareTime(hardwareTime);
+				loopThroughVideoFrame->setInputFrameArrivedReferenceTime(referenceCount);
 
 				// Get the captured timestamp for the incoming frame
-				if (videoFrame->GetHardwareReferenceTimestamp(m_hardwareTimescale, &hardwareFrameTime, &hardwareFrameDuration) != S_OK)
+				if (videoFrame->GetHardwareReferenceTimestamp(ReferenceTime::kTimescale, &completedFrameTime, &frameDuration) != S_OK)
 					return E_FAIL;
 
-				// The time for start of frame on the wire is the frame timestamp minus frame duration
-				loopThroughVideoFrame->setInputFrameStartHardwareTime(hardwareFrameTime - hardwareFrameDuration);
+				// The time for start of frame on the wire is the timestamp attached to the frame at completion minus the frame duration
+				loopThroughVideoFrame->setInputFrameStartReferenceTime(completedFrameTime - frameDuration);
 
 				loopThroughVideoFrame->setVideoStreamTime(streamTime);
 				loopThroughVideoFrame->setVideoFrameDuration(frameDuration);
@@ -184,7 +182,7 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived(IDeckLinkVideoInputFrame* vi
 		
 		auto loopThroughAudioPacket = std::make_shared<LoopThroughAudioPacket>(audioBuffer, audioPacket->GetSampleFrameCount(), [=]() { audioPacket->Release(); });
 		
-		loopThroughAudioPacket->setInputPacketArrivedHardwareTime(hardwareTime);
+		loopThroughAudioPacket->setInputPacketArrivedReferenceTime(referenceCount);
 
 		// Get stream time from input audio packet
 		if (audioPacket->GetPacketTime(&packetTime, m_frameTimescale) != S_OK)

@@ -50,10 +50,10 @@ public:
 		m_videoFrame(videoFrame),
 		m_videoStreamTime(0),
 		m_videoFrameDuration(0),
-		m_inputFrameStartHardwareTime(0),
-		m_inputFrameArrivedHardwareTime(0),
-		m_outputFrameScheduledHardwareTime(0),
-		m_outputFrameCompletedHardwareTime(0),
+		m_inputFrameStartReferenceTime(0),
+		m_inputFrameArrivedReferenceTime(0),
+		m_outputFrameScheduledReferenceTime(0),
+		m_outputFrameCompletedReferenceTime(0),
 		m_outputFrameCompletionResult(bmdOutputFrameDropped)
 	{
 	}
@@ -62,18 +62,18 @@ public:
 	void	setVideoFrame(const com_ptr<IDeckLinkVideoFrame>& videoFrame) { m_videoFrame = videoFrame; }
 	void	setVideoStreamTime(const BMDTimeValue time) { m_videoStreamTime = time; }
 	void	setVideoFrameDuration(const BMDTimeValue duration) { m_videoFrameDuration = duration; }
-	void	setInputFrameStartHardwareTime(const BMDTimeValue time) { m_inputFrameStartHardwareTime = time; }
-	void	setInputFrameArrivedHardwareTime(const BMDTimeValue time) { m_inputFrameArrivedHardwareTime = time; }
-	void	setOutputFrameScheduledHardwareTime(const BMDTimeValue time) { m_outputFrameScheduledHardwareTime = time; }
-	void	setOutputFrameCompletedHardwareTime(const BMDTimeValue time) { m_outputFrameCompletedHardwareTime = time; }
+	void	setInputFrameStartReferenceTime(const BMDTimeValue time) { m_inputFrameStartReferenceTime = time; }
+	void	setInputFrameArrivedReferenceTime(const BMDTimeValue time) { m_inputFrameArrivedReferenceTime = time; }
+	void	setOutputFrameScheduledReferenceTime(const BMDTimeValue time) { m_outputFrameScheduledReferenceTime = time; }
+	void	setOutputFrameCompletedReferenceTime(const BMDTimeValue time) { m_outputFrameCompletedReferenceTime = time; }
 	void	setOutputCompletionResult(const BMDOutputFrameCompletionResult result) { m_outputFrameCompletionResult = result; }
 
 	IDeckLinkVideoFrame*			getVideoFramePtr(void) const { return m_videoFrame.get(); }
 	BMDTimeValue					getVideoStreamTime(void) const { return m_videoStreamTime; }
 	BMDTimeValue					getVideoFrameDuration(void) const { return m_videoFrameDuration; }
-	BMDTimeValue					getInputLatency(void) const { return m_inputFrameArrivedHardwareTime - m_inputFrameStartHardwareTime; }
-	BMDTimeValue					getProcessingLatency(void) const { return m_outputFrameScheduledHardwareTime - m_inputFrameArrivedHardwareTime; }
-	BMDTimeValue					getOutputLatency(void) const { return m_outputFrameCompletedHardwareTime - m_outputFrameScheduledHardwareTime; }
+	BMDTimeValue					getInputLatency(void) const { return m_inputFrameArrivedReferenceTime - m_inputFrameStartReferenceTime; }
+	BMDTimeValue					getProcessingLatency(void) const { return m_outputFrameScheduledReferenceTime - m_inputFrameArrivedReferenceTime; }
+	BMDTimeValue					getOutputLatency(void) const { return m_outputFrameCompletedReferenceTime - m_outputFrameScheduledReferenceTime; }
 	BMDOutputFrameCompletionResult	getOutputCompletionResult(void) const { return m_outputFrameCompletionResult; }
 	
 private:
@@ -81,11 +81,11 @@ private:
 	BMDTimeValue					m_videoStreamTime;
 	BMDTimeValue					m_videoFrameDuration;
 	
-	BMDTimeValue					m_inputFrameStartHardwareTime;
-	BMDTimeValue					m_inputFrameArrivedHardwareTime;
+	BMDTimeValue					m_inputFrameStartReferenceTime;
+	BMDTimeValue					m_inputFrameArrivedReferenceTime;
 
-	BMDTimeValue					m_outputFrameScheduledHardwareTime;
-	BMDTimeValue					m_outputFrameCompletedHardwareTime;
+	BMDTimeValue					m_outputFrameScheduledReferenceTime;
+	BMDTimeValue					m_outputFrameCompletedReferenceTime;
 	
 	BMDOutputFrameCompletionResult	m_outputFrameCompletionResult;
 };

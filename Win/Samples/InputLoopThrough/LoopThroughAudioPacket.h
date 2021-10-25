@@ -56,8 +56,8 @@ public:
 		m_sampleFrameCount(sampleFrameCount),
 		m_deleter(deleter),
 		m_audioStreamTime(0),
-		m_inputPacketArrivedHardwareTime(0),
-		m_outputPacketScheduledHardwareTime(0)
+		m_inputPacketArrivedReferenceTime(0),
+		m_outputPacketScheduledReferenceTime(0)
 	{
 	}
 	
@@ -83,11 +83,11 @@ public:
 	}
 	
 	void			setAudioStreamTime(const BMDTimeValue time) { m_audioStreamTime = time; }
-	void			setInputPacketArrivedHardwareTime(const BMDTimeValue time) { m_inputPacketArrivedHardwareTime = time; }
-	void			setOutputPacketScheduledHardwareTime(const BMDTimeValue time) { m_outputPacketScheduledHardwareTime = time; }
+	void			setInputPacketArrivedReferenceTime(const BMDTimeValue time) { m_inputPacketArrivedReferenceTime = time; }
+	void			setOutputPacketScheduledReferenceTime(const BMDTimeValue time) { m_outputPacketScheduledReferenceTime = time; }
 
 	BMDTimeValue	getAudioStreamTime(void) const { return m_audioStreamTime; }
-	BMDTimeValue	getProcessingLatency(void) const { return m_outputPacketScheduledHardwareTime - m_inputPacketArrivedHardwareTime; }
+	BMDTimeValue	getProcessingLatency(void) const { return m_outputPacketScheduledReferenceTime - m_inputPacketArrivedReferenceTime; }
 
 private:
 	void*			m_audioBuffer;
@@ -95,6 +95,6 @@ private:
 	Deleter			m_deleter;
 
 	BMDTimeValue	m_audioStreamTime;
-	BMDTimeValue	m_inputPacketArrivedHardwareTime;
-	BMDTimeValue	m_outputPacketScheduledHardwareTime;
+	BMDTimeValue	m_inputPacketArrivedReferenceTime;
+	BMDTimeValue	m_outputPacketScheduledReferenceTime;
 };

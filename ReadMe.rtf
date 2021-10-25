@@ -13,7 +13,7 @@
 \deftab720
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\tx13563\pardeftab720\partightenfactor0
 
-\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 12.1\
+\f0\b\fs28 \cf0 Blackmagic Design DeckLink SDK 12.2\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\partightenfactor0
 \cf0 \
 
@@ -21,7 +21,18 @@
 \
 \pard\pardeftab720\partightenfactor0
 
-\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 12.1\
+\f0\b\fs24 \cf0 Changes in Blackmagic DeckLink SDK 12.2\
+\
+	- Updated Samples\
+\
+		- InputLoopThrough\
+\
+			
+\f1\b0 - Changed latency calculations to use common system clock.
+\f0\b \
+\
+\
+Changes in Blackmagic DeckLink SDK 12.1\
 \
 	- Updated Types\
 \
@@ -31,11 +42,9 @@ BMDReferenceStatus\
 			
 \f1\b0 - Added 
 \f0\b bmdReferenceUnlocked \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \cf2 				-  New item for where genlock reference lock has not be achieved.\
+\f1\b0 				-  New item for where genlock reference lock has not be achieved.\
 \
-\pard\pardeftab720\partightenfactor0
 
 \f0\b \cf0 \kerning1\expnd0\expndtw0 	- Updated Samples\
 \
@@ -185,9 +194,8 @@ BMDDeckLinkStatusID\
 			
 \f1\b0 - added 
 \f0\b bmdDeckLinkStatusDetectedVideoInputFormatFlags \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0 \cf2 				-  New status item of the video input flags when auto-mode detection is enabled.\
+\f1\b0 				-  New status item of the video input flags when auto-mode detection is enabled.\
  \
 
 \f0\b 			
@@ -349,9 +357,8 @@ BMDInternalKeyingAncillaryDataSource\
 		- \cf2 \expnd0\expndtw0\kerning0
 BMDDeckLinkConfigurationID
 \f2\fs26\fsmilli13333  \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs24 \cf2 \
+\f1\b0\fs24 \
 \pard\pardeftab720\partightenfactor0
 \cf5 \kerning1\expnd0\expndtw0 			- added 
 \f0\b bmdDeckLinkConfigInternalKeyingAncillaryDataSource
@@ -363,9 +370,8 @@ BMDDeckLinkConfigurationID
 		- \cf2 \expnd0\expndtw0\kerning0
 BMDDisplayMode
 \f2\fs26\fsmilli13333 \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs24 \cf2 \
+\f1\b0\fs24 \
 \pard\pardeftab720\partightenfactor0
 \cf5 \kerning1\expnd0\expndtw0 			- removed 
 \f0\b bmdModeCintelRAW
@@ -381,9 +387,8 @@ BMDDisplayMode
 \f0\b\fs24 \cf0 		- \cf2 \expnd0\expndtw0\kerning0
 BMDPixelFormat
 \f2\fs26\fsmilli13333  \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs24 \cf2 \
+\f1\b0\fs24 \
 \pard\pardeftab720\partightenfactor0
 \cf5 \kerning1\expnd0\expndtw0 			- removed 
 \f0\b bmdFormat12BitRAWGRBG\
@@ -630,9 +635,8 @@ BMDPixelFormat
 		- \cf2 \expnd0\expndtw0\kerning0
 BMDDeckLinkAttributeID
 \f2\fs26\fsmilli13333  \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs24 \cf2 \
+\f1\b0\fs24 \
 \pard\pardeftab720\partightenfactor0
 \cf5 \kerning1\expnd0\expndtw0 			- added 
 \f0\b BMDDeckLinkMinimumPrerollFrames
@@ -762,9 +766,8 @@ Changes in Blackmagic DeckLink SDK 11.3\
 		- \cf2 \expnd0\expndtw0\kerning0
 BMDDeckLinkConfigurationID
 \f2\fs26\fsmilli13333  \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs24 \cf2 \
+\f1\b0\fs24 \
 \pard\pardeftab720\partightenfactor0
 \cf5 \kerning1\expnd0\expndtw0 			- added 
 \f0\b bmdDeckLinkConfigSwapHDMICh3AndCh4OnInput
@@ -841,9 +844,8 @@ Changes in Blackmagic DeckLink SDK 11.2\
 		- \cf2 \expnd0\expndtw0\kerning0
 BMDDeckLinkAttributeID
 \f2\fs26\fsmilli13333  \
-\pard\pardeftab720\partightenfactor0
 
-\f1\b0\fs24 \cf2 \
+\f1\b0\fs24 \
 \pard\pardeftab720\partightenfactor0
 \cf5 \kerning1\expnd0\expndtw0 			- added 
 \f0\b BMDDeckLinkVANCRequires10BitYUVVideoFrames
@@ -1298,9 +1300,8 @@ Changes in Blackmagic DeckLink SDK 11.0\
 				- The duplex mode \cf0 \kerning1\expnd0\expndtw0 for the profile corresponding to the 
 \f0\b IDeckLinkProfileAttributes 
 \f1\b0 interface\
-\pard\pardeftab720\partightenfactor0
 
-\f0\b \cf0 \
+\f0\b \
 			- 
 \f1\b0 deprecated
 \f0\b  BMDDeckLinkPairedDevicePersistentID\
@@ -4852,4 +4853,4 @@ Some applications may use third party code under license. For details please ref
 \fs18 \cf0 \
 \'a9 2021 Blackmagic Design Pty. Ltd. All rights reserved. Blackmagic Design, Blackmagic, DeckLink, Multibridge, HDLink, Videohub, and "Leading the creative video revolution" are trademarks of Blackmagic Design Pty. Ltd., registered in the U.S.A and other countries.\
 \
-Updated May 19, 2021.}
+Updated October 18, 2021.}

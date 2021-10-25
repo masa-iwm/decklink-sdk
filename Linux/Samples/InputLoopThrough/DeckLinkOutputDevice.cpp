@@ -38,14 +38,16 @@
 ** -LICENSE-END-
 */
 
-#include "DeckLinkOutputDevice.h"
+#include <stdexcept>
 
-DeckLinkOutputDevice::DeckLinkOutputDevice(com_ptr<IDeckLink>& device, int videoPrerollSize, BMDTimeScale hardwareTimescale) :
+#include "DeckLinkOutputDevice.h"
+#include "ReferenceTime.h"
+
+DeckLinkOutputDevice::DeckLinkOutputDevice(com_ptr<IDeckLink>& device, int videoPrerollSize) :
 	m_refCount(1),
 	m_state(PlaybackState::Idle),
 	m_deckLink(device),
 	m_deckLinkOutput(IID_IDeckLinkOutput, device),
-	m_hardwareTimescale(hardwareTimescale),
 	m_videoPrerollSize(videoPrerollSize),
 	m_seenFirstVideoFrame(false),
 	m_seenFirstAudioPacket(false),
@@ -116,18 +118,19 @@ HRESULT	DeckLinkOutputDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame* compl
 	if (completedFrame)
 	{
 		// Get the time that scheduled frame was completely transmitted by the device
-		if (m_deckLinkOutput->GetFrameCompletionReferenceTimestamp(completedFrame, m_hardwareTimescale, &frameCompletionTimestamp) == S_OK)
+		if (m_deckLinkOutput->GetFrameCompletionReferenceTimestamp(completedFrame, ReferenceTime::kTimescale, &frameCompletionTimestamp) == S_OK)
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
 
 			for (auto iter = m_scheduledFramesList.rbegin(); iter != m_scheduledFramesList.rend(); iter++)
 			{
-				if (iter->get()->getVideoFramePtr() == completedFrame)
+				auto loopThroughVideoFrame = iter->get();
+				if (loopThroughVideoFrame->getVideoFramePtr() == completedFrame)
 				{
 					if (m_scheduledFrameCompletedCallback != nullptr)
 					{
-						iter->get()->setOutputCompletionResult(result);
-						iter->get()->setOutputFrameCompletedHardwareTime(frameCompletionTimestamp - m_hardwareFrameDuration);
+						loopThroughVideoFrame->setOutputCompletionResult(result);
+						loopThroughVideoFrame->setOutputFrameCompletedReferenceTime(frameCompletionTimestamp - loopThroughVideoFrame->getVideoFrameDuration());
 						m_scheduledFrameCompletedCallback(std::move(*iter));
 					}
 					// Erase item from reverse_iterator
@@ -190,7 +193,7 @@ bool DeckLinkOutputDevice::startPlayback(BMDDisplayMode displayMode, bool enable
 
 	// Get audio water level, based on video preroll size
 	m_audioWaterLevel = (uint32_t)(((int64_t)(m_videoPrerollSize * m_frameDuration) * bmdAudioSampleRate48kHz) / m_frameTimescale);
-
+	
 	if (enable3D)
 		outputFlags = (BMDVideoOutputFlags)(outputFlags | bmdVideoOutputDualStream3D);
 
@@ -338,32 +341,24 @@ void DeckLinkOutputDevice::scheduleVideoFramesThread()
 	
 		if (m_outputVideoFrameQueue.waitForSample(outputFrame))
 		{
-			BMDTimeValue scheduleHardwareTimestamp;
-			BMDTimeValue hardwareFrameDuration;
-
 			std::lock_guard<std::mutex> lock(m_mutex);
-			// Get the hardware time when video frame was scheduled
-			if (m_deckLinkOutput->GetHardwareReferenceClock(m_hardwareTimescale, &scheduleHardwareTimestamp, nullptr, &hardwareFrameDuration) != S_OK)
-			{
-				fprintf(stderr, "Unable to get output hardware reference clock\n");
-				break;
-			}
 
 			// Record the stream time of the first frame, so we can start playing from that point
 			if (!m_seenFirstVideoFrame)
 			{
 				m_startPlaybackTime = std::max(m_startPlaybackTime, outputFrame->getVideoStreamTime());
-				m_hardwareFrameDuration = hardwareFrameDuration;
 				m_seenFirstVideoFrame = true;
 			}
 			
+			// Get the reference time when video frame was scheduled
+			outputFrame->setOutputFrameScheduledReferenceTime(ReferenceTime::getSteadyClockUptimeCount());
+
 			if (m_deckLinkOutput->ScheduleVideoFrame(outputFrame->getVideoFramePtr(), outputFrame->getVideoStreamTime(), m_frameDuration, m_frameTimescale) != S_OK)
 			{
 				fprintf(stderr, "Unable to schedule output video frame\n");
 				break;
 			}
 			
-			outputFrame->setOutputFrameScheduledHardwareTime(scheduleHardwareTimestamp);
 			m_scheduledFramesList.push_back(outputFrame);
 
 			checkEndOfPreroll();
@@ -385,21 +380,15 @@ void DeckLinkOutputDevice::scheduleAudioPacketsThread()
 		if (m_outputAudioPacketQueue.waitForSample(outputPacket))
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
-			BMDTimeValue scheduleHardwareTimestamp;
-			
-			// Get the hardware time when audio packet was scheduled
-			if (m_deckLinkOutput->GetHardwareReferenceClock(m_hardwareTimescale, &scheduleHardwareTimestamp, nullptr, nullptr) != S_OK)
-			{
-				fprintf(stderr, "Unable to get output hardware reference clock\n");
-				break;
-			}
-
 			// Record the stream time of the first frame, so we can start playing from that point
 			if (!m_seenFirstAudioPacket)
 			{
 				m_startPlaybackTime = std::max(m_startPlaybackTime, outputPacket->getAudioStreamTime());
 				m_seenFirstAudioPacket = true;
 			}
+
+			// Get the reference time when audio packet was scheduled
+			BMDTimeValue scheduleReferenceCount = ReferenceTime::getSteadyClockUptimeCount();
 
 			if (m_deckLinkOutput->ScheduleAudioSamples(outputPacket->getBuffer(), (uint32_t)outputPacket->getSampleFrameCount(), outputPacket->getAudioStreamTime(), m_frameTimescale, nullptr) != S_OK)
 			{
@@ -409,7 +398,7 @@ void DeckLinkOutputDevice::scheduleAudioPacketsThread()
 			
 			if (m_scheduledAudioPacketCallback)
 			{
-				outputPacket->setOutputPacketScheduledHardwareTime(scheduleHardwareTimestamp);
+				outputPacket->setOutputPacketScheduledReferenceTime(scheduleReferenceCount);
 				m_scheduledAudioPacketCallback(std::move(outputPacket));
 			}
 
