@@ -146,18 +146,18 @@ HRESULT DeckLinkInputDevice::VideoInputFrameArrived(IDeckLinkVideoInputFrame* vi
 			}
 			else if (m_videoInputArrivedCallback)
 			{
-				BMDTimeValue	completedFrameTime;
-				BMDTimeValue	frameDuration;
+				BMDTimeValue	referenceFrameTime;
+				BMDTimeValue	referenceFrameDuration;
 
 				auto loopThroughVideoFrame = std::make_shared<LoopThroughVideoFrame>(com_ptr<IDeckLinkVideoFrame>(videoFrame));
 				loopThroughVideoFrame->setInputFrameArrivedReferenceTime(referenceCount);
 
 				// Get the captured timestamp for the incoming frame
-				if (videoFrame->GetHardwareReferenceTimestamp(ReferenceTime::kTimescale, &completedFrameTime, &frameDuration) != S_OK)
+				if (videoFrame->GetHardwareReferenceTimestamp(ReferenceTime::kTimescale, &referenceFrameTime, &referenceFrameDuration) != S_OK)
 					return E_FAIL;
 
 				// The time for start of frame on the wire is the timestamp attached to the frame at completion minus the frame duration
-				loopThroughVideoFrame->setInputFrameStartReferenceTime(completedFrameTime - frameDuration);
+				loopThroughVideoFrame->setInputFrameStartReferenceTime(referenceFrameTime - referenceFrameDuration);
 
 				loopThroughVideoFrame->setVideoStreamTime(streamTime);
 				loopThroughVideoFrame->setVideoFrameDuration(frameDuration);

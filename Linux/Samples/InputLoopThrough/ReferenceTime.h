@@ -41,6 +41,7 @@
 #pragma once
 
 #include <chrono>
+#include <time.h>
 #include "DeckLinkAPI.h"
 
 namespace ReferenceTime
@@ -48,10 +49,14 @@ namespace ReferenceTime
 	using ReferenceDuration = std::chrono::microseconds;		// Capture reference times in microseconds
 	constexpr BMDTimeScale	kTimescale = (BMDTimeScale)ReferenceDuration(std::chrono::seconds(1)).count();
 	constexpr int			kTicksPerMilliSec = ReferenceDuration(std::chrono::milliseconds(1)).count();
+	constexpr long			kTicksPerNanoSec = std::chrono::nanoseconds(std::chrono::seconds(1)).count();
 
 	static inline BMDTimeValue getSteadyClockUptimeCount(void)
 	{
-		auto now = std::chrono::steady_clock::now();
+		struct timespec ts;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+
+		auto now = std::chrono::time_point<std::chrono::steady_clock>(std::chrono::nanoseconds(ts.tv_sec * kTicksPerNanoSec + ts.tv_nsec));	
 		auto referenceTime = std::chrono::time_point_cast<ReferenceDuration>(now);
 		return referenceTime.time_since_epoch().count();
 	}
